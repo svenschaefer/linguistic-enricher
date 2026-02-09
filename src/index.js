@@ -3,6 +3,8 @@
 const runPipelineModule = require("./pipeline/run-pipeline");
 const stageRegistry = require("./pipeline/stage-registry");
 const runtimeCheck = require("./python/runtime-check");
+const schemaValidator = require("./validation/schema-validator");
+const invariantsValidator = require("./validation/runtime-invariants");
 
 /**
  * Allowed pipeline targets for this package.
@@ -43,9 +45,23 @@ async function runDoctor(options) {
  * @returns {object} Validation result.
  */
 function validateDocument(doc, options) {
-  void doc;
-  void options;
-  throw new Error("Not implemented");
+  const normalizedOptions = options && typeof options === "object" ? options : {};
+  const result = {
+    ok: true,
+    checks: []
+  };
+
+  if (normalizedOptions.skipSchema !== true) {
+    schemaValidator.validateSchema(doc);
+    result.checks.push("schema");
+  }
+
+  if (normalizedOptions.skipInvariants !== true) {
+    invariantsValidator.validateRuntimeInvariants(doc);
+    result.checks.push("invariants");
+  }
+
+  return result;
 }
 
 module.exports = {

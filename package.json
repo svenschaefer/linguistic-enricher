@@ -7,10 +7,10 @@
     "linguistic-enricher": "bin/linguistic-enricher.js"
   },
   "scripts": {
-    "test": "npm run test:unit && npm run test:integration",
+    "test": "npm run lint && npm run test:unit && npm run test:integration",
     "test:unit": "node --test test/unit/*.test.js",
     "test:integration": "node --test test/integration/*.test.js",
-    "lint": "node -e \"console.log('TODO: lint is not implemented yet')\"",
+    "lint": "eslint src bin test",
     "doctor": "node bin/linguistic-enricher.js doctor"
   },
   "keywords": [
@@ -22,5 +22,11 @@
   "license": "MIT",
   "engines": {
     "node": ">=24.10.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
   }
 }

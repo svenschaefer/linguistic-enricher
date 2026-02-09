@@ -1,5 +1,16 @@
 "use strict";
 
+const Ajv2020 = require("ajv/dist/2020");
+const errors = require("../util/errors");
+const schema = require("../../schema.json");
+
+const ajv = new Ajv2020({
+  allErrors: true,
+  strict: false,
+  validateFormats: false
+});
+const validate = ajv.compile(schema);
+
 /**
  * Validate document structure against schema.json.
  *
@@ -8,8 +19,17 @@
  * @returns {object} Validation result.
  */
 function validateSchema(doc) {
-  void doc;
-  throw new Error("Not implemented");
+  const ok = validate(doc);
+
+  if (!ok) {
+    throw errors.createError(
+      errors.ERROR_CODES.E_SCHEMA_INVALID,
+      "Document failed schema validation.",
+      { errors: validate.errors || [] }
+    );
+  }
+
+  return { ok: true };
 }
 
 module.exports = {

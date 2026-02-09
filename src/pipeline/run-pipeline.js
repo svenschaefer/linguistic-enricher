@@ -19,7 +19,7 @@ function clone(value) {
  * @returns {object} Normalized options.
  */
 function normalizeOptions(options) {
-  var normalized = options && typeof options === "object" ? Object.assign({}, options) : {};
+  const normalized = options && typeof options === "object" ? Object.assign({}, options) : {};
   normalized.target = normalized.target || "relations_extracted";
 
   if (!stageRegistry.isValidTarget(normalized.target)) {
@@ -69,11 +69,14 @@ function runValidationHook(validator, seed, phase) {
   try {
     validator(seed);
   } catch (error) {
-    if (error && error.message === "Not implemented") {
-      return;
+    const phaseError = new Error("Validation failed at " + phase + ": " + error.message);
+    if (error && error.code) {
+      phaseError.code = error.code;
     }
-
-    throw new Error("Validation failed at " + phase + ": " + error.message);
+    if (error && error.details) {
+      phaseError.details = error.details;
+    }
+    throw phaseError;
   }
 }
 
@@ -86,16 +89,16 @@ function runValidationHook(validator, seed, phase) {
  * @returns {Promise<object>} Updated seed document.
  */
 async function runPipelineInternal(input, options) {
-  var normalizedOptions = normalizeOptions(options);
-  var seed = initializeSeed(input, normalizedOptions);
-  var stages = stageRegistry.resolveStagesUpToTarget(normalizedOptions.target);
+  const normalizedOptions = normalizeOptions(options);
+  let seed = initializeSeed(input, normalizedOptions);
+  const stages = stageRegistry.resolveStagesUpToTarget(normalizedOptions.target);
 
   runValidationHook(schemaValidator.validateSchema, seed, "entry:schema");
   runValidationHook(invariantsValidator.validateRuntimeInvariants, seed, "entry:invariants");
 
-  for (var i = 0; i < stages.length; i += 1) {
-    var stage = stages[i];
-    var context = {
+  for (let i = 0; i < stages.length; i += 1) {
+    const stage = stages[i];
+    const context = {
       stageIndex: stage.index,
       prototypeStage: stage.prototypeStage,
       semanticTarget: stage.target,

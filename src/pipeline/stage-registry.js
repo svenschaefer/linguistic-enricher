@@ -146,8 +146,8 @@ function resolveStagesUpToTarget(target) {
     return STAGES;
   }
 
-  var index = -1;
-  for (var i = 0; i < STAGES.length; i += 1) {
+  let index = -1;
+  for (let i = 0; i < STAGES.length; i += 1) {
     if (STAGES[i].target === target) {
       index = i;
       break;
