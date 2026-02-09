@@ -1,0 +1,1234 @@
+{
+  "schema_version": "1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/seed.schema.json",
+  "title": "seed.yaml (one-document enrichment schema)",
+  "$comment": "Design intent: one schema for all pipeline stages; one evolving seed document. Enrichment is additive: new information is integrated as anchored annotations (selectors over the canonical text and/or token/segment references). JSON Schema enforces structural shape and stage-based presence; ordering constraints and referential integrity are enforced at runtime.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "seed_id",
+    "stage",
+    "canonical_text",
+    "index_basis"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "seed_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "canonical",
+        "segmented",
+        "tokenized",
+        "pos_tagged",
+        "mwe_candidates",
+        "mwe_pattern_candidates",
+        "mwe_materialized",
+        "parsed",
+        "chunked",
+        "enriched",
+        "heads_identified",
+        "relations_extracted",
+        "elementary_assertions"
+      ],
+      "description": "Pipeline stage marker used to apply progressive validation constraints."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "git": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "commit": {
+              "type": "string",
+              "minLength": 7
+            },
+            "dirty": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "Provenance describes production context (normalization, tools). It is not Seed-Truth.",
+      "properties": {
+        "normalization": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "unicode": {
+              "type": "string",
+              "enum": [
+                "NFC",
+                "NFD",
+                "NFKC",
+                "NFKD"
+              ]
+            },
+            "line_endings": {
+              "type": "string",
+              "enum": [
+                "LF",
+                "CRLF"
+              ]
+            }
+          }
+        },
+        "framework": {
+          "$comment": "Framework/model/tooling metadata. Structure is intentionally unconstrained.",
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "original_text": {
+          "type": "string"
+        },
+        "surface_normalized_text": {
+          "type": "string"
+        }
+      }
+    },
+    "canonical_text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Single canonical seed surface used as the reference for all text-position selectors."
+    },
+    "index_basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit"
+      ],
+      "properties": {
+        "unit": {
+          "type": "string",
+          "enum": [
+            "utf16_code_units",
+            "unicode_codepoints",
+            "bytes_utf8"
+          ]
+        }
+      },
+      "$comment": "Index basis is defined over canonical_text only."
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/segment"
+      },
+      "$comment": "Segments are structural boundaries. token_range is a forward commitment and may be used before tokens exist."
+    },
+    "tokens": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/token"
+      },
+      "$comment": "Tokens may be absent at early stages. Referential integrity and ordering semantics are runtime invariants."
+    },
+    "annotations": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/annotation"
+      },
+      "$comment": "Integrated enrichment lives here. Each annotation has a stable id, a kind, an anchor (selectors), and provenance sources. As the pipeline progresses, the same annotation can be refined by adding selectors (e.g., from quote to position, then token alignment) and by changing status (candidate -> accepted)."
+    },
+    "invariants": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/invariant"
+      },
+      "description": "Optional runtime checks recorded by the pipeline."
+    }
+  },
+  "$defs": {
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "$comment": "Ordering constraints (end >= start) are enforced by runtime invariants."
+    },
+    "tokenRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "description": "Half-open range [start, end) over tokens array indices.",
+      "$comment": "Ordering constraints (end >= start) are enforced by runtime invariants."
+    },
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "index",
+        "span",
+        "token_range"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        },
+        "token_range": {
+          "$ref": "#/$defs/tokenRange"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "sentence",
+            "segment"
+          ]
+        }
+      }
+    },
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "i",
+        "segment_id",
+        "span",
+        "surface"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "i": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Absolute token index in tokens array."
+        },
+        "segment_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "normalized": {
+          "type": "string"
+        },
+        "lemma": {
+          "type": "string"
+        },
+        "pos": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tag": {
+              "type": "string"
+            },
+            "coarse": {
+              "type": "string"
+            },
+            "morph": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "flags": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "is_punct": {
+              "type": "boolean"
+            },
+            "is_space": {
+              "type": "boolean"
+            },
+            "is_stop": {
+              "type": "boolean"
+            }
+          }
+        },
+        "joiner": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "pre": {
+              "type": "string"
+            },
+            "post": {
+              "type": "string"
+            }
+          },
+          "description": "Optional deterministic joiner information for reconstructing surface."
+        },
+        "lexicon": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "wikipedia_title_index": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "wiki_exact_match",
+                "wiki_prefix_count",
+                "wiki_parenthetical_variant_count",
+                "wiki_hyphen_space_variant_match",
+                "wiki_apostrophe_variant_match",
+                "wiki_singular_plural_variant_match",
+                "wiki_any_signal"
+              ],
+              "properties": {
+                "wiki_exact_match": {
+                  "type": "boolean"
+                },
+                "wiki_prefix_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "wiki_parenthetical_variant_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "wiki_hyphen_space_variant_match": {
+                  "type": "boolean"
+                },
+                "wiki_apostrophe_variant_match": {
+                  "type": "boolean"
+                },
+                "wiki_singular_plural_variant_match": {
+                  "type": "boolean"
+                },
+                "wiki_any_signal": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "$comment": "Referential integrity of segment_id is enforced by runtime checks, not JSON Schema."
+    },
+    "selector_text_position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "span"
+      ],
+      "properties": {
+        "type": {
+          "const": "TextPositionSelector"
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        }
+      }
+    },
+    "selector_text_quote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "exact"
+      ],
+      "properties": {
+        "type": {
+          "const": "TextQuoteSelector"
+        },
+        "exact": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "suffix": {
+          "type": "string"
+        },
+        "occurrence": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "selector_token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "token_ids"
+      ],
+      "properties": {
+        "type": {
+          "const": "TokenSelector"
+        },
+        "token_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "$comment": "Referential integrity of token_ids is enforced by runtime checks, not JSON Schema."
+    },
+    "selector_segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "segment_id"
+      ],
+      "properties": {
+        "type": {
+          "const": "SegmentSelector"
+        },
+        "segment_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "$comment": "Referential integrity of segment_id is enforced by runtime checks, not JSON Schema."
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selectors"
+      ],
+      "properties": {
+        "selectors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/selector_text_position"
+              },
+              {
+                "$ref": "#/$defs/selector_text_quote"
+              },
+              {
+                "$ref": "#/$defs/selector_token"
+              },
+              {
+                "$ref": "#/$defs/selector_segment"
+              }
+            ]
+          }
+        }
+      },
+      "$comment": "Anchors are refined over time by adding selectors (quote -> position -> token alignment)."
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "pattern",
+            "model",
+            "heuristic",
+            "lexicon",
+            "manual",
+            "rule"
+          ]
+        },
+        "version": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "annotation_common": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "status",
+        "anchor",
+        "sources"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "mwe",
+            "chunk",
+            "dependency",
+            "chunk_head",
+            "named_entity",
+            "noun_phrase",
+            "lemma",
+            "dependency_surface"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "candidate",
+            "accepted",
+            "observation"
+          ],
+          "description": "candidate = proposal; accepted = Seed-Truth; observation = non-normative analysis output."
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sourceRef"
+          }
+        },
+        "surface": {
+          "type": "string",
+          "description": "Optional surface string for quote-only items; not authoritative once position selectors exist."
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "accepted"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "anchor": {
+                "type": "object",
+                "properties": {
+                  "selectors": {
+                    "type": "array",
+                    "contains": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/$defs/selector_text_position"
+                        },
+                        {
+                          "$ref": "#/$defs/selector_token"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "annotation_mwe": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mwe_kind": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "annotation_chunk": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "chunk_type"
+          ],
+          "properties": {
+            "chunk_type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "annotation_dependency": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "dep",
+            "label",
+            "is_root"
+          ],
+          "properties": {
+            "dep": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "head": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "is_root": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "is_root": {
+                "const": true
+              }
+            },
+            "required": [
+              "is_root"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "head"
+              ]
+            }
+          },
+          "else": {
+            "required": [
+              "head"
+            ]
+          }
+        }
+      ],
+      "$comment": "If is_root=true, head must be omitted; otherwise head is required."
+    },
+    "annotation_chunk_head": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "chunk_id",
+            "head"
+          ],
+          "properties": {
+            "chunk_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "head": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "$comment": "Referential integrity of chunk_id is enforced by runtime checks."
+    },
+    "annotation_named_entity": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "annotation_noun_phrase": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "properties": {}
+        }
+      ]
+    },
+    "annotation_lemma": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "lemma"
+          ],
+          "properties": {
+            "lemma": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "annotation_dependency_surface": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "relation"
+          ],
+          "properties": {
+            "relation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "head_text": {
+              "type": "string"
+            },
+            "dep_text": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "annotation": {
+      "oneOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_mwe"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "mwe"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_chunk"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "chunk"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_dependency"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "dependency"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_chunk_head"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "chunk_head"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_named_entity"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "named_entity"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_noun_phrase"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "noun_phrase"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_lemma"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "lemma"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_dependency_surface"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "dependency_surface"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "tokenRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "not": {
+            "required": [
+              "i"
+            ]
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "i"
+          ],
+          "properties": {
+            "i": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "not": {
+            "required": [
+              "id"
+            ]
+          }
+        }
+      ],
+      "$comment": "Referential integrity is enforced by runtime checks."
+    },
+    "invariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "skip"
+          ]
+        },
+        "details": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "segmented",
+              "tokenized",
+              "pos_tagged",
+              "mwe_pattern_candidates",
+              "mwe_materialized",
+              "parsed",
+              "chunked",
+              "enriched",
+              "heads_identified",
+              "relations_extracted",
+              "elementary_assertions"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "required": [
+          "segments"
+        ],
+        "properties": {
+          "segments": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "tokenized",
+              "pos_tagged",
+              "mwe_pattern_candidates",
+              "mwe_materialized",
+              "parsed",
+              "chunked",
+              "enriched",
+              "heads_identified",
+              "relations_extracted",
+              "elementary_assertions"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "required": [
+          "tokens"
+        ],
+        "properties": {
+          "tokens": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "pos_tagged",
+              "mwe_pattern_candidates",
+              "mwe_materialized",
+              "parsed",
+              "chunked",
+              "enriched",
+              "heads_identified",
+              "relations_extracted",
+              "elementary_assertions"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "properties": {
+          "tokens": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "required": [
+                "pos"
+              ],
+              "properties": {
+                "pos": {
+                  "type": "object",
+                  "required": [
+                    "tag"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "parsed",
+              "chunked",
+              "enriched",
+              "heads_identified",
+              "relations_extracted"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "required": [
+          "annotations"
+        ],
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "dependency"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "chunked",
+              "enriched",
+              "heads_identified",
+              "relations_extracted"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "required": [
+          "annotations"
+        ],
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "chunk"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "enriched"
+              ,
+              "heads_identified",
+              "relations_extracted"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "required": [
+          "annotations"
+        ],
+        "properties": {
+          "annotations": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}
