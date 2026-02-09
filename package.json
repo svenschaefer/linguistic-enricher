@@ -7,9 +7,9 @@
     "linguistic-enricher": "bin/linguistic-enricher.js"
   },
   "scripts": {
-    "test": "node -e \"console.log('TODO: tests are not implemented yet')\"",
-    "test:unit": "node -e \"console.log('TODO: unit tests are not implemented yet')\"",
-    "test:integration": "node -e \"console.log('TODO: integration tests are not implemented yet')\"",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "node --test test/unit/*.test.js",
+    "test:integration": "node --test test/integration/*.test.js",
     "lint": "node -e \"console.log('TODO: lint is not implemented yet')\"",
     "doctor": "node bin/linguistic-enricher.js doctor"
   },
@@ -24,4 +24,3 @@
     "node": ">=24.10.0"
   }
 }
-

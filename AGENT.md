@@ -38,3 +38,9 @@
 - Python integration is subprocess-based only (JSON stdin/stdout) and scaffolded only.
 - `wikipedia-title-index` integration is optional HTTP service and scaffolded only.
 
+## Test Gate (Mandatory)
+
+- Every implementation phase MUST be fully covered by tests before the next phase begins.
+- All tests for the current phase MUST pass before any next-phase implementation work is started.
+- Proceeding to a new phase without tests is NOT ALLOWED.
+- A phase without passing tests is considered incomplete.
