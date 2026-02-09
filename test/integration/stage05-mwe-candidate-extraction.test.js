@@ -42,3 +42,32 @@ test("runPipeline mwe_candidates keeps matcher and lexicon sources on candidates
     assert.equal(typeof lexicon.evidence, "object");
   }
 });
+
+test(
+  "runPipeline mwe_candidates uses live wikipedia-title-index endpoint when configured",
+  {
+    skip: !process.env.WIKI_INDEX_ENDPOINT
+      ? "Set WIKI_INDEX_ENDPOINT to run live lexicon integration check"
+      : false
+  },
+  async function () {
+    const out = await api.runPipeline("An online store has a shopping cart.", {
+      target: "mwe_candidates",
+      services: {
+        "wikipedia-title-index": {
+          endpoint: process.env.WIKI_INDEX_ENDPOINT
+        }
+      }
+    });
+
+    const candidates = out.annotations.filter(function (a) { return a.kind === "mwe"; });
+    assert.equal(candidates.length > 0, true);
+
+    const hasSignal = candidates.some(function (candidate) {
+      const lexicon = candidate.sources.find(function (s) { return s.name === "wikipedia-title-index"; });
+      return Boolean(lexicon && lexicon.evidence && lexicon.evidence.wiki_any_signal === true);
+    });
+
+    assert.equal(hasSignal, true);
+  }
+);
