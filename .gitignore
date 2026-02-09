@@ -11,6 +11,7 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+data/
 
 # Dependency directories
 node_modules/
