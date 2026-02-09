@@ -2,20 +2,357 @@
 
 const { deepClone } = require("../../util/deep-clone");
 const { createDeterministicId } = require("../../util/ids");
+const errors = require("../../util/errors");
 
-function isChunkPos(posTag) {
-  return (
-    posTag === "NOUN" ||
-    posTag === "ADJ" ||
-    posTag === "PROPN" ||
-    posTag === "NN" ||
-    posTag === "NNS" ||
-    posTag === "NNP" ||
-    posTag === "NNPS" ||
-    posTag === "JJ" ||
-    posTag === "JJR" ||
-    posTag === "JJS"
+function getTag(token) {
+  if (!token || !token.pos) {
+    return "";
+  }
+  if (typeof token.pos.tag === "string" && token.pos.tag.length > 0) {
+    return token.pos.tag;
+  }
+  if (typeof token.pos.coarse === "string" && token.pos.coarse.length > 0) {
+    return token.pos.coarse;
+  }
+  return "";
+}
+
+function isPunct(token) {
+  if (token && token.flags && token.flags.is_punct === true) {
+    return true;
+  }
+  return /^\p{P}+$/u.test(String(token && token.surface ? token.surface : ""));
+}
+
+function isDet(tag) {
+  return tag === "DT" || tag === "PRP$" || tag === "WDT" || tag === "PDT";
+}
+
+function isAdj(tag) {
+  return tag === "JJ" || tag === "JJR" || tag === "JJS";
+}
+
+function isNoun(tag) {
+  return tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS";
+}
+
+function isVerb(tag) {
+  return /^VB/.test(tag);
+}
+
+function isPrep(tag) {
+  return tag === "IN" || tag === "TO";
+}
+
+function spanTextFromCanonical(canonicalText, span, unit) {
+  const text = String(canonicalText || "");
+  if (unit === "utf16_code_units") {
+    return text.slice(span.start, span.end);
+  }
+  if (unit === "unicode_codepoints") {
+    return Array.from(text).slice(span.start, span.end).join("");
+  }
+  if (unit === "bytes_utf8") {
+    return Buffer.from(text, "utf8").slice(span.start, span.end).toString("utf8");
+  }
+  throw errors.createError(
+    errors.ERROR_CODES.E_INVARIANT_VIOLATION,
+    "Stage 09 received unsupported index_basis.unit.",
+    { unit: unit }
   );
+}
+
+function groupTokensBySentence(tokens) {
+  const bySentence = new Map();
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (!bySentence.has(token.segment_id)) {
+      bySentence.set(token.segment_id, []);
+    }
+    bySentence.get(token.segment_id).push(token);
+  }
+  for (const list of bySentence.values()) {
+    list.sort(function (a, b) { return a.i - b.i; });
+  }
+  return bySentence;
+}
+
+function buildMweCandidates(seed, tokenById) {
+  const annotations = Array.isArray(seed.annotations) ? seed.annotations : [];
+  const out = [];
+
+  for (let i = 0; i < annotations.length; i += 1) {
+    const annotation = annotations[i];
+    if (!annotation || annotation.kind !== "mwe" || annotation.status !== "accepted") {
+      continue;
+    }
+    if (!annotation.anchor || !Array.isArray(annotation.anchor.selectors)) {
+      continue;
+    }
+    const tokenSelector = annotation.anchor.selectors.find(function (s) { return s && s.type === "TokenSelector"; });
+    if (!tokenSelector || !Array.isArray(tokenSelector.token_ids) || tokenSelector.token_ids.length === 0) {
+      continue;
+    }
+
+    const tokenObjs = tokenSelector.token_ids.map(function (id) { return tokenById.get(id); }).filter(Boolean);
+    if (tokenObjs.length !== tokenSelector.token_ids.length) {
+      continue;
+    }
+    tokenObjs.sort(function (a, b) { return a.i - b.i; });
+
+    const sentenceId = tokenObjs[0].segment_id;
+    if (tokenObjs.some(function (t) { return t.segment_id !== sentenceId; })) {
+      continue;
+    }
+
+    const startIdx = tokenObjs[0].i;
+    const endIdx = tokenObjs[tokenObjs.length - 1].i;
+    const span = {
+      start: tokenObjs[0].span.start,
+      end: tokenObjs[tokenObjs.length - 1].span.end
+    };
+    const text = annotation.label || annotation.surface || tokenObjs.map(function (t) { return t.surface; }).join(" ");
+
+    out.push({
+      id: annotation.id,
+      sentenceId: sentenceId,
+      tokenIds: tokenObjs.map(function (t) { return t.id; }),
+      startIdx: startIdx,
+      endIdx: endIdx,
+      span: span,
+      text: text
+    });
+  }
+
+  return out;
+}
+
+function selectWinningMwesBySentence(candidates) {
+  const grouped = new Map();
+  for (let i = 0; i < candidates.length; i += 1) {
+    const c = candidates[i];
+    if (!grouped.has(c.sentenceId)) {
+      grouped.set(c.sentenceId, []);
+    }
+    grouped.get(c.sentenceId).push(c);
+  }
+
+  const winners = new Map();
+  for (const entry of grouped.entries()) {
+    const sentenceId = entry[0];
+    const list = entry[1].slice().sort(function (a, b) {
+      const lenA = a.endIdx - a.startIdx + 1;
+      const lenB = b.endIdx - b.startIdx + 1;
+      if (lenA !== lenB) {
+        return lenB - lenA;
+      }
+      if (a.startIdx !== b.startIdx) {
+        return a.startIdx - b.startIdx;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+
+    const selected = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const candidate = list[i];
+      const overlaps = selected.some(function (picked) {
+        return candidate.startIdx <= picked.endIdx && candidate.endIdx >= picked.startIdx;
+      });
+      if (!overlaps) {
+        selected.push(candidate);
+      }
+    }
+
+    selected.sort(function (a, b) { return a.startIdx - b.startIdx; });
+    winners.set(sentenceId, selected);
+  }
+  return winners;
+}
+
+function buildUnits(tokensBySentence, winningMwes) {
+  const unitsBySentence = new Map();
+
+  for (const entry of tokensBySentence.entries()) {
+    const sentenceId = entry[0];
+    const sentenceTokens = entry[1];
+    const mwes = winningMwes.get(sentenceId) || [];
+    const units = [];
+
+    let tokenCursor = 0;
+    let mweCursor = 0;
+    while (tokenCursor < sentenceTokens.length) {
+      const nextMwe = mwes[mweCursor];
+      const token = sentenceTokens[tokenCursor];
+      if (nextMwe && nextMwe.startIdx === token.i) {
+        units.push({
+          kind: "mwe",
+          id: nextMwe.id,
+          tokenIds: nextMwe.tokenIds.slice(),
+          span: nextMwe.span,
+          text: nextMwe.text
+        });
+        tokenCursor += nextMwe.endIdx - nextMwe.startIdx + 1;
+        mweCursor += 1;
+        continue;
+      }
+
+      units.push({
+        kind: isPunct(token) ? "punctuation" : "token",
+        id: token.id,
+        tokenIds: [token.id],
+        span: token.span,
+        text: token.surface,
+        pos: getTag(token)
+      });
+      tokenCursor += 1;
+    }
+
+    unitsBySentence.set(sentenceId, units);
+  }
+
+  return unitsBySentence;
+}
+
+function asRunUnit(unit) {
+  const pos = unit.pos || "";
+  return {
+    unit: unit,
+    det: unit.kind === "token" && isDet(pos),
+    adj: unit.kind === "token" && isAdj(pos),
+    noun: unit.kind === "mwe" || (unit.kind === "token" && isNoun(pos)),
+    verb: unit.kind === "token" && isVerb(pos),
+    prep: unit.kind === "token" && isPrep(pos)
+  };
+}
+
+function matchNP(run, start) {
+  let i = start;
+  if (i < run.length && run[i].det) {
+    i += 1;
+  }
+  while (i < run.length && run[i].adj) {
+    i += 1;
+  }
+  const nounStart = i;
+  while (i < run.length && run[i].noun) {
+    i += 1;
+  }
+  if (i > nounStart) {
+    return { type: "NP", end: i - 1 };
+  }
+  return null;
+}
+
+function matchPP(run, start) {
+  if (start >= run.length || !run[start].prep) {
+    return null;
+  }
+  const np = matchNP(run, start + 1);
+  if (!np) {
+    return null;
+  }
+  return { type: "PP", end: np.end };
+}
+
+function matchVP(run, start) {
+  let i = start;
+  while (i < run.length && run[i].verb) {
+    i += 1;
+  }
+  if (i === start) {
+    return null;
+  }
+  const np = matchNP(run, i);
+  if (np) {
+    return { type: "VP", end: np.end };
+  }
+  return { type: "VP", end: i - 1 };
+}
+
+function chooseMatch(run, start) {
+  const candidates = [matchVP(run, start), matchPP(run, start), matchNP(run, start)].filter(Boolean);
+  if (candidates.length === 0) {
+    return null;
+  }
+  candidates.sort(function (a, b) {
+    const lenA = a.end - start;
+    const lenB = b.end - start;
+    if (lenA !== lenB) {
+      return lenB - lenA;
+    }
+    const order = { VP: 0, PP: 1, NP: 2 };
+    return order[a.type] - order[b.type];
+  });
+  return candidates[0];
+}
+
+function buildChunks(unitsBySentence, canonicalText, unit) {
+  const chunks = [];
+
+  for (const entry of unitsBySentence.entries()) {
+    const sentenceId = entry[0];
+    const units = entry[1];
+    let run = [];
+
+    function flushRun() {
+      if (run.length === 0) {
+        return;
+      }
+      let i = 0;
+      while (i < run.length) {
+        const chosen = chooseMatch(run, i);
+        if (!chosen) {
+          const fallback = run[i].unit;
+          chunks.push({
+            sentenceId: sentenceId,
+            type: "O",
+            span: fallback.span,
+            tokenIds: fallback.tokenIds.slice(),
+            text: spanTextFromCanonical(canonicalText, fallback.span, unit)
+          });
+          i += 1;
+          continue;
+        }
+        const slice = run.slice(i, chosen.end + 1).map(function (x) { return x.unit; });
+        const span = {
+          start: slice[0].span.start,
+          end: slice[slice.length - 1].span.end
+        };
+        const tokenIds = [];
+        for (let k = 0; k < slice.length; k += 1) {
+          tokenIds.push.apply(tokenIds, slice[k].tokenIds);
+        }
+        chunks.push({
+          sentenceId: sentenceId,
+          type: chosen.type,
+          span: span,
+          tokenIds: tokenIds,
+          text: spanTextFromCanonical(canonicalText, span, unit)
+        });
+        i = chosen.end + 1;
+      }
+      run = [];
+    }
+
+    for (let i = 0; i < units.length; i += 1) {
+      const next = units[i];
+      if (next.kind === "punctuation") {
+        flushRun();
+        chunks.push({
+          sentenceId: sentenceId,
+          type: "O",
+          span: next.span,
+          tokenIds: next.tokenIds.slice(),
+          text: spanTextFromCanonical(canonicalText, next.span, unit)
+        });
+      } else {
+        run.push(asRunUnit(next));
+      }
+    }
+    flushRun();
+  }
+
+  return chunks;
 }
 
 /**
@@ -27,52 +364,58 @@ async function runStage(seed) {
   const out = deepClone(seed);
   const tokens = Array.isArray(out.tokens) ? out.tokens : [];
   const annotations = Array.isArray(out.annotations) ? out.annotations : [];
+  const unit = out.index_basis && out.index_basis.unit ? out.index_basis.unit : "utf16_code_units";
 
-  let i = 0;
-  while (i < tokens.length) {
-    const token = tokens[i];
-    const tag = token.pos && (token.pos.tag || token.pos.coarse);
-    if (!isChunkPos(tag)) {
-      i += 1;
-      continue;
+  for (let i = 0; i < annotations.length; i += 1) {
+    if (annotations[i] && annotations[i].kind === "chunk") {
+      throw errors.createError(
+        errors.ERROR_CODES.E_INVARIANT_VIOLATION,
+        "Stage 09 rejects partially chunked documents with existing chunk annotations."
+      );
     }
+  }
 
-    let j = i + 1;
-    while (j < tokens.length && isChunkPos(tokens[j].pos && (tokens[j].pos.tag || tokens[j].pos.coarse))) {
-      j += 1;
-    }
+  const tokenById = new Map(tokens.map(function (t) { return [t.id, t]; }));
+  const tokensBySentence = groupTokensBySentence(tokens);
+  const mweCandidates = buildMweCandidates(out, tokenById);
+  const winningMwes = selectWinningMwesBySentence(mweCandidates);
+  const unitsBySentence = buildUnits(tokensBySentence, winningMwes);
+  const chunks = buildChunks(unitsBySentence, out.canonical_text, unit);
 
-    const group = tokens.slice(i, j);
+  for (let i = 0; i < chunks.length; i += 1) {
+    const chunk = chunks[i];
     const chunkId = createDeterministicId("chunk", {
-      from: group[0].id,
-      to: group[group.length - 1].id
+      sentence: chunk.sentenceId,
+      type: chunk.type,
+      token_ids: chunk.tokenIds
     });
-
     annotations.push({
       id: chunkId,
       kind: "chunk",
       status: "accepted",
-      chunk_type: "NP",
-      label: group.map(function (t) { return t.surface; }).join(" "),
+      chunk_type: chunk.type,
+      label: chunk.text,
       anchor: {
         selectors: [
           {
+            type: "TextQuoteSelector",
+            exact: chunk.text
+          },
+          {
             type: "TokenSelector",
-            token_ids: group.map(function (t) { return t.id; })
+            token_ids: chunk.tokenIds
           },
           {
             type: "TextPositionSelector",
             span: {
-              start: group[0].span.start,
-              end: group[group.length - 1].span.end
+              start: chunk.span.start,
+              end: chunk.span.end
             }
           }
         ]
       },
-      sources: [{ name: "pos-fsm", kind: "rule" }]
+      sources: [{ name: "chunking-pos-fsm", kind: "rule" }]
     });
-
-    i = j;
   }
 
   out.annotations = annotations;
