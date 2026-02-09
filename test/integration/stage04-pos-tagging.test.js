@@ -67,3 +67,33 @@ test("runPipeline pos_tagged rejects partial docs with existing annotations", as
     }
   );
 });
+
+test(
+  "runPipeline pos_tagged can enrich token lexicon evidence from live wikipedia-title-index",
+  {
+    skip: !process.env.WIKI_INDEX_ENDPOINT
+      ? "Set WIKI_INDEX_ENDPOINT to run live lexicon integration check"
+      : false
+  },
+  async function () {
+    const out = await api.runPipeline("An online store has a shopping cart.", {
+      target: "pos_tagged",
+      services: {
+        "wikipedia-title-index": {
+          endpoint: process.env.WIKI_INDEX_ENDPOINT
+        }
+      }
+    });
+
+    const hasSignal = out.tokens.some(function (token) {
+      return Boolean(
+        token &&
+        token.lexicon &&
+        token.lexicon.wikipedia_title_index &&
+        token.lexicon.wikipedia_title_index.wiki_any_signal === true
+      );
+    });
+
+    assert.equal(hasSignal, true);
+  }
+);

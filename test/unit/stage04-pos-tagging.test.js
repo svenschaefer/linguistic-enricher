@@ -47,6 +47,7 @@ test("stage04 tags each token with Penn tag and coarse class", async function ()
     assert.equal(typeof out.tokens[i].pos, "object");
     assert.equal(PENN_TAGS.has(out.tokens[i].pos.tag), true);
     assert.equal(typeof out.tokens[i].pos.coarse, "string");
+    assert.equal(typeof out.tokens[i].lexicon, "undefined");
   }
 });
 
