@@ -4,7 +4,18 @@ const { deepClone } = require("../../util/deep-clone");
 const { createDeterministicId } = require("../../util/ids");
 
 function isChunkPos(posTag) {
-  return posTag === "NOUN" || posTag === "ADJ" || posTag === "PROPN";
+  return (
+    posTag === "NOUN" ||
+    posTag === "ADJ" ||
+    posTag === "PROPN" ||
+    posTag === "NN" ||
+    posTag === "NNS" ||
+    posTag === "NNP" ||
+    posTag === "NNPS" ||
+    posTag === "JJ" ||
+    posTag === "JJR" ||
+    posTag === "JJS"
+  );
 }
 
 /**
@@ -20,14 +31,14 @@ async function runStage(seed) {
   let i = 0;
   while (i < tokens.length) {
     const token = tokens[i];
-    const tag = token.pos && token.pos.tag;
+    const tag = token.pos && (token.pos.tag || token.pos.coarse);
     if (!isChunkPos(tag)) {
       i += 1;
       continue;
     }
 
     let j = i + 1;
-    while (j < tokens.length && isChunkPos(tokens[j].pos && tokens[j].pos.tag)) {
+    while (j < tokens.length && isChunkPos(tokens[j].pos && (tokens[j].pos.tag || tokens[j].pos.coarse))) {
       j += 1;
     }
 
