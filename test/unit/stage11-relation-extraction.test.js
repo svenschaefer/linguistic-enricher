@@ -165,3 +165,51 @@ test("stage11 rejects partially relation-extracted docs", async function () {
     }
   );
 });
+
+test("stage11 chunk fallback emits relations when dependency labels are weak", async function () {
+  const text = "people can pick products and ship orders.";
+  const tokens = [
+    token("t1", 0, "people", "NNS", 0, 6),
+    token("t2", 1, "can", "MD", 7, 10),
+    token("t3", 2, "pick", "VB", 11, 15),
+    token("t4", 3, "products", "NNS", 16, 24),
+    token("t5", 4, "and", "CC", 25, 28),
+    token("t6", 5, "ship", "VB", 29, 33),
+    token("t7", 6, "orders", "NNS", 34, 40),
+    token("t8", 7, ".", ".", 40, 41)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "people", "NP", { start: 0, end: 6 }),
+    chunk("c2", ["t2"], "can", "VP", { start: 7, end: 10 }),
+    chunk("c3", ["t3", "t4"], "pick products", "VP", { start: 11, end: 24 }),
+    chunk("c4", ["t5"], "and", "O", { start: 25, end: 28 }),
+    chunk("c5", ["t6", "t7"], "ship orders", "VP", { start: 29, end: 40 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t2"),
+    chunkHead("h3", "c3", "t3"),
+    chunkHead("h4", "c5", "t6"),
+    depObs("d1", "t1", "t3", "dep", false),
+    depObs("d2", "t2", "t3", "dep", false),
+    depObs("d3", "t3", null, "root", true),
+    depObs("d4", "t4", "t3", "dep", false),
+    depObs("d5", "t6", "t3", "dep", false),
+    depObs("d6", "t7", "t6", "dep", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  function has(head, label, dep) {
+    return rels.some(function (r) { return r.head.id === head && r.label === label && r.dep.id === dep; });
+  }
+
+  assert.equal(has("t3", "theme", "t4"), true);
+  assert.equal(has("t6", "theme", "t7"), true);
+  assert.equal(has("t3", "modality", "t2"), true);
+  assert.equal(has("t3", "coordination", "t6"), true);
+});

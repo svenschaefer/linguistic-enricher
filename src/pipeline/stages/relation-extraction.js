@@ -21,6 +21,10 @@ function isVerbish(tag) {
   return /^(VB|VBD|VBG|VBN|VBP|VBZ|MD)$/.test(String(tag || ""));
 }
 
+function isNoun(tag) {
+  return tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS";
+}
+
 function getSelector(annotation, type) {
   if (!annotation || !annotation.anchor || !Array.isArray(annotation.anchor.selectors)) {
     return null;
@@ -124,6 +128,221 @@ function roleFromPrepSurface(surface) {
   return null;
 }
 
+function buildOrderedChunks(annotations) {
+  const chunks = [];
+  for (let i = 0; i < annotations.length; i += 1) {
+    const annotation = annotations[i];
+    if (!annotation || annotation.kind !== "chunk" || annotation.status !== "accepted") {
+      continue;
+    }
+    const pos = getSelector(annotation, "TextPositionSelector");
+    const tok = getSelector(annotation, "TokenSelector");
+    if (!pos || !pos.span || !tok || !Array.isArray(tok.token_ids) || tok.token_ids.length === 0) {
+      continue;
+    }
+    chunks.push({
+      id: annotation.id,
+      chunkType: annotation.chunk_type || "O",
+      label: annotation.label || "",
+      span: { start: pos.span.start, end: pos.span.end },
+      tokenIds: tok.token_ids.slice()
+    });
+  }
+  chunks.sort(function (a, b) {
+    if (a.span.start !== b.span.start) {
+      return a.span.start - b.span.start;
+    }
+    if (a.span.end !== b.span.end) {
+      return a.span.end - b.span.end;
+    }
+    return String(a.id).localeCompare(String(b.id));
+  });
+  return chunks;
+}
+
+function containsBoundary(chunk) {
+  const text = String(chunk && chunk.label ? chunk.label : "").trim().toLowerCase();
+  return text === "." || text === "," || text === ";" || text === ":" || text === "!" || text === "?";
+}
+
+function isCoordToken(chunk) {
+  const text = String(chunk && chunk.label ? chunk.label : "").trim().toLowerCase();
+  return text === "and" || text === "or";
+}
+
+function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById) {
+  function nearestPrevNP(idx) {
+    for (let i = idx - 1; i >= 0; i -= 1) {
+      const c = chunks[i];
+      if (containsBoundary(c)) {
+        break;
+      }
+      if (c.chunkType === "NP") {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  function nearestNextNP(idx) {
+    for (let i = idx + 1; i < chunks.length; i += 1) {
+      const c = chunks[i];
+      if (containsBoundary(c)) {
+        break;
+      }
+      if (c.chunkType === "NP") {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  function nearestNextVP(idx) {
+    for (let i = idx + 1; i < chunks.length; i += 1) {
+      const c = chunks[i];
+      if (containsBoundary(c)) {
+        break;
+      }
+      if (c.chunkType === "VP") {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  for (let i = 0; i < chunks.length; i += 1) {
+    const chunk = chunks[i];
+    if (chunk.chunkType !== "VP") {
+      continue;
+    }
+    const predicateId = chunkHeadByChunkId.get(chunk.id);
+    if (!predicateId || !tokenById.has(predicateId)) {
+      continue;
+    }
+    const predTok = tokenById.get(predicateId);
+    const sentenceId = predTok.segment_id;
+
+    const prevNP = nearestPrevNP(i);
+    if (prevNP) {
+      const arg = chunkHeadByChunkId.get(prevNP.id);
+      addRelation(predicateId, arg, "actor", {
+        pattern: "chunk_fallback",
+        dependency_label: null,
+        sentence_id: sentenceId
+      });
+    }
+
+    const nextNP = nearestNextNP(i);
+    if (nextNP) {
+      const arg = chunkHeadByChunkId.get(nextNP.id);
+      addRelation(predicateId, arg, "theme", {
+        pattern: "chunk_fallback",
+        dependency_label: null,
+        sentence_id: sentenceId
+      });
+    }
+
+    // Internal VP argument fallback: prefer noun token inside VP chunk.
+    const internalThemeToken = chunk.tokenIds
+      .map(function (id) { return tokenById.get(id); })
+      .filter(Boolean)
+      .filter(function (t) { return t.id !== predicateId && isNoun(getTag(t)); })
+      .sort(function (a, b) { return a.i - b.i; })[0];
+    if (internalThemeToken) {
+      addRelation(predicateId, internalThemeToken.id, "theme", {
+        pattern: "chunk_fallback",
+        dependency_label: "obj",
+        sentence_id: sentenceId
+      });
+    }
+
+    const chunkLower = String(chunk.label || "").toLowerCase();
+    if (chunkLower.indexOf(" in ") !== -1 || chunkLower.startsWith("in ")) {
+      const arg = nextNP ? chunkHeadByChunkId.get(nextNP.id) : null;
+      addRelation(predicateId, arg, "location", {
+        pattern: "chunk_fallback",
+        dependency_label: "prep",
+        prep_surface: "in",
+        sentence_id: sentenceId
+      });
+    }
+    if (chunkLower.indexOf(" of ") !== -1 || chunkLower.startsWith("of ")) {
+      const arg = nextNP ? chunkHeadByChunkId.get(nextNP.id) : null;
+      addRelation(predicateId, arg, "topic", {
+        pattern: "chunk_fallback",
+        dependency_label: "prep",
+        prep_surface: "of",
+        sentence_id: sentenceId
+      });
+    }
+    if (chunkLower.indexOf(" with ") !== -1 || chunkLower.startsWith("with ")) {
+      const arg = nextNP ? chunkHeadByChunkId.get(nextNP.id) : null;
+      addRelation(predicateId, arg, "instrument", {
+        pattern: "chunk_fallback",
+        dependency_label: "prep",
+        prep_surface: "with",
+        sentence_id: sentenceId
+      });
+    }
+    if (chunkLower.indexOf(" for ") !== -1 || chunkLower.startsWith("for ")) {
+      const arg = nextNP ? chunkHeadByChunkId.get(nextNP.id) : null;
+      addRelation(predicateId, arg, "beneficiary", {
+        pattern: "chunk_fallback",
+        dependency_label: "prep",
+        prep_surface: "for",
+        sentence_id: sentenceId
+      });
+    }
+
+    if (chunkLower.indexOf(" to ") !== -1 || chunkLower.startsWith("to ")) {
+      const nextVP = nearestNextVP(i);
+      if (nextVP) {
+        addRelation(predicateId, chunkHeadByChunkId.get(nextVP.id), "complement_clause", {
+          pattern: "chunk_fallback",
+          dependency_label: "xcomp",
+          sentence_id: sentenceId
+        });
+      }
+    }
+
+    if (getTag(predTok) === "MD") {
+      const nextVP = nearestNextVP(i);
+      if (nextVP) {
+        const nextPred = chunkHeadByChunkId.get(nextVP.id);
+        addRelation(nextPred, predicateId, "modality", {
+          pattern: "chunk_fallback",
+          dependency_label: "aux",
+          sentence_id: sentenceId
+        });
+      }
+    }
+  }
+
+  for (let i = 1; i + 1 < chunks.length; i += 1) {
+    const mid = chunks[i];
+    if (!isCoordToken(mid)) {
+      continue;
+    }
+    const left = chunks[i - 1];
+    const right = chunks[i + 1];
+    if (left.chunkType !== "VP" || right.chunkType !== "VP") {
+      continue;
+    }
+    const leftPred = chunkHeadByChunkId.get(left.id);
+    const rightPred = chunkHeadByChunkId.get(right.id);
+    if (!leftPred || !rightPred || !tokenById.has(leftPred)) {
+      continue;
+    }
+    addRelation(leftPred, rightPred, "coordination", {
+      pattern: "chunk_fallback",
+      dependency_label: "conj",
+      sentence_id: tokenById.get(leftPred).segment_id
+    });
+  }
+
+  void relations;
+}
+
 function isExistingStage11Relation(annotation) {
   return Boolean(
     annotation &&
@@ -214,6 +433,14 @@ async function runStage(seed) {
   }
 
   const chunkIndex = buildChunkIndex(annotations);
+  const chunks = buildOrderedChunks(annotations);
+  const chunkHeadByChunkId = new Map();
+  for (let i = 0; i < annotations.length; i += 1) {
+    const annotation = annotations[i];
+    if (annotation && annotation.kind === "chunk_head" && annotation.status === "accepted" && annotation.chunk_id && annotation.head && annotation.head.id) {
+      chunkHeadByChunkId.set(annotation.chunk_id, annotation.head.id);
+    }
+  }
   function resolvePredicate(tokenId) {
     if (!tokenId || !tokenById.has(tokenId)) {
       return null;
@@ -270,6 +497,8 @@ async function runStage(seed) {
       );
     }
   }
+
+  maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById);
 
   for (let i = 0; i < dependencyObs.length; i += 1) {
     const dep = dependencyObs[i];
