@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const cli = require("../../bin/linguistic-enricher");
+const api = require("../../src/index");
 
 test("CLI run writes output and validate succeeds", async function () {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ling-enricher-"));
@@ -28,6 +29,12 @@ test("CLI run writes output and validate succeeds", async function () {
 
   const output = JSON.parse(fs.readFileSync(outputFile, "utf8"));
   assert.equal(output.stage, "relations_extracted");
+  assert.equal(Object.prototype.hasOwnProperty.call(output, "seed"), false);
+
+  const fromApi = await api.runPipeline("Alice sees Bob in Berlin.", {
+    target: "relations_extracted"
+  });
+  assert.deepEqual(output, fromApi);
 
   const logs = [];
   const originalLog = console.log;

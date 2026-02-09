@@ -38,3 +38,41 @@ test("validateDocument throws typed schema error for invalid docs", function () 
   );
 });
 
+test("validateDocument throws typed invariant error for invariant violations", function () {
+  const bad = makeCanonicalDoc();
+  bad.stage = "tokenized";
+  bad.segments = [
+    {
+      id: "s1",
+      index: 0,
+      span: { start: 0, end: 11 },
+      token_range: { start: 0, end: 2 }
+    }
+  ];
+  bad.tokens = [
+    {
+      id: "t1",
+      i: 0,
+      segment_id: "missing-segment",
+      span: { start: 0, end: 5 },
+      surface: "Hello"
+    },
+    {
+      id: "t2",
+      i: 1,
+      segment_id: "s1",
+      span: { start: 6, end: 11 },
+      surface: "world"
+    }
+  ];
+
+  assert.throws(
+    function () {
+      api.validateDocument(bad, { skipSchema: true });
+    },
+    function (error) {
+      assert.equal(error.code, errors.ERROR_CODES.E_INVARIANT_VIOLATION);
+      return true;
+    }
+  );
+});

@@ -1,4 +1,22 @@
-# TODO: Build `linguistic-enricher` as an Independent CommonJS npm Package
+# TODO: Harden `linguistic-enricher` to Prototype-Semantic Parity (CommonJS)
+
+## Current Status (Baseline Complete)
+
+- Independent CommonJS package scaffold is complete.
+- Public API (`runPipeline`, `runDoctor`, `validateDocument`) is implemented.
+- CLI wrapper (`run`, `doctor`, `validate`) is implemented.
+- Validation hooks and baseline invariant checks are integrated.
+- Deterministic utility baseline exists.
+- Unit + integration test suites and lint gates are in place.
+
+## Next Execution Mode (Fidelity Hardening)
+
+- Remaining work is fidelity hardening, not scaffolding.
+- Prototype source (`C:\code\Secos\prototypes\linguistics\pipeline`) is semantic reference only.
+- Do NOT port prototype file/YAML artifact mechanics or script-driven execution.
+- Preserve API-first in-memory architecture.
+- Execute stage hardening sequentially: 00 -> 11.
+- Every stage hardening step is test-gated and lint-gated before moving on.
 
 ## 0) Guardrails and Scope Lock
 
@@ -14,7 +32,7 @@
   - All `xx-*` prototype directories.
 - Preserve output boundary:
   - Authoritative output target stage = `relations_extracted`.
-- Keep `README.md` and `schema.json` unchanged for now.
+- Keep `schema.json` unchanged unless explicitly requested.
 
 ## 1) Repository and Folder Structure (CommonJS Layout)
 
@@ -284,23 +302,23 @@
   - `12-elementary-assertions`
   - all `xx-*` directories
 
-## 12) Migration Sequence (Execution Plan)
+## 12) Fidelity Hardening Sequence (Execution Plan)
 
-1. Scaffold package structure and CommonJS package metadata.
-2. Implement public API shell and stage registry.
-3. Migrate core text stages (normalization -> tokenization).
-4. Migrate POS stage and wire Python runtime bridge.
-5. Migrate spaCy-only MWE candidate extraction.
-6. Migrate MWE construction and materialization.
-7. Migrate linguistic analysis stage.
-8. Migrate POS-FSM chunking stage.
-9. Migrate head identification and relation extraction.
-10. Integrate optional wikipedia-title-index client.
-11. Wire schema validation + runtime invariants at stage boundaries.
-12. Implement CLI wrapper and doctor command.
-13. Add unit + integration test suites.
-14. Run full deterministic regression checks.
-15. Prepare package for independent versioning and publish workflow.
+1. Baseline consistency checks (docs/API alignment, validation/determinism guardrails).
+2. Harden stage 00 (surface normalization), add focused unit/integration tests.
+3. Harden stage 01 (canonicalization), add focused tests.
+4. Harden stage 02 (segmentation), add focused tests.
+5. Harden stage 03 (tokenization), add focused tests.
+6. Harden stage 04 (POS tagging), add focused tests.
+7. Harden stage 05 (spaCy MWE candidate extraction path), add focused tests.
+8. Harden stage 06 (MWE candidate construction), add focused tests.
+9. Harden stage 07 (MWE materialization), add focused tests.
+10. Harden stage 08 (linguistic analysis), add focused tests.
+11. Harden stage 09 (POS-FSM chunking), add focused tests.
+12. Harden stage 10 (head identification), add focused tests.
+13. Harden stage 11 (relation extraction), add focused tests.
+14. Run full deterministic regression suite.
+15. Final release hardening and versioning.
 
 ## 13) Acceptance Criteria
 

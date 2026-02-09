@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const { stableStringify } = require("./determinism");
 
 /**
  * Build deterministic ID from namespace and payload.
@@ -10,7 +11,7 @@ const crypto = require("node:crypto");
  */
 function createDeterministicId(namespace, payload) {
   const normalizedNamespace = String(namespace || "id");
-  const basis = typeof payload === "string" ? payload : JSON.stringify(payload);
+  const basis = typeof payload === "string" ? payload : stableStringify(payload);
   const digest = crypto.createHash("sha1").update(basis).digest("hex").slice(0, 12);
   return normalizedNamespace + "-" + digest;
 }

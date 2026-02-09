@@ -149,17 +149,27 @@ The output is designed to be:
 ## Usage as a library
 
 ```js
-import { runPipeline } from "linguistic-enricher";
+const { runPipeline } = require("linguistic-enricher");
 
 const result = await runPipeline(text, {
   target: "relations_extracted"
 });
 
-console.log(result.seed);
+console.log(result.stage);
 ```
 
 The library API is the primary interface.
 File I/O, serialization, and CLI concerns are intentionally kept outside the core logic.
+
+---
+
+## Current maturity and prototype parity
+
+This package currently provides a stable baseline implementation of the full 00..11 pipeline surface.
+
+- Baseline orchestration, validation hooks, CLI/API integration, and deterministic utilities are implemented and tested.
+- Stage-by-stage linguistic parity hardening against the intended prototype semantics is still in progress.
+- The Secos prototype (`C:\code\Secos\prototypes\linguistics\pipeline`) is treated as a semantic reference only, not as a technical implementation template.
 
 ---
 

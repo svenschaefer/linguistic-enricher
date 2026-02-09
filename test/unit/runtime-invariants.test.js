@@ -91,3 +91,32 @@ test("validateRuntimeInvariants fails on invalid span ordering", function () {
   );
 });
 
+test("validateRuntimeInvariants fails when segment index order is unstable", function () {
+  const bad = makeValidDoc();
+  bad.segments[0].index = 3;
+
+  assert.throws(
+    function () {
+      invariants.validateRuntimeInvariants(bad);
+    },
+    function (error) {
+      assert.equal(error.code, errors.ERROR_CODES.E_INVARIANT_VIOLATION);
+      return true;
+    }
+  );
+});
+
+test("validateRuntimeInvariants fails when segment token_range exceeds token count", function () {
+  const bad = makeValidDoc();
+  bad.segments[0].token_range = { start: 0, end: 3 };
+
+  assert.throws(
+    function () {
+      invariants.validateRuntimeInvariants(bad);
+    },
+    function (error) {
+      assert.equal(error.code, errors.ERROR_CODES.E_INVARIANT_VIOLATION);
+      return true;
+    }
+  );
+});

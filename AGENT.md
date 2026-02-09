@@ -11,10 +11,11 @@
 
 ## Current Phase
 
-- Execution phase: scaffold only.
-- Create package structure and CommonJS metadata.
-- Provide stub implementations only.
-- Do not implement pipeline/business logic yet.
+- Baseline implementation is in place (pipeline shell + stage modules + CLI + validation + Python bridge + tests).
+- Active focus is prototype-parity hardening:
+  - align stage behavior with `C:\code\Secos\prototypes\linguistics\pipeline` (00..11 scope),
+  - increase deterministic fidelity of stage outputs,
+  - close remaining functional gaps while preserving CommonJS-only constraints.
 
 ## Scope
 
@@ -25,18 +26,22 @@
 - Exclude:
   - Stage 12.
   - Any `xx-*` prototype scope.
+- Prototype repository at `C:\code\Secos\prototypes\linguistics\pipeline` is a semantic/domain reference only.
+- That prototype is NOT an implementation template and NOT a technical port target.
+- File/YAML artifact mechanics and step-script execution from prototypes are NOT ALLOWED in this package core.
+- Core implementation MUST remain API-first and in-memory via `runPipeline(...)`, with CLI as thin wrapper.
 
-## Stub Contract
+## Implementation Contract
 
-- Every scaffolded module function must throw:
-  - `new Error("Not implemented")`
-- Exception:
-  - CLI command stubs (`run`, `doctor`) print TODO notices.
+- Core modules are implemented and callable; do not regress them to scaffold stubs.
+- Any unfinished behavior MUST be represented as explicit, typed runtime errors (not silent fallbacks).
+- New modules introduced during future phases MUST include tests in the same phase.
 
 ## External Services and Runtime
 
-- Python integration is subprocess-based only (JSON stdin/stdout) and scaffolded only.
-- `wikipedia-title-index` integration is optional HTTP service and scaffolded only.
+- Python integration is subprocess-based only (JSON stdin/stdout).
+- `wikipedia-title-index` integration is optional HTTP service.
+- Both integrations MUST remain optional where documented and deterministic in fallback behavior.
 
 ## Test Gate (Mandatory)
 
@@ -156,6 +161,8 @@ Phases must be implemented sequentially in order.
 
 Each phase MUST include corresponding tests before the next phase begins.
 Phases without passing tests and lint are considered incomplete and MUST be resolved before advancing.
+Stage fidelity work MUST be executed sequentially (00 -> 11), one stage block at a time.
+Each stage block is NOT ALLOWED to advance until lint and tests are green.
 
 ## Phase Completion Commit Rule (Mandatory)
 

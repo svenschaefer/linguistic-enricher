@@ -10,6 +10,7 @@ test("runPipeline reaches relations_extracted with deterministic output", async 
   const second = await api.runPipeline(input, { target: "relations_extracted" });
 
   assert.equal(first.stage, "relations_extracted");
+  assert.equal(Object.prototype.hasOwnProperty.call(first, "seed"), false);
   assert.equal(Array.isArray(first.segments), true);
   assert.equal(Array.isArray(first.tokens), true);
   assert.equal(Array.isArray(first.annotations), true);

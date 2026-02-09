@@ -1,6 +1,34 @@
 "use strict";
 
 /**
+ * Deterministically stringify plain JSON-like values.
+ * Object keys are sorted recursively to avoid insertion-order variance.
+ * @param {any} value Input value.
+ * @returns {string} Stable JSON string.
+ */
+function stableStringify(value) {
+  return JSON.stringify(sortValue(value));
+}
+
+function sortValue(value) {
+  if (Array.isArray(value)) {
+    return value.map(sortValue);
+  }
+
+  if (value && typeof value === "object") {
+    const keys = Object.keys(value).sort();
+    const out = {};
+    for (let i = 0; i < keys.length; i += 1) {
+      const key = keys[i];
+      out[key] = sortValue(value[key]);
+    }
+    return out;
+  }
+
+  return value;
+}
+
+/**
  * Build a comparator function for deterministic sorting by keys.
  * @param {string[]} keys Ordered property keys.
  * @returns {(a:any,b:any)=>number} Comparator.
@@ -49,5 +77,6 @@ function stableSort(list, comparator) {
 
 module.exports = {
   byKeys,
-  stableSort
+  stableSort,
+  stableStringify
 };

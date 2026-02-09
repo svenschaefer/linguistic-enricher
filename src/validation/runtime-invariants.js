@@ -72,6 +72,7 @@ function validateRuntimeInvariants(doc) {
   const annotations = Array.isArray(doc.annotations) ? doc.annotations : [];
 
   const segmentIds = new Set();
+  let previousSegmentStart = -1;
   for (let i = 0; i < segments.length; i += 1) {
     const segment = segments[i];
     const path = "segments[" + i + "]";
@@ -84,10 +85,40 @@ function validateRuntimeInvariants(doc) {
     }
     segmentIds.add(segment.id);
 
+    if (segment.index !== i) {
+      failInvariant("Segment index field `index` must match array position.", {
+        path: path,
+        expected: i,
+        actual: segment.index
+      });
+    }
+
     validateSpan(segment.span, maxEnd, path + ".span");
+    if (segment.span.start < previousSegmentStart) {
+      failInvariant("Segments must be ordered by span.start.", {
+        path: path,
+        previous_start: previousSegmentStart,
+        actual_start: segment.span.start
+      });
+    }
+    previousSegmentStart = segment.span.start;
+
+    if (!isObject(segment.token_range)) {
+      failInvariant("Segment token_range must be an object.", { path: path + ".token_range" });
+    }
+    if (!Number.isInteger(segment.token_range.start) || !Number.isInteger(segment.token_range.end)) {
+      failInvariant("Segment token_range start/end must be integers.", { path: path + ".token_range" });
+    }
+    if (segment.token_range.start < 0 || segment.token_range.end < segment.token_range.start) {
+      failInvariant("Segment token_range must satisfy 0 <= start <= end.", {
+        path: path + ".token_range",
+        token_range: segment.token_range
+      });
+    }
   }
 
   const tokensById = new Map();
+  let previousTokenStart = -1;
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
     const path = "tokens[" + i + "]";
@@ -109,6 +140,26 @@ function validateRuntimeInvariants(doc) {
     }
 
     validateSpan(token.span, maxEnd, path + ".span");
+    if (token.span.start < previousTokenStart) {
+      failInvariant("Tokens must be ordered by span.start.", {
+        path: path,
+        previous_start: previousTokenStart,
+        actual_start: token.span.start
+      });
+    }
+    previousTokenStart = token.span.start;
+  }
+
+  for (let i = 0; i < segments.length; i += 1) {
+    const segment = segments[i];
+    const path = "segments[" + i + "].token_range";
+    if (segment.token_range.end > tokens.length) {
+      failInvariant("Segment token_range end exceeds token count.", {
+        path: path,
+        end: segment.token_range.end,
+        token_count: tokens.length
+      });
+    }
   }
 
   const annotationIds = new Set();
