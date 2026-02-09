@@ -1,22 +1,14 @@
 "use strict";
 
+const runPipelineModule = require("./pipeline/run-pipeline");
+const stageRegistry = require("./pipeline/stage-registry");
+
 /**
  * Allowed pipeline targets for this package.
+ * This list is authoritative and aligned with stage-registry.
  * @type {readonly string[]}
  */
-const PIPELINE_TARGETS = Object.freeze([
-  "canonical",
-  "segmented",
-  "tokenized",
-  "pos_tagged",
-  "mwe_candidates",
-  "mwe_pattern_candidates",
-  "mwe_materialized",
-  "parsed",
-  "chunked",
-  "heads_identified",
-  "relations_extracted"
-]);
+const PIPELINE_TARGETS = stageRegistry.PIPELINE_TARGETS;
 
 /**
  * Run the linguistic enrichment pipeline through a target stage.
@@ -27,9 +19,7 @@ const PIPELINE_TARGETS = Object.freeze([
  * @returns {Promise<object>} Enriched seed document.
  */
 async function runPipeline(input, options) {
-  void input;
-  void options;
-  throw new Error("Not implemented");
+  return runPipelineModule.runPipelineInternal(input, options);
 }
 
 /**

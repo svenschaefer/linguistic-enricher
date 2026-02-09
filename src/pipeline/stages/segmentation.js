@@ -1,4 +1,4 @@
-\"use strict\";
+"use strict";
 
 /**
  * Stage stub: segmentation.
@@ -11,7 +11,7 @@
 async function runStage(seed, context) {
   void seed;
   void context;
-  throw new Error(\"Not implemented\");
+  throw new Error("Not implemented");
 }
 
 module.exports = {
