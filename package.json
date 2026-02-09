@@ -1,0 +1,27 @@
+{
+  "name": "linguistic-enricher",
+  "version": "0.1.0",
+  "description": "Deterministic linguistic enrichment pipeline for Node.js (CommonJS)",
+  "main": "src/index.js",
+  "bin": {
+    "linguistic-enricher": "bin/linguistic-enricher.js"
+  },
+  "scripts": {
+    "test": "node -e \"console.log('TODO: tests are not implemented yet')\"",
+    "test:unit": "node -e \"console.log('TODO: unit tests are not implemented yet')\"",
+    "test:integration": "node -e \"console.log('TODO: integration tests are not implemented yet')\"",
+    "lint": "node -e \"console.log('TODO: lint is not implemented yet')\"",
+    "doctor": "node bin/linguistic-enricher.js doctor"
+  },
+  "keywords": [
+    "nlp",
+    "linguistics",
+    "pipeline",
+    "commonjs"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.10.0"
+  }
+}
+
