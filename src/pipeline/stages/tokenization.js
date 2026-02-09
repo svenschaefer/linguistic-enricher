@@ -3,46 +3,117 @@
 const { deepClone } = require("../../util/deep-clone");
 const { normalizeSpan } = require("../../util/spans");
 const errors = require("../../util/errors");
+const winkTokenizer = require("wink-tokenizer");
 
-const TOKEN_REGEX =
-  /(?:\p{L}\.){2,}|\.{3}|\p{L}[\p{L}\p{N}'’ʼ]*(?:-\p{L}[\p{L}\p{N}'’ʼ]*)+|\p{L}[\p{L}\p{N}'’ʼ]*|\p{N}+|[^\s]/gu;
+const TOKENIZER = winkTokenizer();
 
-function splitContractions(surface, startUtf16) {
-  const apostropheSuffix = /^(.*?)(['’ʼ]s)$/u.exec(surface);
-  if (apostropheSuffix && apostropheSuffix[1].length > 0) {
-    const base = apostropheSuffix[1];
-    const suffix = apostropheSuffix[2];
-    return [
-      { surface: base, startUtf16: startUtf16, endUtf16: startUtf16 + base.length },
-      {
-        surface: suffix,
-        startUtf16: startUtf16 + base.length,
-        endUtf16: startUtf16 + base.length + suffix.length
-      }
-    ];
-  }
+function mergePieces(pieces, start, end, value, tag) {
+  return {
+    value: value,
+    start: pieces[start].start,
+    end: pieces[end].end,
+    tag: tag || pieces[start].tag
+  };
+}
 
-  const ntSuffix = /^(.*?)(n't)$/u.exec(surface);
-  if (ntSuffix && ntSuffix[1].length > 0) {
-    const base = ntSuffix[1];
-    const suffix = ntSuffix[2];
-    return [
-      { surface: base, startUtf16: startUtf16, endUtf16: startUtf16 + base.length },
-      {
-        surface: suffix,
-        startUtf16: startUtf16 + base.length,
-        endUtf16: startUtf16 + base.length + suffix.length
-      }
-    ];
-  }
-
-  return [
-    {
-      surface: surface,
-      startUtf16: startUtf16,
-      endUtf16: startUtf16 + surface.length
+function mergeEllipsis(pieces) {
+  const merged = [];
+  for (let i = 0; i < pieces.length; i += 1) {
+    if (
+      i + 2 < pieces.length &&
+      pieces[i].value === "." &&
+      pieces[i + 1].value === "." &&
+      pieces[i + 2].value === "." &&
+      pieces[i].end === pieces[i + 1].start &&
+      pieces[i + 1].end === pieces[i + 2].start
+    ) {
+      merged.push(mergePieces(pieces, i, i + 2, "...", "punctuation"));
+      i += 2;
+      continue;
     }
-  ];
+    merged.push(pieces[i]);
+  }
+  return merged;
+}
+
+function mergeAbbreviations(pieces) {
+  const merged = [];
+  let i = 0;
+  while (i < pieces.length) {
+    if (/^[A-Za-z]$/.test(pieces[i].value) && i + 1 < pieces.length && pieces[i + 1].value === ".") {
+      let j = i;
+      const parts = [];
+      while (
+        j + 1 < pieces.length &&
+        /^[A-Za-z]$/.test(pieces[j].value) &&
+        pieces[j + 1].value === "." &&
+        pieces[j].end === pieces[j + 1].start
+      ) {
+        parts.push(pieces[j].value + ".");
+        j += 2;
+      }
+      if (parts.length >= 2) {
+        merged.push(mergePieces(pieces, i, j - 1, parts.join(""), "word"));
+        i = j;
+        continue;
+      }
+    }
+    merged.push(pieces[i]);
+    i += 1;
+  }
+  return merged;
+}
+
+function mergeHyphenCompounds(pieces) {
+  const merged = [];
+  let i = 0;
+  while (i < pieces.length) {
+    if (
+      /^[A-Za-z0-9]+$/.test(pieces[i].value) &&
+      i + 2 < pieces.length &&
+      pieces[i + 1].value === "-" &&
+      /^[A-Za-z0-9]+$/.test(pieces[i + 2].value) &&
+      pieces[i].end === pieces[i + 1].start &&
+      pieces[i + 1].end === pieces[i + 2].start
+    ) {
+      let j = i + 2;
+      let value = pieces[i].value + "-" + pieces[i + 2].value;
+      while (
+        j + 2 < pieces.length &&
+        pieces[j + 1].value === "-" &&
+        /^[A-Za-z0-9]+$/.test(pieces[j + 2].value) &&
+        pieces[j].end === pieces[j + 1].start &&
+        pieces[j + 1].end === pieces[j + 2].start
+      ) {
+        value += "-" + pieces[j + 2].value;
+        j += 2;
+      }
+      merged.push(mergePieces(pieces, i, j, value, "word"));
+      i = j + 1;
+      continue;
+    }
+    merged.push(pieces[i]);
+    i += 1;
+  }
+  return merged;
+}
+
+function mergeApostropheS(pieces) {
+  const merged = [];
+  for (let i = 0; i < pieces.length; i += 1) {
+    if (
+      i + 1 < pieces.length &&
+      (pieces[i].value === "'" || pieces[i].value === "’" || pieces[i].value === "ʼ") &&
+      pieces[i + 1].value === "s" &&
+      pieces[i].end === pieces[i + 1].start
+    ) {
+      merged.push(mergePieces(pieces, i, i + 1, pieces[i].value + "s", "word"));
+      i += 1;
+      continue;
+    }
+    merged.push(pieces[i]);
+  }
+  return merged;
 }
 
 function buildIndexMaps(text) {
@@ -167,22 +238,56 @@ function fromUtf16(index, unit, maps) {
 
 function tokenizeSegment(segmentText, segmentStartUtf16, unit, maps) {
   const tokens = [];
-  TOKEN_REGEX.lastIndex = 0;
-  let match = TOKEN_REGEX.exec(segmentText);
+  const rawTokens = TOKENIZER.tokenize(segmentText);
+  const pieces = [];
+  let cursor = 0;
 
-  while (match) {
-    const startUtf16 = segmentStartUtf16 + match.index;
-    const split = splitContractions(match[0], startUtf16);
-    for (let i = 0; i < split.length; i += 1) {
-      tokens.push({
-        surface: split[i].surface,
-        span: normalizeSpan(
-          fromUtf16(split[i].startUtf16, unit, maps),
-          fromUtf16(split[i].endUtf16, unit, maps)
-        )
-      });
+  for (let i = 0; i < rawTokens.length; i += 1) {
+    const item = rawTokens[i];
+    if (!item || typeof item.value !== "string" || item.value.length === 0) {
+      continue;
     }
-    match = TOKEN_REGEX.exec(segmentText);
+    if (item.tag === "space" || item.tag === "tab" || item.tag === "newline") {
+      continue;
+    }
+
+    const localStart = segmentText.indexOf(item.value, cursor);
+    if (localStart === -1) {
+      throw errors.createError(
+        errors.ERROR_CODES.E_INVARIANT_VIOLATION,
+        "Stage 03 could not align wink-tokenizer output to segment text.",
+        { token: item.value, tag: item.tag }
+      );
+    }
+    const localEnd = localStart + item.value.length;
+    cursor = localEnd;
+    pieces.push({
+      value: item.value,
+      start: localStart,
+      end: localEnd,
+      tag: item.tag
+    });
+  }
+
+  const normalizedPieces = mergeApostropheS(
+    mergeHyphenCompounds(
+      mergeAbbreviations(
+        mergeEllipsis(pieces)
+      )
+    )
+  );
+
+  for (let i = 0; i < normalizedPieces.length; i += 1) {
+    const piece = normalizedPieces[i];
+    const startUtf16 = segmentStartUtf16 + piece.start;
+    const endUtf16 = segmentStartUtf16 + piece.end;
+    tokens.push({
+      surface: piece.value,
+      span: normalizeSpan(
+        fromUtf16(startUtf16, unit, maps),
+        fromUtf16(endUtf16, unit, maps)
+      )
+    });
   }
 
   return tokens;
