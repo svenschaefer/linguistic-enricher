@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
+const api = require("../src/index");
+
 /**
  * CLI command stub for `run`.
  * Intended behavior: execute pipeline and print/write result.
@@ -13,8 +15,24 @@ function run() {
  * CLI command stub for `doctor`.
  * Intended behavior: execute runtime checks and return status.
  */
-function doctor() {
-  console.log("TODO: doctor command is not implemented yet");
+async function doctor() {
+  try {
+    const result = await api.runDoctor({});
+    console.log("Doctor checks passed.");
+    console.log(
+      "Python executable: " +
+        result.python.executable +
+        " (" +
+        result.python.version +
+        ")"
+    );
+    console.log("spaCy: ok");
+    console.log("spaCy model: " + result.model.name + " (installed)");
+  } catch (error) {
+    const code = error && error.code ? error.code : "E_DOCTOR_FAILED";
+    console.error("Doctor checks failed [" + code + "]: " + error.message);
+    process.exitCode = 1;
+  }
 }
 
 /**
@@ -25,7 +43,7 @@ function validate() {
   console.log("TODO: validate command is not implemented yet");
 }
 
-function main(argv) {
+async function main(argv) {
   const command = argv[2] || "run";
 
   if (command === "run") {
@@ -34,7 +52,7 @@ function main(argv) {
   }
 
   if (command === "doctor") {
-    doctor();
+    await doctor();
     return;
   }
 
@@ -47,7 +65,10 @@ function main(argv) {
 }
 
 if (require.main === module) {
-  main(process.argv);
+  main(process.argv).catch(function onMainError(error) {
+    console.error("CLI failed: " + error.message);
+    process.exit(1);
+  });
 }
 
 module.exports = {

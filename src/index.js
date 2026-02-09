@@ -2,6 +2,7 @@
 
 const runPipelineModule = require("./pipeline/run-pipeline");
 const stageRegistry = require("./pipeline/stage-registry");
+const runtimeCheck = require("./python/runtime-check");
 
 /**
  * Allowed pipeline targets for this package.
@@ -30,8 +31,7 @@ async function runPipeline(input, options) {
  * @returns {Promise<object>} Doctor report.
  */
 async function runDoctor(options) {
-  void options;
-  throw new Error("Not implemented");
+  return runtimeCheck.runRuntimeChecks(options);
 }
 
 /**
