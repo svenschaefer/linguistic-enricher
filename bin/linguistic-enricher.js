@@ -1,19 +1,75 @@
 #!/usr/bin/env node
 "use strict";
 
+const fs = require("node:fs");
 const api = require("../src/index");
 
-/**
- * CLI command stub for `run`.
- * Intended behavior: execute pipeline and print/write result.
- */
-function run() {
-  console.log("TODO: run command is not implemented yet");
+function parseArgs(argv) {
+  const args = argv.slice(3);
+  const out = {};
+
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === "--pretty") {
+      out.pretty = true;
+      continue;
+    }
+    if (arg === "--strict") {
+      out.strict = true;
+      continue;
+    }
+    if (arg === "--in" || arg === "--text" || arg === "--out" || arg === "--target" || arg === "--service-wti-endpoint" || arg === "--timeout-ms") {
+      out[arg.slice(2)] = args[i + 1];
+      i += 1;
+      continue;
+    }
+  }
+
+  return out;
+}
+
+function readInput(options) {
+  if (options.text && options.in) {
+    throw new Error("Use either --text or --in, not both.");
+  }
+
+  if (options.text) {
+    return options.text;
+  }
+
+  if (options.in) {
+    return fs.readFileSync(options.in, "utf8");
+  }
+
+  throw new Error("Missing input. Use --text or --in.");
+}
+
+async function run(argv) {
+  const options = parseArgs(argv);
+  const input = readInput(options);
+
+  const pipelineOptions = {
+    target: options.target,
+    timeoutMs: options["timeout-ms"] ? Number(options["timeout-ms"]) : undefined,
+    services: options["service-wti-endpoint"]
+      ? { "wikipedia-title-index": { endpoint: options["service-wti-endpoint"] } }
+      : undefined,
+    strict: options.strict === true
+  };
+
+  const result = await api.runPipeline(input, pipelineOptions);
+  const serialized = JSON.stringify(result, null, options.pretty ? 2 : 0);
+
+  if (options.out) {
+    fs.writeFileSync(options.out, serialized + "\n", "utf8");
+  } else {
+    console.log(serialized);
+  }
 }
 
 /**
- * CLI command stub for `doctor`.
- * Intended behavior: execute runtime checks and return status.
+ * CLI command for `doctor`.
+ * @returns {Promise<void>}
  */
 async function doctor() {
   try {
@@ -35,19 +91,23 @@ async function doctor() {
   }
 }
 
-/**
- * CLI command stub for `validate`.
- * Intended behavior: validate a seed document against schema and invariants.
- */
-function validate() {
-  console.log("TODO: validate command is not implemented yet");
+function validate(argv) {
+  const options = parseArgs(argv);
+  if (!options.in) {
+    throw new Error("validate requires --in <path>");
+  }
+
+  const raw = fs.readFileSync(options.in, "utf8");
+  const doc = JSON.parse(raw);
+  const result = api.validateDocument(doc);
+  console.log(JSON.stringify(result, null, options.pretty ? 2 : 0));
 }
 
 async function main(argv) {
   const command = argv[2] || "run";
 
   if (command === "run") {
-    run();
+    await run(argv);
     return;
   }
 
@@ -57,11 +117,11 @@ async function main(argv) {
   }
 
   if (command === "validate") {
-    validate();
+    validate(argv);
     return;
   }
 
-  console.log("TODO: unknown command. Supported commands: run, doctor, validate");
+  throw new Error("Unknown command. Supported commands: run, doctor, validate");
 }
 
 if (require.main === module) {

@@ -1,14 +1,18 @@
 "use strict";
 
 /**
- * Utility stub: deep-clone.
- *
- * Intended behavior: provide reusable internal helpers for deterministic pipeline execution.
+ * Clone JSON-compatible values deterministically.
+ * @param {any} value Input value.
+ * @returns {any} Cloned value.
  */
-function notImplemented() {
-  throw new Error("Not implemented");
+function deepClone(value) {
+  if (typeof structuredClone === "function") {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value));
 }
 
 module.exports = {
-  notImplemented
+  deepClone
 };

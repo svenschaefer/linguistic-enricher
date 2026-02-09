@@ -71,21 +71,21 @@ const STAGES = Object.freeze([
   {
     index: 7,
     prototypeStage: "07",
-    target: "parsed",
+    target: "mwe_materialized",
     modulePath: "./stages/mwe-materialization",
     runStage: mweMaterialization.runStage
   },
   {
     index: 8,
     prototypeStage: "08",
-    target: "chunked",
+    target: "parsed",
     modulePath: "./stages/linguistic-analysis",
     runStage: linguisticAnalysis.runStage
   },
   {
     index: 9,
     prototypeStage: "09",
-    target: "heads_identified",
+    target: "chunked",
     modulePath: "./stages/chunking",
     runStage: chunking.runStage
   },

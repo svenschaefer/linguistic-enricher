@@ -1,14 +1,20 @@
 "use strict";
 
+const crypto = require("node:crypto");
+
 /**
- * Utility stub: ids.
- *
- * Intended behavior: provide reusable internal helpers for deterministic pipeline execution.
+ * Build deterministic ID from namespace and payload.
+ * @param {string} namespace ID namespace/prefix.
+ * @param {object|string} payload Deterministic payload basis.
+ * @returns {string} Deterministic ID.
  */
-function notImplemented() {
-  throw new Error("Not implemented");
+function createDeterministicId(namespace, payload) {
+  const normalizedNamespace = String(namespace || "id");
+  const basis = typeof payload === "string" ? payload : JSON.stringify(payload);
+  const digest = crypto.createHash("sha1").update(basis).digest("hex").slice(0, 12);
+  return normalizedNamespace + "-" + digest;
 }
 
 module.exports = {
-  notImplemented
+  createDeterministicId
 };
