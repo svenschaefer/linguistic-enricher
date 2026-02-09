@@ -12,9 +12,17 @@ test("runPipeline tokenized target returns deterministic token stream", async fu
   assert.equal(out.stage, "tokenized");
   assert.deepEqual(
     out.tokens.map(function (t) { return t.surface; }),
-    ["Alice's", "cart", ",", "paid", "."]
+    ["Alice", "'s", "cart", ",", "paid", "."]
   );
-  assert.deepEqual(out.segments[0].token_range, { start: 0, end: 5 });
+  assert.deepEqual(out.segments[0].token_range, { start: 0, end: 6 });
+});
+
+test("runPipeline tokenized preserves prototype-like contraction and abbreviation semantics", async function () {
+  const out = await api.runPipeline("U.S. don't state-of-the-art", { target: "tokenized" });
+  assert.deepEqual(
+    out.tokens.map(function (t) { return t.surface; }),
+    ["U.S.", "do", "n't", "state-of-the-art"]
+  );
 });
 
 test("runPipeline tokenized rejects partial docs with existing token anchors", async function () {

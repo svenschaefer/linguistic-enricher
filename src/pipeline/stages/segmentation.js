@@ -4,7 +4,21 @@ const { deepClone } = require("../../util/deep-clone");
 const { normalizeSpan } = require("../../util/spans");
 const errors = require("../../util/errors");
 
-const LINE_SENTENCE_REGEX = /[^.!?]+[.!?]+|[^.!?]+$/g;
+const ABBREVIATIONS = new Set([
+  "mr.",
+  "mrs.",
+  "ms.",
+  "dr.",
+  "prof.",
+  "sr.",
+  "jr.",
+  "st.",
+  "vs.",
+  "etc.",
+  "e.g.",
+  "i.e.",
+  "u.s."
+]);
 
 function hasExistingDownstreamAnchors(seed) {
   const tokens = Array.isArray(seed.tokens) ? seed.tokens : [];
@@ -31,23 +45,59 @@ function pushTrimmedChunk(chunks, rawChunk, absoluteStart) {
   chunks.push({ start: start, end: end });
 }
 
+function isLowerAsciiLetter(ch) {
+  return typeof ch === "string" && /^[a-z]$/.test(ch);
+}
+
+function isSentenceBoundary(text, i) {
+  const ch = text[i];
+  if (ch === "\n") {
+    return true;
+  }
+  if (ch !== "." && ch !== "!" && ch !== "?") {
+    return false;
+  }
+
+  if (ch === ".") {
+    if (/[A-Za-z]/.test(text[i + 1] || "") && text[i + 2] === ".") {
+      return false;
+    }
+
+    const before = text.slice(0, i + 1);
+    const tokenMatch = /([A-Za-z]+(?:\.[A-Za-z]+)*\.)$/.exec(before);
+    if (tokenMatch && ABBREVIATIONS.has(tokenMatch[1].toLowerCase())) {
+      return false;
+    }
+
+    let j = i + 1;
+    while (j < text.length && text[j] === " ") {
+      j += 1;
+    }
+    if (j < text.length && isLowerAsciiLetter(text[j])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function splitSentences(text) {
-  const lines = String(text || "").split("\n");
+  const src = String(text || "");
   const segments = [];
-  let offset = 0;
+  let start = 0;
 
-  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-    const line = lines[lineIndex];
-    LINE_SENTENCE_REGEX.lastIndex = 0;
-    let match = LINE_SENTENCE_REGEX.exec(line);
-    while (match) {
-      pushTrimmedChunk(segments, match[0], offset + match.index);
-      match = LINE_SENTENCE_REGEX.exec(line);
+  for (let i = 0; i < src.length; i += 1) {
+    if (!isSentenceBoundary(src, i)) {
+      continue;
     }
 
-    if (lineIndex < lines.length - 1) {
-      offset += line.length + 1;
-    }
+    const end = i + 1;
+    pushTrimmedChunk(segments, src.slice(start, end), start);
+    start = end;
+  }
+
+  if (start < src.length) {
+    pushTrimmedChunk(segments, src.slice(start), start);
   }
 
   return segments;

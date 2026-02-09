@@ -25,6 +25,11 @@ test("runPipeline segmented target returns deterministic sentence segmentation",
   ]);
 });
 
+test("runPipeline segmented does not split known abbreviations", async function () {
+  const out = await api.runPipeline("Dr. Smith went home.", { target: "segmented" });
+  assert.deepEqual(segmentTexts(out), ["Dr. Smith went home."]);
+});
+
 test("runPipeline segmented rejects partial docs with token anchors", async function () {
   const partial = {
     schema_version: "1.0.0",
@@ -67,4 +72,3 @@ test("runPipeline segmented rejects partial docs with token anchors", async func
     }
   );
 });
-

@@ -4,7 +4,46 @@ const { deepClone } = require("../../util/deep-clone");
 const { normalizeSpan } = require("../../util/spans");
 const errors = require("../../util/errors");
 
-const TOKEN_REGEX = /\p{L}[\p{L}\p{N}'’ʼ-]*|\p{N}+|[^\s]/gu;
+const TOKEN_REGEX =
+  /(?:\p{L}\.){2,}|\.{3}|\p{L}[\p{L}\p{N}'’ʼ]*(?:-\p{L}[\p{L}\p{N}'’ʼ]*)+|\p{L}[\p{L}\p{N}'’ʼ]*|\p{N}+|[^\s]/gu;
+
+function splitContractions(surface, startUtf16) {
+  const apostropheSuffix = /^(.*?)(['’ʼ]s)$/u.exec(surface);
+  if (apostropheSuffix && apostropheSuffix[1].length > 0) {
+    const base = apostropheSuffix[1];
+    const suffix = apostropheSuffix[2];
+    return [
+      { surface: base, startUtf16: startUtf16, endUtf16: startUtf16 + base.length },
+      {
+        surface: suffix,
+        startUtf16: startUtf16 + base.length,
+        endUtf16: startUtf16 + base.length + suffix.length
+      }
+    ];
+  }
+
+  const ntSuffix = /^(.*?)(n't)$/u.exec(surface);
+  if (ntSuffix && ntSuffix[1].length > 0) {
+    const base = ntSuffix[1];
+    const suffix = ntSuffix[2];
+    return [
+      { surface: base, startUtf16: startUtf16, endUtf16: startUtf16 + base.length },
+      {
+        surface: suffix,
+        startUtf16: startUtf16 + base.length,
+        endUtf16: startUtf16 + base.length + suffix.length
+      }
+    ];
+  }
+
+  return [
+    {
+      surface: surface,
+      startUtf16: startUtf16,
+      endUtf16: startUtf16 + surface.length
+    }
+  ];
+}
 
 function buildIndexMaps(text) {
   const cpToUtf16 = [0];
@@ -133,14 +172,16 @@ function tokenizeSegment(segmentText, segmentStartUtf16, unit, maps) {
 
   while (match) {
     const startUtf16 = segmentStartUtf16 + match.index;
-    const endUtf16 = startUtf16 + match[0].length;
-    tokens.push({
-      surface: match[0],
-      span: normalizeSpan(
-        fromUtf16(startUtf16, unit, maps),
-        fromUtf16(endUtf16, unit, maps)
-      )
-    });
+    const split = splitContractions(match[0], startUtf16);
+    for (let i = 0; i < split.length; i += 1) {
+      tokens.push({
+        surface: split[i].surface,
+        span: normalizeSpan(
+          fromUtf16(split[i].startUtf16, unit, maps),
+          fromUtf16(split[i].endUtf16, unit, maps)
+        )
+      });
+    }
     match = TOKEN_REGEX.exec(segmentText);
   }
 

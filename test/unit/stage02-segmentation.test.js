@@ -34,6 +34,16 @@ test("stage02 splits sentences by punctuation and line boundaries deterministica
   ]);
 });
 
+test("stage02 does not split after known abbreviations", async function () {
+  const out = await stage02.runStage(makeSeed("Dr. Smith went home."));
+  assert.deepEqual(sentenceTexts(out), ["Dr. Smith went home."]);
+});
+
+test("stage02 does not split period + lowercase patterns", async function () {
+  const out = await stage02.runStage(makeSeed("Use e.g. examples."));
+  assert.deepEqual(sentenceTexts(out), ["Use e.g. examples."]);
+});
+
 test("stage02 preserves empty lines but emits only non-empty sentence segments", async function () {
   const out = await stage02.runStage(makeSeed("A.\n\n  B line  \n\nC!"));
   assert.deepEqual(sentenceTexts(out), ["A.", "B line", "C!"]);
@@ -74,4 +84,3 @@ test("stage02 rejects partial docs with downstream anchors", async function () {
     }
   );
 });
-

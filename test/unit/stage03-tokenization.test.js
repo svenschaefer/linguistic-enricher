@@ -37,13 +37,50 @@ test("stage03 tokenizes punctuation and preserves token ranges per segment", asy
   assert.deepEqual(out.segments[0].token_range, { start: 0, end: 7 });
 });
 
-test("stage03 keeps curly-apostrophe lexical token as one word", async function () {
+test("stage03 splits apostrophe possessives into base + clitic", async function () {
   const seed = makeSeed("customer’s payment");
   const out = await stage03.runStage(seed);
   assert.deepEqual(
     out.tokens.map(function (t) { return t.surface; }),
-    ["customer’s", "payment"]
+    ["customer", "’s", "payment"]
   );
+});
+
+test("stage03 splits n't contractions into base + clitic", async function () {
+  const seed = makeSeed("don't stop");
+  const out = await stage03.runStage(seed);
+  assert.deepEqual(
+    out.tokens.map(function (t) { return t.surface; }),
+    ["do", "n't", "stop"]
+  );
+});
+
+test("stage03 keeps hyphenated compounds as one token", async function () {
+  const seed = makeSeed("state-of-the-art");
+  const out = await stage03.runStage(seed);
+  assert.deepEqual(
+    out.tokens.map(function (t) { return t.surface; }),
+    ["state-of-the-art"]
+  );
+});
+
+test("stage03 keeps dotted abbreviations as one token", async function () {
+  const seed = makeSeed("U.S.");
+  const out = await stage03.runStage(seed);
+  assert.deepEqual(
+    out.tokens.map(function (t) { return t.surface; }),
+    ["U.S."]
+  );
+});
+
+test("stage03 keeps ellipsis as one punctuation token", async function () {
+  const seed = makeSeed("...");
+  const out = await stage03.runStage(seed);
+  assert.deepEqual(
+    out.tokens.map(function (t) { return t.surface; }),
+    ["..."]
+  );
+  assert.equal(out.tokens[0].flags.is_punct, true);
 });
 
 test("stage03 supports unicode_codepoints index basis", async function () {
@@ -115,4 +152,3 @@ test("stage03 rejects when segments are missing", async function () {
     }
   );
 });
-
