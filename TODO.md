@@ -84,31 +84,43 @@
 - Implement a library-first API via `src/index.js` using `module.exports`.
 - Define stable exported surface (initial target):
   - `runPipeline(input, options)`
-  - `createPipeline(options)`
   - `runDoctor(options)`
   - `validateDocument(doc, options)`
   - `PIPELINE_TARGETS` (constants)
+- Do not export `createPipeline(...)` in v1 unless explicitly added to `README.md`.
 - Accept raw text or a partial seed document input.
 - Return a fully enriched seed object up to requested target stage, defaulting to `relations_extracted`.
 - Ensure API is deterministic and side-effect controlled.
+- Explicitly publish allowed `target` literals for this package:
+  - `canonical`
+  - `segmented`
+  - `tokenized`
+  - `pos_tagged`
+  - `mwe_candidates`
+  - `mwe_pattern_candidates`
+  - `mwe_materialized`
+  - `parsed`
+  - `chunked`
+  - `heads_identified`
+  - `relations_extracted`
 
 ## 4) Internal Pipeline Architecture (Single Coherent Pipeline)
 
 - Present one unified pipeline externally, while internally keeping stage modules.
 - Build a stage registry with ordered execution and target cutoffs.
-- Implement a canonical stage chain corresponding to 00..11:
-  1. surface normalization
-  2. canonicalization
-  3. segmentation
-  4. tokenization
-  5. POS tagging
-  6. MWE candidate extraction (spaCy-backed path only)
-  7. MWE candidate construction
-  8. MWE materialization
-  9. linguistic analysis
-  10. chunking (POS-FSM only)
-  11. head identification
-  12. relation extraction
+- Implement a canonical stage chain corresponding exactly to prototype stages `00..11`:
+  - `00` surface normalization
+  - `01` canonicalization
+  - `02` segmentation
+  - `03` tokenization
+  - `04` POS tagging
+  - `05` MWE candidate extraction (spaCy-backed path only)
+  - `06` MWE candidate construction
+  - `07` MWE materialization
+  - `08` linguistic analysis
+  - `09` chunking (POS-FSM only)
+  - `10` head identification
+  - `11` relation extraction
 - Do not expose numeric stage names in user-facing API/CLI.
 - Keep stage naming semantic (e.g., `relations_extracted`) in options and outputs.
 
@@ -126,12 +138,25 @@
   - Required Python packages.
   - spaCy model availability.
 - Ensure consumers never need to call Python directly.
+- Define explicit runtime failure behavior:
+  - Missing Python executable: throw typed error `E_PYTHON_NOT_FOUND` with remediation hint.
+  - Missing Python dependency/module: throw typed error `E_PYTHON_DEPENDENCY_MISSING`.
+  - Missing spaCy model: throw typed error `E_PYTHON_MODEL_MISSING`.
+  - Subprocess non-zero exit: throw typed error `E_PYTHON_SUBPROCESS_FAILED` and include stderr excerpt.
+  - Subprocess timeout: throw typed error `E_PYTHON_TIMEOUT`.
+  - Invalid JSON on stdout: throw typed error `E_PYTHON_PROTOCOL_INVALID_JSON`.
 
 ## 6) Optional `wikipedia-title-index` Service Integration
 
 - Implement optional HTTP client in `src/services/wikipedia-title-index-client.js`.
 - Configuration shape in pipeline options:
-  - `services.wikipediaTitleIndex.endpoint` (or equivalent normalized key).
+  - Canonical key (must match README): `services[\"wikipedia-title-index\"].endpoint`.
+  - Optional accepted alias for compatibility: `services.wikipediaTitleIndex.endpoint`.
+  - Normalize alias -> canonical key internally before first request.
+- HTTP contract expected from service:
+  - `GET /health` for readiness checks.
+  - `POST /v1/titles/query` for deterministic query operations.
+  - Request/response shape must follow `wikipedia-title-index` service OpenAPI contract.
 - If endpoint exists:
   - Query service deterministically for lexical signals.
   - Integrate signals into enrichment evidence paths.
@@ -143,7 +168,11 @@
 ## 7) Schema Enforcement and Validation Strategy
 
 - Treat `schema.json` as authoritative shape contract.
-- Add structural schema validation after each stage transition and final output.
+- Use synchronous in-process schema validation (AJV in Node process) at:
+  - API entry (if caller passes partial seed document).
+  - Before each stage (precondition check).
+  - After each stage (postcondition check).
+  - Final output before returning to caller.
 - Add runtime invariant checks not expressible in JSON Schema:
   - span ordering and bounds.
   - token/segment reference integrity.
@@ -163,6 +192,11 @@
 - Ensure optional service inputs are incorporated deterministically.
 - Preserve additive enrichment contract:
   - no destructive rewriting of authoritative earlier structures.
+- Enforce annotation status semantics explicitly:
+  - `candidate`: proposal, non-authoritative.
+  - `observation`: external/model-derived signal, non-authoritative.
+  - `accepted`: authoritative pipeline output.
+- Rule: probabilistic/model outputs must never be marked `accepted` without deterministic materialization rules.
 
 ## 9) CLI Design (Thin Wrapper Around Library)
 
@@ -172,9 +206,18 @@
   - `doctor` (runtime checks)
   - `validate` (validate provided seed JSON against schema + invariants)
 - CLI flags (initial):
-  - `--in`, `--text`, `--out`, `--target`, `--pretty`
-  - `--services.wikipediaTitleIndex.endpoint` (or normalized alias)
-  - `--timeout-ms`
+  - `--in <path>`: read text or seed JSON input from file.
+  - `--text \"...\"`: inline text input (mutually exclusive with `--in`).
+  - `--out <path>`: write output JSON file (stdout if omitted).
+  - `--target <literal>`: one of `PIPELINE_TARGETS`.
+  - `--pretty`: pretty-print JSON output.
+  - `--service-wti-endpoint <url>`: canonical mapping to `services[\"wikipedia-title-index\"].endpoint`.
+  - `--timeout-ms <int>`: per-subprocess/per-service timeout override.
+  - `--strict`: fail on missing optional services instead of fallback mode.
+- CLI behavior rules:
+  - `run`: executes pipeline and returns enriched document.
+  - `doctor`: exits non-zero on missing Python/runtime requirements.
+  - `validate`: validates input document and prints invariant/schema results.
 - Ensure CLI delegates core logic to `src/index.js` exports.
 - Keep CLI behavior cross-platform and shell-agnostic.
 
@@ -190,8 +233,34 @@
   - deterministic snapshot tests with stable fixtures.
   - test with optional service enabled (mock server).
   - test without optional service (must still pass).
+  - explicit Python/runtime quality gates:
+    - Python present.
+    - Python missing.
+    - spaCy model present.
+    - spaCy model missing.
+  - explicit service quality gates:
+    - wikipedia-title-index service present/responding.
+    - wikipedia-title-index service absent/unreachable.
+  - explicit determinism vs observation gates:
+    - observational annotations remain `observation`/`candidate`.
+    - accepted outputs are produced only by deterministic rules.
 - Cross-platform expectations:
   - tests must pass on Windows/Linux/macOS with Node CommonJS runtime.
+
+## 10.1) Logging and Instrumentation Contract
+
+- Provide structured logs in JSON lines format by default.
+- Required fields per log event:
+  - `ts` (ISO timestamp)
+  - `level` (`error|warn|info|debug`)
+  - `component` (e.g., `pipeline`, `python`, `service:wti`)
+  - `event` (stable event key)
+  - `seed_id` (when available)
+  - `target` (when available)
+- Log levels:
+  - default: `info`
+  - configurable via option/env (`LOG_LEVEL`)
+- Logging must never change deterministic data outputs.
 
 ## 11) Explicit Mapping: Prototype Directories -> New Modules
 
@@ -243,3 +312,4 @@
 - Optional wikipedia-title-index endpoint works when configured and is safely optional when absent.
 - Output conforms to `schema.json` and runtime invariants.
 - Tests pass for unit and integration suites.
+- CLI options and target literals are documented and validated consistently with runtime behavior.
