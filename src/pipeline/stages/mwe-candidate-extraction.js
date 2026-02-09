@@ -385,6 +385,9 @@ function mapQueryEvidence(response) {
       if (typeof row === "string") {
         return row;
       }
+      if (Array.isArray(row) && row.length > 0 && typeof row[0] === "string") {
+        return row[0];
+      }
       if (row && typeof row.t === "string") {
         return row.t;
       }
