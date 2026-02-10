@@ -21,6 +21,10 @@ function isNoun(tag) {
   return tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS";
 }
 
+function isVerbLikeTag(tag) {
+  return tag === "VB" || tag === "VBD" || tag === "VBG" || tag === "VBN" || tag === "VBP" || tag === "VBZ" || tag === "MD";
+}
+
 function baseDepLabel(label) {
   const value = String(label || "").toLowerCase();
   const idx = value.indexOf(":");
@@ -91,27 +95,27 @@ function spanTextFromCanonical(canonicalText, span, unit) {
   );
 }
 
-function roleFromDepLabel(depLabel, depTokenTag) {
+function roleFromDepLabel(depLabel, depTokenTag, headTokenTag) {
   const base = baseDepLabel(depLabel);
-  if (base === "nsubj") {
+  if (base === "nsubj" && isVerbLikeTag(headTokenTag)) {
     return "actor";
   }
-  if (base === "nsubjpass") {
+  if (base === "nsubjpass" && isVerbLikeTag(headTokenTag)) {
     return "patient";
   }
-  if (base === "dobj" || base === "obj") {
+  if ((base === "dobj" || base === "obj") && isVerbLikeTag(headTokenTag)) {
     return "theme";
   }
-  if (base === "attr" || base === "acomp" || base === "appos") {
+  if ((base === "attr" || base === "acomp" || base === "appos") && isVerbLikeTag(headTokenTag)) {
     return "attribute";
   }
-  if (base === "iobj") {
+  if (base === "iobj" && isVerbLikeTag(headTokenTag)) {
     return "recipient";
   }
   if ((base === "aux" || base === "auxpass") && depTokenTag === "MD") {
     return "modality";
   }
-  if (base === "amod" || base === "advmod" || base === "npadvmod") {
+  if (base === "advmod" || base === "npadvmod") {
     return "modifier";
   }
   return null;
@@ -182,7 +186,7 @@ function isCoordToken(chunk) {
   return text === "and" || text === "or";
 }
 
-function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById) {
+function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead) {
   function nearestPrevNP(idx) {
     for (let i = idx - 1; i >= 0; i -= 1) {
       const c = chunks[i];
@@ -232,10 +236,16 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
       continue;
     }
     const predTok = tokenById.get(predicateId);
+    const predDeps = depByHead.get(predicateId) || [];
+    const hasCoreSubject = predDeps.some(function (d) { return d && baseDepLabel(d.label) === "nsubj"; });
+    const hasCoreObject = predDeps.some(function (d) {
+      const label = d ? baseDepLabel(d.label) : "";
+      return label === "obj" || label === "dobj" || label === "iobj";
+    });
     const sentenceId = predTok.segment_id;
 
     const prevNP = nearestPrevNP(i);
-    if (prevNP) {
+    if (prevNP && !hasCoreSubject) {
       const arg = chunkHeadByChunkId.get(prevNP.id);
       addRelation(predicateId, arg, "actor", {
         pattern: "chunk_fallback",
@@ -245,7 +255,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     }
 
     const nextNP = nearestNextNP(i);
-    if (nextNP) {
+    if (nextNP && !hasCoreObject) {
       const arg = chunkHeadByChunkId.get(nextNP.id);
       addRelation(predicateId, arg, "theme", {
         pattern: "chunk_fallback",
@@ -260,7 +270,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
       .filter(Boolean)
       .filter(function (t) { return t.id !== predicateId && isNoun(getTag(t)); })
       .sort(function (a, b) { return a.i - b.i; })[0];
-    if (internalThemeToken) {
+    if (internalThemeToken && !hasCoreObject && !nextNP) {
       addRelation(predicateId, internalThemeToken.id, "theme", {
         pattern: "chunk_fallback",
         dependency_label: "obj",
@@ -573,7 +583,8 @@ async function runStage(seed) {
       continue;
     }
     const depTok = tokenById.get(dep.dep.id);
-    const mappedRole = roleFromDepLabel(dep.label, getTag(depTok));
+      const headTok = tokenById.get(dep.head.id);
+      const mappedRole = roleFromDepLabel(dep.label, getTag(depTok), getTag(headTok));
     if (mappedRole) {
       addRelation(
         resolvePredicate(dep.head.id),
@@ -588,7 +599,7 @@ async function runStage(seed) {
     }
   }
 
-  maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById);
+  maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead);
   maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById);
 
   for (let i = 0; i < dependencyObs.length; i += 1) {
