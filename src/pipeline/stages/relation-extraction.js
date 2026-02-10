@@ -25,6 +25,18 @@ function isVerbLikeTag(tag) {
   return tag === "VB" || tag === "VBD" || tag === "VBG" || tag === "VBN" || tag === "VBP" || tag === "VBZ" || tag === "MD";
 }
 
+function isNominalLikeTag(tag) {
+  return (
+    tag === "NN" ||
+    tag === "NNS" ||
+    tag === "NNP" ||
+    tag === "NNPS" ||
+    tag === "PRP" ||
+    tag === "PRP$" ||
+    tag === "CD"
+  );
+}
+
 function baseDepLabel(label) {
   const value = String(label || "").toLowerCase();
   const idx = value.indexOf(":");
@@ -97,13 +109,13 @@ function spanTextFromCanonical(canonicalText, span, unit) {
 
 function roleFromDepLabel(depLabel, depTokenTag, headTokenTag) {
   const base = baseDepLabel(depLabel);
-  if (base === "nsubj" && isVerbLikeTag(headTokenTag)) {
+  if (base === "nsubj" && isVerbLikeTag(headTokenTag) && isNominalLikeTag(depTokenTag)) {
     return "actor";
   }
-  if (base === "nsubjpass" && isVerbLikeTag(headTokenTag)) {
+  if (base === "nsubjpass" && isVerbLikeTag(headTokenTag) && isNominalLikeTag(depTokenTag)) {
     return "patient";
   }
-  if ((base === "dobj" || base === "obj") && isVerbLikeTag(headTokenTag)) {
+  if ((base === "dobj" || base === "obj") && isVerbLikeTag(headTokenTag) && isNominalLikeTag(depTokenTag)) {
     return "theme";
   }
   if ((base === "attr" || base === "acomp" || base === "appos") && isVerbLikeTag(headTokenTag)) {
