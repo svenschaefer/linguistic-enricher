@@ -25,7 +25,7 @@ function buildSeed(text, tokens) {
   };
 }
 
-test("stage05 extracts spaCy-style candidates and removes DT from labels", async function () {
+test("stage05 extracts spaCy-style candidates and preserves internal determiners", async function () {
   const text = "prime number generator placing an order";
   const tokens = [
     { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "prime", pos: { tag: "JJ" }, flags: { is_punct: false } },
@@ -40,9 +40,9 @@ test("stage05 extracts spaCy-style candidates and removes DT from labels", async
   const labels = out.annotations.map(function (ann) { return ann.label; });
 
   assert.equal(labels.includes("prime number generator"), true);
-  assert.equal(labels.includes("placing order"), true);
+  assert.equal(labels.includes("placing an order"), true);
 
-  const placing = out.annotations.find(function (ann) { return ann.label === "placing order"; });
+  const placing = out.annotations.find(function (ann) { return ann.label === "placing an order"; });
   assert.equal(placing.anchor.selectors.find(function (s) { return s.type === "TextQuoteSelector"; }).exact, "placing an order");
   assert.equal(placing.sources.some(function (s) { return s.name === "spacy:matcher/verb_det_noun"; }), true);
 });

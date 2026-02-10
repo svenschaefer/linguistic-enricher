@@ -8,7 +8,6 @@ const errors = require("../../util/errors");
 const NOUN_TAGS = new Set(["NN", "NNS", "NNP", "NNPS"]);
 const ADJ_TAGS = new Set(["JJ", "JJR", "JJS"]);
 const VERB_TAGS = new Set(["VB", "VBD", "VBG", "VBN", "VBP", "VBZ"]);
-const WEAK_OBJECT_NOUNS = new Set(["customer", "customers", "people", "person", "user", "users"]);
 const VERB_TO_VERB_ALLOW = new Set(["buy", "order", "pay", "ship", "place"]);
 
 const PATTERNS = [
@@ -35,10 +34,10 @@ const PATTERNS = [
     ]
   },
   {
-    id: "adj_adj_noun",
+    id: "noun_noun_noun",
     pattern: [
-      { tagIn: ADJ_TAGS, isPunct: false },
-      { tagIn: ADJ_TAGS, isPunct: false },
+      { tagIn: NOUN_TAGS, isPunct: false },
+      { tagIn: NOUN_TAGS, isPunct: false },
       { tagIn: NOUN_TAGS, isPunct: false }
     ]
   },
@@ -61,12 +60,10 @@ const PATTERNS = [
     ]
   },
   {
-    id: "noun_than_num",
+    id: "num_noun",
     pattern: [
-      { tagIn: NOUN_TAGS, isPunct: false },
-      { tag: "JJR", isPunct: false },
-      { tag: "IN", lower: "than", isPunct: false },
-      { tag: "CD", isPunct: false }
+      { tag: "CD", isPunct: false },
+      { tagIn: NOUN_TAGS, isPunct: false }
     ]
   },
   {
@@ -96,20 +93,19 @@ const PATTERNS = [
     ]
   },
   {
+    id: "noun_verb_noun",
+    pattern: [
+      { tagIn: NOUN_TAGS, isPunct: false },
+      { tagIn: VERB_TAGS, isPunct: false },
+      { tagIn: NOUN_TAGS, isPunct: false }
+    ]
+  },
+  {
     id: "verb_to_verb",
     pattern: [
       { tagIn: VERB_TAGS, isPunct: false },
       { tag: "TO", isPunct: false },
       { tagIn: VERB_TAGS, isPunct: false }
-    ]
-  },
-  {
-    id: "noun_prep_for_np",
-    pattern: [
-      { tagIn: NOUN_TAGS, isPunct: false },
-      { tag: "IN", lower: "for", isPunct: false },
-      { tagIn: ADJ_TAGS, isPunct: false, optional: true },
-      { tagIn: NOUN_TAGS, isPunct: false }
     ]
   },
   {
@@ -231,9 +227,6 @@ function passesPatternFilters(patternId, tokens, indexes) {
   }
 
   if (!NOUN_TAGS.has(lastTag)) {
-    return false;
-  }
-  if (WEAK_OBJECT_NOUNS.has(lastLower)) {
     return false;
   }
 
@@ -407,15 +400,24 @@ function mapQueryEvidence(response) {
 }
 
 function buildLabel(candidate) {
-  const parts = [];
-  for (let i = 0; i < candidate.surfaces.length; i += 1) {
-    if (candidate.tags[i] === "DT") {
-      continue;
+  const startIndex = (function findStart() {
+    for (let i = 0; i < candidate.tags.length; i += 1) {
+      if (candidate.tags[i] !== "DT") {
+        return i;
+      }
     }
+    return 0;
+  })();
+
+  const parts = [];
+  for (let i = startIndex; i < candidate.surfaces.length; i += 1) {
     parts.push(candidate.surfaces[i]);
   }
 
-  const label = parts.join(" ").trim();
+  const label = parts
+    .join(" ")
+    .replace(/\s+([’'])s\b/gu, "$1s")
+    .trim();
   return label || candidate.exact;
 }
 
