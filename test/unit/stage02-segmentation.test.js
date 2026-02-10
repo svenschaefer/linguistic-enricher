@@ -23,7 +23,7 @@ function sentenceTexts(seedOut) {
   });
 }
 
-test("stage02 splits sentences by punctuation and line boundaries deterministically", async function () {
+test("stage02 splits sentences deterministically by sentence punctuation", async function () {
   const out = await stage02.runStage(makeSeed("First one. Second two!\nThird three? Last"));
   assert.equal(out.stage, "segmented");
   assert.deepEqual(sentenceTexts(out), [
@@ -44,9 +44,9 @@ test("stage02 does not split period + lowercase patterns", async function () {
   assert.deepEqual(sentenceTexts(out), ["Use e.g. examples."]);
 });
 
-test("stage02 preserves empty lines but emits only non-empty sentence segments", async function () {
+test("stage02 preserves empty lines inside sentence spans without emitting empty segments", async function () {
   const out = await stage02.runStage(makeSeed("A.\n\n  B line  \n\nC!"));
-  assert.deepEqual(sentenceTexts(out), ["A.", "B line", "C!"]);
+  assert.deepEqual(sentenceTexts(out), ["A.\n\n  B line  \n\nC!"]);
 });
 
 test("stage02 emits ordered non-overlapping spans and empty token ranges", async function () {

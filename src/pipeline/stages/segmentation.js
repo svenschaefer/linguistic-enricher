@@ -48,40 +48,30 @@ function pushTrimmedChunk(chunks, rawChunk, absoluteStart) {
 
 function splitSentences(text) {
   const src = String(text || "");
-  const lines = src.split("\n");
   const segments = [];
-  let offset = 0;
+  const sentenceParts = sbd.sentences(src, {
+    newline_boundaries: false,
+    sanitize: false,
+    preserve_whitespace: true,
+    abbreviations: Array.from(ABBREVIATIONS)
+  });
 
-  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-    const line = lines[lineIndex];
-    const sentenceParts = sbd.sentences(line, {
-      newline_boundaries: false,
-      sanitize: false,
-      preserve_whitespace: true,
-      abbreviations: Array.from(ABBREVIATIONS)
-    });
-
-    let cursor = 0;
-    for (let i = 0; i < sentenceParts.length; i += 1) {
-      const part = sentenceParts[i];
-      if (typeof part !== "string" || part.length === 0) {
-        continue;
-      }
-      const localStart = line.indexOf(part, cursor);
-      if (localStart === -1) {
-        throw errors.createError(
-          errors.ERROR_CODES.E_INVARIANT_VIOLATION,
-          "Stage 02 could not align sbd sentence output to canonical_text.",
-          { line: lineIndex, sentence: part }
-        );
-      }
-      pushTrimmedChunk(segments, part, offset + localStart);
-      cursor = localStart + part.length;
+  let cursor = 0;
+  for (let i = 0; i < sentenceParts.length; i += 1) {
+    const part = sentenceParts[i];
+    if (typeof part !== "string" || part.length === 0) {
+      continue;
     }
-
-    if (lineIndex < lines.length - 1) {
-      offset += line.length + 1;
+    const start = src.indexOf(part, cursor);
+    if (start === -1) {
+      throw errors.createError(
+        errors.ERROR_CODES.E_INVARIANT_VIOLATION,
+        "Stage 02 could not align sbd sentence output to canonical_text.",
+        { sentence: part }
+      );
     }
+    pushTrimmedChunk(segments, part, start);
+    cursor = start + part.length;
   }
 
   return segments;

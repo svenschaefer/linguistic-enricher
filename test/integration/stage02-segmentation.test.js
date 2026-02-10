@@ -11,7 +11,7 @@ function segmentTexts(seedOut) {
   });
 }
 
-test("runPipeline segmented target returns deterministic sentence segmentation", async function () {
+test("runPipeline segmented target returns deterministic punctuation-based segmentation", async function () {
   const input = "First one.  Second two!\n\n  Third line\nFourth?";
   const out = await api.runPipeline(input, { target: "segmented" });
 
@@ -20,8 +20,7 @@ test("runPipeline segmented target returns deterministic sentence segmentation",
   assert.deepEqual(segmentTexts(out), [
     "First one.",
     "Second two!",
-    "Third line",
-    "Fourth?"
+    "Third line\nFourth?"
   ]);
 });
 
