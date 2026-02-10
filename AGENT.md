@@ -13,15 +13,15 @@
 ## Current Phase
 
 - Baseline implementation is in place (pipeline shell + stage modules + CLI + validation + Python bridge + tests).
-- Active focus is prototype-parity hardening:
-  - align stage behavior with the legacy linguistics prototype corpus (00..11 scope),
+- Active focus is semantic-parity hardening:
+  - align stage behavior with the legacy linguistics semantic corpus (00..11 scope),
   - increase deterministic fidelity of stage outputs,
   - close remaining functional gaps while preserving CommonJS-only constraints.
 
 ## Scope
 
-- Pipeline coverage: prototype stages `00..11`.
-- Use only the selected prototype outcomes:
+- Pipeline coverage: semantic baseline stages `00..11`.
+- Use only the selected baseline outcomes:
   - Stage 02 segmentation: `sbd`.
   - Stage 03 tokenization: `wink-tokenizer`.
   - Stage 04 POS tagging: `wink-pos-tagger`.
@@ -30,22 +30,22 @@
   - Stage 09 chunking: POS-FSM variant (`09-chunking-pos-fsm`).
 - Exclude:
   - Stage 12.
-  - Any `xx-*` prototype scope.
-- Prototype corpus is a semantic/domain reference only.
-- That prototype is NOT an implementation template and NOT a technical port target.
-- File/YAML artifact mechanics and step-script execution from prototypes are NOT ALLOWED in this package core.
+  - Any `xx-*` baseline scope.
+- Legacy semantic corpus is a semantic/domain reference only.
+- That corpus is NOT an implementation template and NOT a technical port target.
+- File/YAML artifact mechanics and step-script execution from legacy sources are NOT ALLOWED in this package core.
 - Core implementation MUST remain API-first and in-memory via `runPipeline(...)`, with CLI as thin wrapper.
 
 ## Prototype Selection Outcomes (Mandatory)
 
 - Prototype selections are binding input for library/variant choices unless explicitly changed by a new decision.
-- Current mandatory selections from the legacy prototype evaluations:
+- Current mandatory selections from the legacy baseline evaluations:
   - `02-segmentation`: use `sbd`.
   - `03-tokenization`: use `wink-tokenizer`.
   - `04-pos-tagging`: use `wink-pos-tagger`.
   - `05-mwe-candidate-extraction`: use spaCy variant only.
   - `09-chunking`: use POS-FSM variant only.
-- Non-selected alternatives from prototype comparisons are documentation/benchmark artifacts only and are NOT ALLOWED as default implementation paths.
+- Non-selected alternatives from baseline comparisons are documentation/benchmark artifacts only and are NOT ALLOWED as default implementation paths.
 
 ### Stage Library Matrix (00..11)
 
@@ -54,25 +54,25 @@
 - `02-segmentation`: `sbd` (selected).
 - `03-tokenization`: `wink-tokenizer` (selected).
 - `04-pos-tagging`: `wink-pos-tagger` (selected).
-- `05-mwe-candidate-extraction`: multiple prototype variants evaluated; core selected variant is `spaCy` (`05-mwe-candidate-extraction-spacy`).
+- `05-mwe-candidate-extraction`: multiple baseline variants evaluated; core selected variant is `spaCy` (`05-mwe-candidate-extraction-spacy`).
 - `06-mwe-candidate-construction`: no external linguistic library (deterministic pattern/rule logic; optional external lexicon service signals).
 - `07-mwe-materialization`: no external linguistic library (deterministic materialization logic).
 - `08-linguistic-analysis`: `spaCy` (Python) for observational linguistic analysis.
-- `09-chunking`: multiple prototype variants evaluated; core selected variant is `POS-FSM` (`09-chunking-pos-fsm`).
+- `09-chunking`: multiple baseline variants evaluated; core selected variant is `POS-FSM` (`09-chunking-pos-fsm`).
 - `10-head-identification`: no external linguistic library (deterministic rule logic).
 - `11-relation-extraction`: no external linguistic library (deterministic ruleset logic).
 
 ### Prototype Test-Case References (Mandatory)
 
 - For each stage hardening block, realistic semantic test cases MUST be derived from:
-  - prototype `seed.*.yaml` artifacts, and
-  - prototype `*.test.js` files
-  from the legacy prototype corpus.
+  - legacy `seed.*.yaml` artifacts, and
+  - legacy `*.test.js` files
+  from the semantic baseline corpus.
 - These references are mandatory for behavior coverage, edge-case coverage, and regression test design.
 - They are semantic test references only:
-  - DO NOT port prototype script orchestration,
+  - DO NOT port legacy script orchestration,
   - DO NOT port file/YAML artifact execution mechanics,
-  - DO NOT port prototype directory execution model.
+  - DO NOT port legacy directory execution model.
 - Implementers MUST translate reference cases into API-first, in-memory tests for `runPipeline(...)` and stage modules.
 
 ## Implementation Contract

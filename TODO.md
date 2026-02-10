@@ -13,7 +13,7 @@
 
 - Remaining work is fidelity hardening, not scaffolding.
 - Prototype source corpus is semantic reference only.
-- Do NOT port prototype file/YAML artifact mechanics or script-driven execution.
+- Do NOT port legacy file/YAML artifact mechanics or script-driven execution.
 - Preserve API-first in-memory architecture.
 - Execute stage hardening sequentially: 00 -> 11.
 - Every stage hardening step is test-gated and lint-gated before moving on.
@@ -26,10 +26,10 @@
   - No TypeScript.
   - No ES Modules (`import`, `export`, no `"type": "module"`).
   - No PowerShell-driven runtime behavior in the package itself.
-- Lock functional scope to prototype stages 00..11 only.
+- Lock functional scope to baseline stages 00..11 only.
 - Exclude from implementation scope:
   - Stage 12 (elementary assertions).
-  - All `xx-*` prototype directories.
+  - All `xx-*` legacy directories.
 - Preserve output boundary:
   - Authoritative output target stage = `relations_extracted`.
 - Keep `schema.json` unchanged unless explicitly requested.
@@ -126,7 +126,7 @@
 
 - Present one unified pipeline externally, while internally keeping stage modules.
 - Build a stage registry with ordered execution and target cutoffs.
-- Implement a canonical stage chain corresponding exactly to prototype stages `00..11`:
+- Implement a canonical stage chain corresponding exactly to baseline stages `00..11`:
   - `00` surface normalization
   - `01` canonicalization
   - `02` segmentation

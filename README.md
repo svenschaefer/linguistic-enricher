@@ -163,13 +163,13 @@ File I/O, serialization, and CLI concerns are intentionally kept outside the cor
 
 ---
 
-## Current maturity and prototype parity
+## Current maturity and semantic parity
 
 This package currently provides a stable baseline implementation of the full 00..11 pipeline surface.
 
 - Baseline orchestration, validation hooks, CLI/API integration, and deterministic utilities are implemented and tested.
-- Stage-by-stage linguistic parity hardening against the intended prototype semantics is still in progress.
-- The legacy prototype corpus is treated as a semantic reference only, not as a technical implementation template.
+- Stage-by-stage linguistic parity hardening against the intended semantic baseline is still in progress.
+- The legacy semantic corpus is treated as a semantic reference only, not as a technical implementation template.
 
 ---
 
