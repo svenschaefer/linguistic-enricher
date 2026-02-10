@@ -169,7 +169,7 @@ This package currently provides a stable baseline implementation of the full 00.
 
 - Baseline orchestration, validation hooks, CLI/API integration, and deterministic utilities are implemented and tested.
 - Stage-by-stage linguistic parity hardening against the intended prototype semantics is still in progress.
-- The Secos prototype (`C:\code\Secos\prototypes\linguistics\pipeline`) is treated as a semantic reference only, not as a technical implementation template.
+- The legacy prototype corpus is treated as a semantic reference only, not as a technical implementation template.
 
 ---
 

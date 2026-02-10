@@ -12,7 +12,7 @@
 ## Next Execution Mode (Fidelity Hardening)
 
 - Remaining work is fidelity hardening, not scaffolding.
-- Prototype source (`C:\code\Secos\prototypes\linguistics\pipeline`) is semantic reference only.
+- Prototype source corpus is semantic reference only.
 - Do NOT port prototype file/YAML artifact mechanics or script-driven execution.
 - Preserve API-first in-memory architecture.
 - Execute stage hardening sequentially: 00 -> 11.
@@ -322,7 +322,7 @@
 
 ## 13) Acceptance Criteria
 
-- Package is installable and runnable independently of Secos.
+- Package is installable and runnable as an independent npm package.
 - Public API is CommonJS-only and library-first.
 - CLI is optional and thin, backed by same API.
 - Pipeline executes deterministically through `relations_extracted`.

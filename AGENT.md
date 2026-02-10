@@ -14,7 +14,7 @@
 
 - Baseline implementation is in place (pipeline shell + stage modules + CLI + validation + Python bridge + tests).
 - Active focus is prototype-parity hardening:
-  - align stage behavior with `C:\code\Secos\prototypes\linguistics\pipeline` (00..11 scope),
+  - align stage behavior with the legacy linguistics prototype corpus (00..11 scope),
   - increase deterministic fidelity of stage outputs,
   - close remaining functional gaps while preserving CommonJS-only constraints.
 
@@ -31,7 +31,7 @@
 - Exclude:
   - Stage 12.
   - Any `xx-*` prototype scope.
-- Prototype repository at `C:\code\Secos\prototypes\linguistics\pipeline` is a semantic/domain reference only.
+- Prototype corpus is a semantic/domain reference only.
 - That prototype is NOT an implementation template and NOT a technical port target.
 - File/YAML artifact mechanics and step-script execution from prototypes are NOT ALLOWED in this package core.
 - Core implementation MUST remain API-first and in-memory via `runPipeline(...)`, with CLI as thin wrapper.
@@ -39,7 +39,7 @@
 ## Prototype Selection Outcomes (Mandatory)
 
 - Prototype selections are binding input for library/variant choices unless explicitly changed by a new decision.
-- Current mandatory selections from `C:\code\Secos\prototypes\linguistics\pipeline`:
+- Current mandatory selections from the legacy prototype evaluations:
   - `02-segmentation`: use `sbd`.
   - `03-tokenization`: use `wink-tokenizer`.
   - `04-pos-tagging`: use `wink-pos-tagger`.
@@ -67,7 +67,7 @@
 - For each stage hardening block, realistic semantic test cases MUST be derived from:
   - prototype `seed.*.yaml` artifacts, and
   - prototype `*.test.js` files
-  under `C:\code\Secos\prototypes\linguistics\pipeline`.
+  from the legacy prototype corpus.
 - These references are mandatory for behavior coverage, edge-case coverage, and regression test design.
 - They are semantic test references only:
   - DO NOT port prototype script orchestration,
