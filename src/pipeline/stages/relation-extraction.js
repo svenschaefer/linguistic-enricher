@@ -17,12 +17,14 @@ function getTag(token) {
   return "";
 }
 
-function isVerbish(tag) {
-  return /^(VB|VBD|VBG|VBN|VBP|VBZ|MD)$/.test(String(tag || ""));
-}
-
 function isNoun(tag) {
   return tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS";
+}
+
+function baseDepLabel(label) {
+  const value = String(label || "").toLowerCase();
+  const idx = value.indexOf(":");
+  return idx === -1 ? value : value.slice(0, idx);
 }
 
 function getSelector(annotation, type) {
@@ -90,20 +92,27 @@ function spanTextFromCanonical(canonicalText, span, unit) {
 }
 
 function roleFromDepLabel(depLabel, depTokenTag) {
-  if (depLabel === "nsubj") {
+  const base = baseDepLabel(depLabel);
+  if (base === "nsubj") {
     return "actor";
   }
-  if (depLabel === "nsubjpass") {
+  if (base === "nsubjpass") {
     return "patient";
   }
-  if (depLabel === "dobj" || depLabel === "obj" || depLabel === "attr" || depLabel === "acomp") {
+  if (base === "dobj" || base === "obj") {
     return "theme";
   }
-  if (depLabel === "iobj") {
+  if (base === "attr" || base === "acomp" || base === "appos") {
+    return "attribute";
+  }
+  if (base === "iobj") {
     return "recipient";
   }
-  if (depLabel === "aux" && depTokenTag === "MD") {
+  if ((base === "aux" || base === "auxpass") && depTokenTag === "MD") {
     return "modality";
+  }
+  if (base === "amod" || base === "advmod" || base === "npadvmod") {
+    return "modifier";
   }
   return null;
 }
@@ -118,6 +127,9 @@ function roleFromPrepSurface(surface) {
   }
   if (prep === "for") {
     return "beneficiary";
+  }
+  if (prep === "to") {
+    return "purpose";
   }
   if (prep === "with") {
     return "instrument";
@@ -293,11 +305,25 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
         sentence_id: sentenceId
       });
     }
+    if (chunkLower.indexOf(" by ") !== -1 || chunkLower.startsWith("by ")) {
+      const arg = nextNP ? chunkHeadByChunkId.get(nextNP.id) : null;
+      addRelation(predicateId, arg, "agent", {
+        pattern: "chunk_fallback",
+        dependency_label: "prep",
+        prep_surface: "by",
+        sentence_id: sentenceId
+      });
+    }
 
     if (chunkLower.indexOf(" to ") !== -1 || chunkLower.startsWith("to ")) {
       const nextVP = nearestNextVP(i);
       if (nextVP) {
         addRelation(predicateId, chunkHeadByChunkId.get(nextVP.id), "complement_clause", {
+          pattern: "chunk_fallback",
+          dependency_label: "xcomp",
+          sentence_id: sentenceId
+        });
+        addRelation(predicateId, chunkHeadByChunkId.get(nextVP.id), "purpose", {
           pattern: "chunk_fallback",
           dependency_label: "xcomp",
           sentence_id: sentenceId
@@ -341,6 +367,70 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
   }
 
   void relations;
+}
+
+function maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById) {
+  const bySentence = new Map();
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (!bySentence.has(token.segment_id)) {
+      bySentence.set(token.segment_id, []);
+    }
+    bySentence.get(token.segment_id).push(token);
+  }
+  for (const list of bySentence.values()) {
+    list.sort(function (a, b) { return a.i - b.i; });
+  }
+
+  for (const sentenceTokens of bySentence.values()) {
+    for (let i = 0; i < sentenceTokens.length; i += 1) {
+      const token = sentenceTokens[i];
+      const tag = getTag(token);
+      if (tag === "MD") {
+        const parent = (depByHead.get(token.id) || [])[0];
+        if (parent && parent.head && parent.head.id) {
+          addRelation(parent.head.id, token.id, "modality", {
+            pattern: "token_heuristic",
+            dependency_label: parent.label || "dep",
+            sentence_id: token.segment_id
+          });
+        }
+      }
+    }
+
+    for (let i = 1; i + 1 < sentenceTokens.length; i += 1) {
+      const current = sentenceTokens[i];
+      if (String(current.surface || "").toLowerCase() !== "to") {
+        continue;
+      }
+      const next = sentenceTokens[i + 1];
+      if (!next || !/^VB/.test(getTag(next))) {
+        continue;
+      }
+      let prevVerb = null;
+      for (let j = i - 1; j >= 0; j -= 1) {
+        if (/^VB/.test(getTag(sentenceTokens[j]))) {
+          prevVerb = sentenceTokens[j];
+          break;
+        }
+      }
+      if (!prevVerb) {
+        continue;
+      }
+      addRelation(prevVerb.id, next.id, "complement_clause", {
+        pattern: "token_heuristic",
+        dependency_label: "xcomp",
+        sentence_id: current.segment_id
+      });
+      addRelation(prevVerb.id, next.id, "purpose", {
+        pattern: "token_heuristic",
+        dependency_label: "xcomp",
+        sentence_id: current.segment_id
+      });
+    }
+  }
+
+  void tokenById;
 }
 
 function isExistingStage11Relation(annotation) {
@@ -499,6 +589,7 @@ async function runStage(seed) {
   }
 
   maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById);
+  maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById);
 
   for (let i = 0; i < dependencyObs.length; i += 1) {
     const dep = dependencyObs[i];
@@ -540,12 +631,13 @@ async function runStage(seed) {
     if (dep.is_root || !dep.head || !dep.dep) {
       continue;
     }
-    if (dep.label === "xcomp" || dep.label === "ccomp" || dep.label === "advcl" || dep.label === "relcl") {
+    const depBase = baseDepLabel(dep.label);
+    if (depBase === "xcomp" || depBase === "ccomp" || depBase === "advcl" || depBase === "relcl") {
       const pred = resolvePredicate(dep.head.id);
       const argPred = resolvePredicate(dep.dep.id);
       const predTok = tokenById.get(pred);
       const argTok = tokenById.get(argPred);
-      if (predTok && argTok && isVerbish(getTag(predTok)) && isVerbish(getTag(argTok))) {
+      if (predTok && argTok) {
         addRelation(
           pred,
           argPred,
@@ -556,14 +648,26 @@ async function runStage(seed) {
             sentence_id: predTok.segment_id
           }
         );
+        if (depBase === "xcomp") {
+          addRelation(
+            pred,
+            argPred,
+            "purpose",
+            {
+              pattern: "dep_label",
+              dependency_label: dep.label,
+              sentence_id: predTok.segment_id
+            }
+          );
+        }
       }
     }
-    if (dep.label === "conj") {
+    if (depBase === "conj") {
       const pred = resolvePredicate(dep.head.id);
       const argPred = resolvePredicate(dep.dep.id);
       const predTok = tokenById.get(pred);
       const argTok = tokenById.get(argPred);
-      if (predTok && argTok && isVerbish(getTag(predTok)) && isVerbish(getTag(argTok))) {
+      if (predTok && argTok) {
         addRelation(
           pred,
           argPred,

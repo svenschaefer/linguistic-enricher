@@ -50,41 +50,187 @@ function isAdverbLikeTag(tag) {
 
 function detectRootIndex(tokens) {
   for (let i = 0; i < tokens.length; i += 1) {
-    if (isVerbLikeTag(getTag(tokens[i]))) {
+    if (isVerbLikeTag(getTag(tokens[i])) && String(tokens[i].surface || "").toLowerCase() !== "to") {
       return i;
     }
   }
   return 0;
 }
 
-function deriveDepLabel(token, prevToken) {
-  const tag = getTag(token);
-  const prevTag = getTag(prevToken);
-  if (isPunct(token)) {
-    return "punct";
+function nearestIndex(tokens, from, step, predicate) {
+  for (let i = from; i >= 0 && i < tokens.length; i += step) {
+    if (predicate(tokens[i])) {
+      return i;
+    }
   }
-  if (isDetLikeTag(tag)) {
-    return "det";
+  return -1;
+}
+
+function buildSentenceDependencies(sentenceTokens) {
+  const rootIndex = detectRootIndex(sentenceTokens);
+  const rootToken = sentenceTokens[rootIndex];
+  const edges = [];
+
+  for (let i = 0; i < sentenceTokens.length; i += 1) {
+    const token = sentenceTokens[i];
+    const tag = getTag(token);
+    const lower = String(token.surface || "").toLowerCase();
+    const prev = i > 0 ? sentenceTokens[i - 1] : null;
+
+    if (i === rootIndex) {
+      edges.push({ depId: token.id, headId: null, label: "root", isRoot: true });
+      continue;
+    }
+
+    if (isPunct(token)) {
+      const headIndex = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return !isPunct(t); });
+      edges.push({
+        depId: token.id,
+        headId: headIndex >= 0 ? sentenceTokens[headIndex].id : rootToken.id,
+        label: "punct",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (tag === "MD") {
+      const nextVerb = nearestIndex(sentenceTokens, i + 1, 1, function (t) { return isVerbLikeTag(getTag(t)); });
+      edges.push({
+        depId: token.id,
+        headId: nextVerb >= 0 ? sentenceTokens[nextVerb].id : rootToken.id,
+        label: "aux",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (isDetLikeTag(tag)) {
+      const nextNoun = nearestIndex(sentenceTokens, i + 1, 1, function (t) { return isNounLikeTag(getTag(t)); });
+      edges.push({
+        depId: token.id,
+        headId: nextNoun >= 0 ? sentenceTokens[nextNoun].id : rootToken.id,
+        label: "det",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (isAdjLikeTag(tag)) {
+      const nextNoun = nearestIndex(sentenceTokens, i + 1, 1, function (t) { return isNounLikeTag(getTag(t)); });
+      const prevNoun = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isNounLikeTag(getTag(t)); });
+      const headIndex = nextNoun >= 0 ? nextNoun : prevNoun;
+      edges.push({
+        depId: token.id,
+        headId: headIndex >= 0 ? sentenceTokens[headIndex].id : rootToken.id,
+        label: "amod",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (isAdverbLikeTag(tag)) {
+      const prevVerb = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isVerbLikeTag(getTag(t)); });
+      edges.push({
+        depId: token.id,
+        headId: prevVerb >= 0 ? sentenceTokens[prevVerb].id : rootToken.id,
+        label: "advmod",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (isAdpLikeTag(tag)) {
+      const prevContent = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+        const tTag = getTag(t);
+        return isVerbLikeTag(tTag) || isNounLikeTag(tTag);
+      });
+      edges.push({
+        depId: token.id,
+        headId: prevContent >= 0 ? sentenceTokens[prevContent].id : rootToken.id,
+        label: "prep",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (isVerbLikeTag(tag)) {
+      if (prev && getTag(prev) === "TO") {
+        const prevVerb = nearestIndex(sentenceTokens, i - 2, -1, function (t) { return isVerbLikeTag(getTag(t)); });
+        edges.push({
+          depId: token.id,
+          headId: prevVerb >= 0 ? sentenceTokens[prevVerb].id : rootToken.id,
+          label: "xcomp",
+          isRoot: false
+        });
+        continue;
+      }
+      if (prev && String(prev.surface || "").toLowerCase() === "and") {
+        const prevVerb = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isVerbLikeTag(getTag(t)); });
+        edges.push({
+          depId: token.id,
+          headId: prevVerb >= 0 ? sentenceTokens[prevVerb].id : rootToken.id,
+          label: "conj",
+          isRoot: false
+        });
+        continue;
+      }
+      edges.push({
+        depId: token.id,
+        headId: rootToken.id,
+        label: "dep",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (isNounLikeTag(tag)) {
+      if (prev && isAdpLikeTag(getTag(prev))) {
+        edges.push({
+          depId: token.id,
+          headId: prev.id,
+          label: "pobj",
+          isRoot: false
+        });
+        continue;
+      }
+      if (prev && isNounLikeTag(getTag(prev))) {
+        edges.push({
+          depId: token.id,
+          headId: prev.id,
+          label: "compound",
+          isRoot: false
+        });
+        continue;
+      }
+      edges.push({
+        depId: token.id,
+        headId: rootToken.id,
+        label: i < rootIndex ? "nsubj" : "obj",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (lower === "and" || lower === "or") {
+      const prevVerb = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isVerbLikeTag(getTag(t)); });
+      edges.push({
+        depId: token.id,
+        headId: prevVerb >= 0 ? sentenceTokens[prevVerb].id : rootToken.id,
+        label: "cc",
+        isRoot: false
+      });
+      continue;
+    }
+
+    edges.push({
+      depId: token.id,
+      headId: rootToken.id,
+      label: "dep",
+      isRoot: false
+    });
   }
-  if (isAdjLikeTag(tag)) {
-    return "amod";
-  }
-  if (isAdpLikeTag(tag)) {
-    return "prep";
-  }
-  if (isAdverbLikeTag(tag)) {
-    return "advmod";
-  }
-  if (isNounLikeTag(tag) && isAdpLikeTag(prevTag)) {
-    return "pobj";
-  }
-  if (isNounLikeTag(tag) && isVerbLikeTag(prevTag)) {
-    return "obj";
-  }
-  if (isNounLikeTag(tag)) {
-    return "nmod";
-  }
-  return "dep";
+
+  return edges;
 }
 
 function spanTextFromCanonical(canonicalText, span, unit) {
@@ -146,44 +292,62 @@ async function runStage(seed) {
     }
   }
 
-  const rootIndex = detectRootIndex(tokens);
+  const tokensBySentence = new Map();
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (!tokensBySentence.has(token.segment_id)) {
+      tokensBySentence.set(token.segment_id, []);
+    }
+    tokensBySentence.get(token.segment_id).push(token);
+  }
+  for (const list of tokensBySentence.values()) {
+    list.sort(function (a, b) { return a.i - b.i; });
+  }
+
+  for (const sentenceTokens of tokensBySentence.values()) {
+    const edges = buildSentenceDependencies(sentenceTokens);
+    for (let i = 0; i < edges.length; i += 1) {
+      const edge = edges[i];
+      const token = sentenceTokens.find(function (t) { return t.id === edge.depId; });
+      const id = createDeterministicId("dep", { token: edge.depId, head: edge.headId, root: edge.isRoot });
+      const selector = {
+        type: "TokenSelector",
+        token_ids: [edge.depId]
+      };
+      const textPos = { type: "TextPositionSelector", span: token.span };
+      const textQuote = { type: "TextQuoteSelector", exact: spanTextFromCanonical(out.canonical_text, token.span, unit) };
+      const dependencyAnnotation = {
+        id: id,
+        kind: "dependency",
+        status: "observation",
+        label: edge.label,
+        is_root: edge.isRoot,
+        dep: { id: edge.depId },
+        anchor: { selectors: [textQuote, textPos, selector] },
+        sources: annotationSource()
+      };
+
+      if (!edge.isRoot && edge.headId) {
+        dependencyAnnotation.head = { id: edge.headId };
+      }
+
+      annotations.push(dependencyAnnotation);
+    }
+  }
 
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
-    const isRoot = i === rootIndex;
-    let headTokenId = null;
-    if (!isRoot) {
-      if (i > 0) {
-        headTokenId = tokens[i - 1].id;
-      } else {
-        headTokenId = tokens[rootIndex].id;
-      }
-    }
-    const id = createDeterministicId("dep", { token: token.id, head: headTokenId, root: isRoot });
-    const selector = {
-      type: "TokenSelector",
-      token_ids: [token.id]
-    };
-    const textPos = { type: "TextPositionSelector", span: token.span };
-    const textQuote = { type: "TextQuoteSelector", exact: spanTextFromCanonical(out.canonical_text, token.span, unit) };
-    const dependencyAnnotation = {
-      id: id,
-      kind: "dependency",
-      status: "observation",
-      label: isRoot ? "root" : deriveDepLabel(token, tokens[i - 1] || null),
-      is_root: isRoot,
-      dep: { id: token.id },
-      anchor: { selectors: [textQuote, textPos, selector] },
-      sources: annotationSource()
-    };
-
-    if (!isRoot) {
-      dependencyAnnotation.head = { id: headTokenId };
-    }
-
-    annotations.push(dependencyAnnotation);
 
     if (!isPunct(token) && /\p{L}/u.test(token.surface)) {
+      const selector = {
+        type: "TokenSelector",
+        token_ids: [token.id]
+      };
+      const textPos = { type: "TextPositionSelector", span: token.span };
+      const textQuote = {
+        type: "TextQuoteSelector",
+        exact: spanTextFromCanonical(out.canonical_text, token.span, unit)
+      };
       annotations.push({
         id: createDeterministicId("lemma", { token: token.id }),
         kind: "lemma",
