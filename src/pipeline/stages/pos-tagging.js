@@ -169,7 +169,7 @@ async function runStage(seed, context) {
 
     if (client.enabled && shouldEnrichToken(token)) {
       try {
-        const response = await client.queryTitle(token.surface, 10);
+        const response = await client.queryTitle(token.surface, 100);
         const evidence = mapQueryEvidence(response);
         if (evidence.wiki_any_signal) {
           token.lexicon = token.lexicon && typeof token.lexicon === "object" ? token.lexicon : {};

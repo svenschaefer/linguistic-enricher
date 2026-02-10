@@ -459,7 +459,7 @@ async function runStage(seed, context) {
 
     if (client.enabled) {
       try {
-        const response = await client.queryTitle(label, 10);
+        const response = await client.queryTitle(label, 100);
         evidence = mapQueryEvidence(response);
       } catch (error) {
         void error;

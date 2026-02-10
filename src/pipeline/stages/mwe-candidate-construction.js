@@ -99,7 +99,7 @@ async function runStage(seed, context) {
 
     if (client.enabled && typeof ann.label === "string" && ann.label.trim().length > 0) {
       try {
-        const response = await client.queryTitle(ann.label, 10);
+        const response = await client.queryTitle(ann.label, 100);
         const evidence = mapQueryEvidence(response);
         ann.sources = upsertWikipediaLexiconSource(ann.sources, evidence);
       } catch (error) {
