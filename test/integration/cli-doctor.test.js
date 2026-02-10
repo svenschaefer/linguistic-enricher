@@ -59,27 +59,12 @@ test("CLI doctor failure path sets exit code 1 and prints typed code", async fun
     );
   });
 
-  const errorLines = [];
-  const originalLog = console.log;
-  const originalError = console.error;
-  const originalExitCode = process.exitCode;
-
-  process.exitCode = 0;
-  console.log = function () {};
-  console.error = function (msg) { errorLines.push(String(msg)); };
-
-  try {
-    await cli.main(["node", "linguistic-enricher", "doctor"]);
-  } finally {
-    console.log = originalLog;
-    console.error = originalError;
-    const capturedExitCode = process.exitCode;
-    process.exitCode = originalExitCode;
-    assert.equal(capturedExitCode, 1);
-  }
-
-  assert.equal(errorLines.some(function (line) {
-    return line.indexOf("E_PYTHON_MODEL_MISSING") !== -1;
-  }), true);
+  await assert.rejects(
+    function () {
+      return cli.main(["node", "linguistic-enricher", "doctor"]);
+    },
+    function (error) {
+      return error && error.code === errors.ERROR_CODES.E_PYTHON_MODEL_MISSING;
+    }
+  );
 });
-

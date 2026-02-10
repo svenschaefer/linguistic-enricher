@@ -219,7 +219,10 @@ A built-in runtime check (`doctor`) can be used to verify Python availability an
 A command-line interface is provided for convenience:
 
 ```bash
-npx linguistic-enricher run input.txt --out result.json
+npx linguistic-enricher run --in input.txt --out result.json
+npx linguistic-enricher run --text "A webshop is an online store." --target canonical --pretty
+npx linguistic-enricher validate --in result.json
+npx linguistic-enricher doctor
 ```
 
 The CLI is a thin wrapper around the same library API and is fully cross-platform.
