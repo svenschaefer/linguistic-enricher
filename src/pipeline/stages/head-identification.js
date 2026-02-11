@@ -41,7 +41,7 @@ function isDemotedVerbish(token) {
   if (tag === "VBG" && ["using", "doing", "being", "having"].indexOf(surface) !== -1) {
     return true;
   }
-  if (tag === "VBN" && ["used", "assigned", "recorded", "submitted", "accepted", "authenticated", "present", "considered"].indexOf(surface) !== -1) {
+  if (tag === "VBN" && ["assigned", "recorded", "submitted", "accepted", "authenticated", "present"].indexOf(surface) !== -1) {
     return true;
   }
   return false;
@@ -87,6 +87,58 @@ function dependencyMap(annotations) {
     }
   }
   return map;
+}
+
+function inChunkIdSet(tokens) {
+  return new Set(tokens.map(function (t) { return t.id; }));
+}
+
+function buildIncidentDegreeMap(tokens, depMap, inChunkSet, annotations) {
+  void depMap;
+  const degreeMap = new Map(tokens.map(function (t) { return [t.id, 0]; }));
+  const deps = Array.isArray(annotations) ? annotations : [];
+
+  for (let i = 0; i < deps.length; i += 1) {
+    const ann = deps[i];
+    if (!ann || ann.kind !== "dependency" || !ann.dep || typeof ann.dep.id !== "string") {
+      continue;
+    }
+    const depId = ann.dep.id;
+    const headId = ann.head && typeof ann.head.id === "string" ? ann.head.id : null;
+    const depInChunk = inChunkSet.has(depId);
+    const headInChunk = headId ? inChunkSet.has(headId) : false;
+
+    if (depInChunk && (ann.is_root === true || headInChunk)) {
+      degreeMap.set(depId, (degreeMap.get(depId) || 0) + 1);
+    }
+    if (depInChunk && headInChunk) {
+      degreeMap.set(headId, (degreeMap.get(headId) || 0) + 1);
+    }
+  }
+
+  return degreeMap;
+}
+
+function chooseMatrixLexVerb(tokens, inChunkSet, degreeMap) {
+  const candidates = tokens.filter(function (t) {
+    const tag = getTag(t);
+    return isVerb(tag) && tag !== "MD" && !isDemotedVerbish(t) && inChunkSet.has(t.id);
+  });
+  if (candidates.length === 0) {
+    return null;
+  }
+  const sorted = candidates.slice().sort(function (a, b) {
+    const degreeA = degreeMap.get(a.id) || 0;
+    const degreeB = degreeMap.get(b.id) || 0;
+    if (degreeA !== degreeB) {
+      return degreeB - degreeA;
+    }
+    if (a.i !== b.i) {
+      return a.i - b.i;
+    }
+    return String(a.id).localeCompare(String(b.id));
+  });
+  return sorted[0];
 }
 
 function chooseByPosition(tokens, rightmost) {
@@ -215,8 +267,20 @@ async function runStage(seed) {
     }
     chunkTokens.sort(function (a, b) { return a.i - b.i; });
 
-    const selected = selectHeadToken(ann.chunk_type || "O", chunkTokens, depMap);
-    const maybeOverridden = maybeApplyVpLexicalOverride(ann.chunk_type || "O", selected, chunkTokens);
+    const chunkType = ann.chunk_type || "O";
+    let selected = selectHeadToken(chunkType, chunkTokens, depMap);
+    let matrixPreferenceFired = false;
+    if (chunkType === "VP" && isDemotedVerbish(selected)) {
+      const chunkSet = inChunkIdSet(chunkTokens);
+      const degreeMap = buildIncidentDegreeMap(chunkTokens, depMap, chunkSet, annotations);
+      const matrixLex = chooseMatrixLexVerb(chunkTokens, chunkSet, degreeMap);
+      if (matrixLex) {
+        selected = matrixLex;
+        matrixPreferenceFired = true;
+      }
+    }
+
+    const maybeOverridden = maybeApplyVpLexicalOverride(chunkType, selected, chunkTokens);
     const headTokenId = maybeOverridden.head.id;
     const headSpan = maybeOverridden.head.span;
     const headLabel = spanTextFromCanonical(out.canonical_text, headSpan, unit);
@@ -257,8 +321,15 @@ async function runStage(seed) {
     if (chunkSurface) {
       newAnnotation.surface = chunkSurface;
     }
-    if (maybeOverridden.fired) {
-      newAnnotation.notes = "vp_lexical_head_override=true";
+    if (matrixPreferenceFired || maybeOverridden.fired) {
+      const notes = [];
+      if (matrixPreferenceFired) {
+        notes.push("vp_matrix_lexical_preference=true");
+      }
+      if (maybeOverridden.fired) {
+        notes.push("vp_lexical_head_override=true");
+      }
+      newAnnotation.notes = notes.join(",");
     }
 
     chunkHeads.push(newAnnotation);

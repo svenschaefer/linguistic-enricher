@@ -108,7 +108,7 @@ test("stage10 applies VP lexical override for demoted auxiliary-like head", asyn
   const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
   assert.ok(head);
   assert.equal(head.head.id, "t1");
-  assert.equal(head.notes, "vp_lexical_head_override=true");
+  assert.equal(head.notes, "vp_matrix_lexical_preference=true");
 });
 
 test("stage10 rejects partially head-identified docs", async function () {
@@ -195,4 +195,89 @@ test("stage10 allows MD fallback as VP head when no lexical verb exists", async 
   assert.ok(head);
   assert.equal(head.head.id, "t1");
   assert.equal(head.label, "may");
+});
+
+test("stage10 prefers matrix lexical verb over demoted VP root in may be used", async function () {
+  const text = "may be used";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "may", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 6 }, surface: "be", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 7, end: 11 }, surface: "used", pos: { tag: "VBN" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2", "t3"], { start: 0, end: 11 }, "may be used"),
+    depAnnotation("dep-1", "t2", null, true, { start: 4, end: 6 }, "be", ["t2"]),
+    depAnnotation("dep-2", "t1", "t2", false, { start: 0, end: 3 }, "may", ["t1", "t2"]),
+    depAnnotation("dep-3", "t3", "t2", false, { start: 7, end: 11 }, "used", ["t3", "t2"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t3");
+  assert.equal(head.label, "used");
+  assert.equal(head.notes, "vp_matrix_lexical_preference=true");
+});
+
+test("stage10 prefers matrix lexical participle over copula root in are considered", async function () {
+  const text = "are considered";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "are", pos: { tag: "VBP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 14 }, surface: "considered", pos: { tag: "VBN" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2"], { start: 0, end: 14 }, "are considered"),
+    depAnnotation("dep-1", "t1", null, true, { start: 0, end: 3 }, "are", ["t1"]),
+    depAnnotation("dep-2", "t2", "t1", false, { start: 4, end: 14 }, "considered", ["t2", "t1"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t2");
+  assert.equal(head.label, "considered");
+  assert.equal(head.notes, "vp_matrix_lexical_preference=true");
+});
+
+test("stage10 matrix lexical preference uses degree then index tie-break deterministically", async function () {
+  const text = "using plan execute";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "using", pos: { tag: "VBG" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 6, end: 10 }, surface: "plan", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 11, end: 18 }, surface: "execute", pos: { tag: "VB" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2", "t3"], { start: 0, end: 18 }, "using plan execute"),
+    depAnnotation("dep-1", "t1", null, true, { start: 0, end: 5 }, "using", ["t1"]),
+    depAnnotation("dep-2", "t2", "t1", false, { start: 6, end: 10 }, "plan", ["t2", "t1"]),
+    depAnnotation("dep-3", "t3", "t1", false, { start: 11, end: 18 }, "execute", ["t3", "t1"]),
+    depAnnotation("dep-4", "t1", "t3", false, { start: 0, end: 5 }, "using", ["t1", "t3"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t3");
+  assert.equal(head.notes, "vp_matrix_lexical_preference=true");
+});
+
+test("stage10 matrix lexical preference uses earliest index when lexical degrees tie", async function () {
+  const text = "using plan execute";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "using", pos: { tag: "VBG" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 6, end: 10 }, surface: "plan", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 11, end: 18 }, surface: "execute", pos: { tag: "VB" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2", "t3"], { start: 0, end: 18 }, "using plan execute"),
+    depAnnotation("dep-1", "t1", null, true, { start: 0, end: 5 }, "using", ["t1"]),
+    depAnnotation("dep-2", "t2", "t1", false, { start: 6, end: 10 }, "plan", ["t2", "t1"]),
+    depAnnotation("dep-3", "t3", "t1", false, { start: 11, end: 18 }, "execute", ["t3", "t1"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t2");
+  assert.equal(head.notes, "vp_matrix_lexical_preference=true");
 });
