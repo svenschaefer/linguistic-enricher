@@ -48,7 +48,7 @@ test("stage09 emits NP and O chunks including punctuation", async function () {
   assert.equal(o.label, ".");
 });
 
-test("stage09 emits VP and PP chunks with POS-FSM matching", async function () {
+test("stage09 emits VP with adjacent PP complement under refined VP matching", async function () {
   const text = "Ships to Berlin";
   const tokens = [
     { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "Ships", pos: { tag: "VBZ" }, flags: { is_punct: false } },
@@ -60,11 +60,8 @@ test("stage09 emits VP and PP chunks with POS-FSM matching", async function () {
   const chunks = out.annotations.filter(function (a) { return a.kind === "chunk"; });
 
   const vp = chunks.find(function (a) { return a.chunk_type === "VP"; });
-  const pp = chunks.find(function (a) { return a.chunk_type === "PP"; });
   assert.ok(vp);
-  assert.ok(pp);
-  assert.equal(vp.label, "Ships");
-  assert.equal(pp.label, "to Berlin");
+  assert.equal(vp.label, "Ships to Berlin");
 });
 
 test("stage09 treats accepted MWE annotations as atomic noun units", async function () {
@@ -127,4 +124,120 @@ test("stage09 rejects partially chunked inputs", async function () {
       return true;
     }
   );
+});
+
+test("stage09 treats coordinator as hard boundary for NP coordination", async function () {
+  const text = "educational purposes or basic numerical experiments";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 11 }, surface: "educational", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 12, end: 20 }, surface: "purposes", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 21, end: 23 }, surface: "or", pos: { tag: "CC" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 24, end: 29 }, surface: "basic", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 30, end: 39 }, surface: "numerical", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 40, end: 51 }, surface: "experiments", pos: { tag: "NNS" }, flags: { is_punct: false } }
+  ];
+
+  const out = await stage09.runStage(buildSeed(text, tokens, []));
+  const chunks = out.annotations.filter(function (a) { return a.kind === "chunk"; });
+  const npChunks = chunks.filter(function (a) { return a.chunk_type === "NP"; });
+  const oChunks = chunks.filter(function (a) { return a.chunk_type === "O"; });
+
+  assert.equal(npChunks.length, 2);
+  assert.equal(oChunks.some(function (a) { return a.label === "or"; }), true);
+  assert.equal(npChunks.some(function (a) { return a.label.indexOf(" or ") !== -1; }), false);
+  assert.equal(npChunks.some(function (a) { return a.label === "educational purposes"; }), true);
+  assert.equal(npChunks.some(function (a) { return a.label === "basic numerical experiments"; }), true);
+});
+
+test("stage09 does not create one VP across or-coordinated verbs", async function () {
+  const text = "Alice buys or sells.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "Alice", pos: { tag: "NNP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 6, end: 10 }, surface: "buys", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 11, end: 13 }, surface: "or", pos: { tag: "CC" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 14, end: 19 }, surface: "sells", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 19, end: 20 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage09.runStage(buildSeed(text, tokens, []));
+  const chunks = out.annotations.filter(function (a) { return a.kind === "chunk"; });
+
+  const coordinatorO = chunks.find(function (a) { return a.chunk_type === "O" && a.label === "or"; });
+  assert.ok(coordinatorO);
+
+  const vpWithBuys = chunks.find(function (a) {
+    if (a.chunk_type !== "VP") {
+      return false;
+    }
+    const tokenSelector = a.anchor.selectors.find(function (s) { return s.type === "TokenSelector"; });
+    return tokenSelector && tokenSelector.token_ids.indexOf("t2") !== -1;
+  });
+  const vpWithSells = chunks.find(function (a) {
+    if (a.chunk_type !== "VP") {
+      return false;
+    }
+    const tokenSelector = a.anchor.selectors.find(function (s) { return s.type === "TokenSelector"; });
+    return tokenSelector && tokenSelector.token_ids.indexOf("t4") !== -1;
+  });
+
+  assert.ok(vpWithBuys);
+  assert.ok(vpWithSells);
+
+  const fusedVp = chunks.find(function (a) {
+    if (a.chunk_type !== "VP") {
+      return false;
+    }
+    const tokenSelector = a.anchor.selectors.find(function (s) { return s.type === "TokenSelector"; });
+    return tokenSelector &&
+      tokenSelector.token_ids.indexOf("t2") !== -1 &&
+      tokenSelector.token_ids.indexOf("t4") !== -1;
+  });
+  assert.equal(Boolean(fusedVp), false);
+});
+
+test("stage09 keeps for-PP separate from VP under bounded marker policy", async function () {
+  const text = "Generated primes may be used for educational purposes.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 9 }, surface: "Generated", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 10, end: 16 }, surface: "primes", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 17, end: 20 }, surface: "may", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 21, end: 23 }, surface: "be", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 24, end: 28 }, surface: "used", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 29, end: 32 }, surface: "for", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 33, end: 44 }, surface: "educational", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 45, end: 53 }, surface: "purposes", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t9", i: 8, segment_id: "s1", span: { start: 53, end: 54 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage09.runStage(buildSeed(text, tokens, []));
+  const chunks = out.annotations.filter(function (a) { return a.kind === "chunk"; });
+  const vp = chunks.find(function (a) { return a.chunk_type === "VP"; });
+  const pp = chunks.find(function (a) { return a.chunk_type === "PP"; });
+  assert.ok(vp);
+  assert.ok(pp);
+  assert.equal(vp.label, "may be used");
+  assert.equal(pp.label, "for educational purposes");
+  assert.equal(chunks.some(function (a) { return a.chunk_type === "VP" && a.label.indexOf("for ") !== -1; }), false);
+});
+
+test("stage09 keeps at-PP separate and preserves starts as VP nucleus", async function () {
+  const text = "It starts at a minimum value.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 2 }, surface: "It", pos: { tag: "PRP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 3, end: 9 }, surface: "starts", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 10, end: 12 }, surface: "at", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 13, end: 14 }, surface: "a", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 15, end: 22 }, surface: "minimum", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 23, end: 28 }, surface: "value", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 28, end: 29 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage09.runStage(buildSeed(text, tokens, []));
+  const chunks = out.annotations.filter(function (a) { return a.kind === "chunk"; });
+  const vp = chunks.find(function (a) { return a.chunk_type === "VP"; });
+  const pp = chunks.find(function (a) { return a.chunk_type === "PP"; });
+  assert.ok(vp);
+  assert.ok(pp);
+  assert.equal(vp.label, "starts");
+  assert.equal(pp.label, "at a minimum value");
 });

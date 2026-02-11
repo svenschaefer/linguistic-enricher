@@ -4,6 +4,8 @@ const { deepClone } = require("../../util/deep-clone");
 const { createDeterministicId } = require("../../util/ids");
 const errors = require("../../util/errors");
 
+const VP_PP_ABSORB_DENY = new Set(["for", "at", "in", "than"]);
+
 function getTag(token) {
   if (!token || !token.pos) {
     return "";
@@ -42,6 +44,32 @@ function isVerb(tag) {
 
 function isPrep(tag) {
   return tag === "IN" || tag === "TO";
+}
+
+const AUX_SURFACES = new Set([
+  "be",
+  "am",
+  "is",
+  "are",
+  "was",
+  "were",
+  "been",
+  "being",
+  "have",
+  "has",
+  "had",
+  "do",
+  "does",
+  "did"
+]);
+
+function isCoordinatorUnit(unit) {
+  if (!unit || unit.kind !== "token") {
+    return false;
+  }
+  const surface = String(unit.text || "").toLowerCase();
+  const pos = String(unit.pos || "");
+  return pos === "CC" || surface === "and" || surface === "or";
 }
 
 function spanTextFromCanonical(canonicalText, span, unit) {
@@ -215,13 +243,22 @@ function buildUnits(tokensBySentence, winningMwes) {
 
 function asRunUnit(unit) {
   const pos = unit.pos || "";
+  const lower = String(unit.text || "").toLowerCase();
+  const isToken = unit.kind === "token";
+  const isVerbTag = /^VB/.test(pos);
+  const isAux = isToken && (pos === "MD" || (isVerbTag && AUX_SURFACES.has(lower)));
+  const isLexVerb = isToken && isVerbTag && pos !== "MD" && !AUX_SURFACES.has(lower);
   return {
     unit: unit,
     det: unit.kind === "token" && isDet(pos),
     adj: unit.kind === "token" && isAdj(pos),
     noun: unit.kind === "mwe" || (unit.kind === "token" && isNoun(pos)),
     verb: unit.kind === "token" && isVerb(pos),
-    prep: unit.kind === "token" && isPrep(pos)
+    prep: unit.kind === "token" && isPrep(pos),
+    aux: isAux,
+    lexVerb: isLexVerb,
+    to: isToken && pos === "TO" && lower === "to",
+    surfaceLower: lower
   };
 }
 
@@ -251,22 +288,63 @@ function matchPP(run, start) {
   if (!np) {
     return null;
   }
-  return { type: "PP", end: np.end };
+  return {
+    type: "PP",
+    end: np.end,
+    marker_surface: run[start].surfaceLower || ""
+  };
 }
 
 function matchVP(run, start) {
-  let i = start;
-  while (i < run.length && run[i].verb) {
-    i += 1;
+  function consumeVerbComplex(from) {
+    let i = from;
+    while (i < run.length && run[i].aux) {
+      i += 1;
+    }
+    const lexStart = i;
+    while (i < run.length && run[i].lexVerb) {
+      i += 1;
+    }
+    if (i === lexStart) {
+      return null;
+    }
+    return { end: i - 1 };
   }
-  if (i === start) {
+
+  const main = consumeVerbComplex(start);
+  if (!main) {
     return null;
   }
-  const np = matchNP(run, i);
+
+  let end = main.end;
+  let cursor = end + 1;
+
+  const np = matchNP(run, cursor);
   if (np) {
-    return { type: "VP", end: np.end };
+    end = np.end;
+    cursor = np.end + 1;
   }
-  return { type: "VP", end: i - 1 };
+
+  if (cursor < run.length && run[cursor].to) {
+    const inf = consumeVerbComplex(cursor + 1);
+    if (inf) {
+      end = inf.end;
+      cursor = inf.end + 1;
+
+      const infNp = matchNP(run, cursor);
+      if (infNp) {
+        end = infNp.end;
+        cursor = infNp.end + 1;
+      }
+    }
+  }
+
+  const pp = matchPP(run, cursor);
+  if (pp && !VP_PP_ABSORB_DENY.has(pp.marker_surface)) {
+    end = pp.end;
+  }
+
+  return { type: "VP", end: end };
 }
 
 function chooseMatch(run, start) {
@@ -336,7 +414,7 @@ function buildChunks(unitsBySentence, canonicalText, unit) {
 
     for (let i = 0; i < units.length; i += 1) {
       const next = units[i];
-      if (next.kind === "punctuation") {
+      if (next.kind === "punctuation" || isCoordinatorUnit(next)) {
         flushRun();
         chunks.push({
           sentenceId: sentenceId,
