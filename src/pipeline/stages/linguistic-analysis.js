@@ -48,6 +48,38 @@ function isAdverbLikeTag(tag) {
   return /^RB/.test(tag);
 }
 
+function coordinationTypeFromSurface(surface) {
+  const lower = String(surface || "").toLowerCase();
+  if (lower === "and" || lower === "or") {
+    return lower;
+  }
+  return null;
+}
+
+function isComparativeHeadTag(tag) {
+  return tag === "JJR" || tag === "RBR";
+}
+
+function comparativeLabelFromSurface(surface) {
+  const lower = String(surface || "").toLowerCase();
+  if (lower === "greater" || lower === "more") {
+    return "compare_gt";
+  }
+  if (lower === "less" || lower === "fewer") {
+    return "compare_lt";
+  }
+  return "compare";
+}
+
+function isComparativeHeadToken(token) {
+  const tag = getTag(token);
+  if (isComparativeHeadTag(tag)) {
+    return true;
+  }
+  const lower = String(token && token.surface ? token.surface : "").toLowerCase();
+  return lower === "greater" || lower === "more" || lower === "less" || lower === "fewer";
+}
+
 function detectRootIndex(tokens) {
   for (let i = 0; i < tokens.length; i += 1) {
     if (isVerbLikeTag(getTag(tokens[i])) && String(tokens[i].surface || "").toLowerCase() !== "to") {
@@ -164,13 +196,16 @@ function buildSentenceDependencies(sentenceTokens) {
         });
         continue;
       }
-      if (prev && String(prev.surface || "").toLowerCase() === "and") {
+      const coordType = coordinationTypeFromSurface(prev ? prev.surface : "");
+      if (prev && coordType) {
         const prevVerb = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isVerbLikeTag(getTag(t)); });
         edges.push({
           depId: token.id,
           headId: prevVerb >= 0 ? sentenceTokens[prevVerb].id : rootToken.id,
           label: "conj",
-          isRoot: false
+          isRoot: false,
+          coordinationType: coordType,
+          coordinatorTokenId: prev.id
         });
         continue;
       }
@@ -184,6 +219,19 @@ function buildSentenceDependencies(sentenceTokens) {
     }
 
     if (isNounLikeTag(tag)) {
+      const coordType = coordinationTypeFromSurface(prev ? prev.surface : "");
+      if (prev && coordType) {
+        const prevNoun = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isNounLikeTag(getTag(t)); });
+        edges.push({
+          depId: token.id,
+          headId: prevNoun >= 0 ? sentenceTokens[prevNoun].id : rootToken.id,
+          label: "conj",
+          isRoot: false,
+          coordinationType: coordType,
+          coordinatorTokenId: prev.id
+        });
+        continue;
+      }
       if (prev && isAdpLikeTag(getTag(prev))) {
         edges.push({
           depId: token.id,
@@ -217,7 +265,9 @@ function buildSentenceDependencies(sentenceTokens) {
         depId: token.id,
         headId: prevVerb >= 0 ? sentenceTokens[prevVerb].id : rootToken.id,
         label: "cc",
-        isRoot: false
+        isRoot: false,
+        coordinationType: lower,
+        coordinatorTokenId: token.id
       });
       continue;
     }
@@ -263,6 +313,446 @@ function annotationSource() {
   ];
 }
 
+function collectComparativeObservations(sentenceTokens, canonicalText, unit) {
+  const observations = [];
+  const seen = new Set();
+
+  for (let i = 0; i < sentenceTokens.length; i += 1) {
+    const marker = sentenceTokens[i];
+    if (String(marker.surface || "").toLowerCase() !== "than") {
+      continue;
+    }
+
+    const headIndex = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+      return isComparativeHeadToken(t);
+    });
+    if (headIndex < 0) {
+      continue;
+    }
+
+    const rhsIndex = nearestIndex(sentenceTokens, i + 1, 1, function (t) {
+      const tag = getTag(t);
+      return tag === "CD" || isNounLikeTag(tag);
+    });
+    if (rhsIndex < 0) {
+      continue;
+    }
+
+    const head = sentenceTokens[headIndex];
+    const rhs = sentenceTokens[rhsIndex];
+    const key = [head.id, marker.id, rhs.id].join("|");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    const span = {
+      start: head.span.start,
+      end: rhs.span.end
+    };
+    const exact = spanTextFromCanonical(canonicalText, span, unit);
+    const label = comparativeLabelFromSurface(head.surface);
+    const source = annotationSource();
+    source[0].evidence = {
+      framework: "heuristic",
+      pattern: "comparative_than",
+      marker_surface: "than",
+      marker_token_id: marker.id
+    };
+
+    observations.push({
+      id: createDeterministicId("cmp", { head: head.id, marker: marker.id, rhs: rhs.id, label: label }),
+      kind: "comparative",
+      status: "observation",
+      label: label,
+      head: { id: head.id },
+      rhs: { id: rhs.id },
+      marker: { id: marker.id },
+      anchor: {
+        selectors: [
+          { type: "TextQuoteSelector", exact: exact },
+          { type: "TextPositionSelector", span: span },
+          { type: "TokenSelector", token_ids: [head.id, marker.id, rhs.id] }
+        ]
+      },
+      sources: source
+    });
+  }
+
+  return observations;
+}
+
+const QUANTIFIER_SURFACES = new Set(["each", "every", "all", "some", "no"]);
+const SCOPE_SURFACES = new Set(["only"]);
+
+function quantifierScopeSpecForSurface(surface) {
+  const lower = String(surface || "").toLowerCase();
+  if (QUANTIFIER_SURFACES.has(lower)) {
+    return {
+      category: "quantifier",
+      label: "quantifier_" + lower
+    };
+  }
+  if (SCOPE_SURFACES.has(lower)) {
+    return {
+      category: "scope",
+      label: "scope_" + lower
+    };
+  }
+  return null;
+}
+
+function collectQuantifierScopeObservations(sentenceTokens, canonicalText, unit) {
+  const observations = [];
+  const seen = new Set();
+  const attachmentRule = "nearest_noun_right_else_left";
+
+  for (let i = 0; i < sentenceTokens.length; i += 1) {
+    const marker = sentenceTokens[i];
+    const spec = quantifierScopeSpecForSurface(marker.surface);
+    if (!spec) {
+      continue;
+    }
+
+    const rightTargetIndex = nearestIndex(sentenceTokens, i + 1, 1, function (t) {
+      return isNounLikeTag(getTag(t));
+    });
+    const leftTargetIndex = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+      return isNounLikeTag(getTag(t));
+    });
+    const targetIndex = rightTargetIndex >= 0 ? rightTargetIndex : leftTargetIndex;
+    if (targetIndex < 0) {
+      continue;
+    }
+
+    const target = sentenceTokens[targetIndex];
+    const key = [spec.category, marker.id, target.id].join("|");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    const span = {
+      start: marker.span.start < target.span.start ? marker.span.start : target.span.start,
+      end: marker.span.end > target.span.end ? marker.span.end : target.span.end
+    };
+    const exact = spanTextFromCanonical(canonicalText, span, unit);
+    const source = annotationSource();
+    source[0].evidence = {
+      framework: "heuristic",
+      marker_surface: String(marker.surface || "").toLowerCase(),
+      marker_token_id: marker.id,
+      attachment_rule: attachmentRule
+    };
+
+    observations.push({
+      id: createDeterministicId("qscope", {
+        category: spec.category,
+        marker: marker.id,
+        target: target.id,
+        label: spec.label
+      }),
+      kind: "quantifier_scope",
+      status: "observation",
+      category: spec.category,
+      label: spec.label,
+      marker: { id: marker.id },
+      target: { id: target.id },
+      anchor: {
+        selectors: [
+          { type: "TextQuoteSelector", exact: exact },
+          { type: "TextPositionSelector", span: span },
+          { type: "TokenSelector", token_ids: [marker.id, target.id] }
+        ]
+      },
+      sources: source
+    });
+  }
+
+  return observations;
+}
+
+const COPULA_SURFACES = new Set(["be", "am", "is", "are", "was", "were", "been", "being"]);
+
+function copulaComplementKind(token) {
+  const tag = getTag(token);
+  if (isNounLikeTag(tag)) {
+    return "nominal";
+  }
+  if (isAdjLikeTag(tag)) {
+    return "adjectival";
+  }
+  if (isVerbLikeTag(tag)) {
+    return "clausal";
+  }
+  return "other";
+}
+
+function collectCopulaFrames(sentenceTokens, canonicalText, unit) {
+  const observations = [];
+  const seen = new Set();
+  const attachmentRule = "nearest_subject_left_nearest_complement_right";
+
+  for (let i = 0; i < sentenceTokens.length; i += 1) {
+    const copula = sentenceTokens[i];
+    const tag = getTag(copula);
+    const lower = String(copula.surface || "").toLowerCase();
+    if (!/^VB/.test(tag) || !COPULA_SURFACES.has(lower)) {
+      continue;
+    }
+
+    const subjectIndex = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+      const tTag = getTag(t);
+      return isNounLikeTag(tTag) || tTag === "PRP";
+    });
+    if (subjectIndex < 0) {
+      continue;
+    }
+
+    const complementIndex = nearestIndex(sentenceTokens, i + 1, 1, function (t) {
+      const tTag = getTag(t);
+      return isNounLikeTag(tTag) || isAdjLikeTag(tTag) || isVerbLikeTag(tTag);
+    });
+    if (complementIndex < 0) {
+      continue;
+    }
+
+    const subject = sentenceTokens[subjectIndex];
+    const complement = sentenceTokens[complementIndex];
+    const key = [subject.id, copula.id, complement.id].join("|");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    const span = {
+      start: subject.span.start,
+      end: complement.span.end
+    };
+    const exact = spanTextFromCanonical(canonicalText, span, unit);
+    const complementKind = copulaComplementKind(complement);
+    const source = annotationSource();
+    source[0].evidence = {
+      framework: "heuristic",
+      pattern: "copula_subject_complement",
+      copula_surface: lower,
+      copula_token_id: copula.id,
+      complement_kind: complementKind,
+      attachment_rule: attachmentRule
+    };
+
+    observations.push({
+      id: createDeterministicId("cop", {
+        subject: subject.id,
+        copula: copula.id,
+        complement: complement.id
+      }),
+      kind: "copula_frame",
+      status: "observation",
+      label: "copula_" + complementKind,
+      subject: { id: subject.id },
+      copula: { id: copula.id },
+      complement: { id: complement.id },
+      anchor: {
+        selectors: [
+          { type: "TextQuoteSelector", exact: exact },
+          { type: "TextPositionSelector", span: span },
+          { type: "TokenSelector", token_ids: [subject.id, copula.id, complement.id] }
+        ]
+      },
+      sources: source
+    });
+  }
+
+  return observations;
+}
+
+const PP_MARKER_SURFACES = new Set([
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "with",
+  "by",
+  "of",
+  "from",
+  "into",
+  "onto",
+  "over",
+  "under",
+  "within",
+  "without",
+  "than"
+]);
+
+function isPpMarkerToken(token) {
+  const tag = getTag(token);
+  const lower = String(token && token.surface ? token.surface : "").toLowerCase();
+  return tag === "IN" || tag === "TO" || PP_MARKER_SURFACES.has(lower);
+}
+
+function collectPpAttachments(sentenceTokens, canonicalText, unit) {
+  const observations = [];
+  const seen = new Set();
+  const attachmentRule = "nearest_content_left_nearest_object_right";
+
+  for (let i = 0; i < sentenceTokens.length; i += 1) {
+    const marker = sentenceTokens[i];
+    if (!isPpMarkerToken(marker)) {
+      continue;
+    }
+
+    const headIndex = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+      const tag = getTag(t);
+      return isVerbLikeTag(tag) || isNounLikeTag(tag) || isAdjLikeTag(tag) || isAdverbLikeTag(tag);
+    });
+    if (headIndex < 0) {
+      continue;
+    }
+
+    const objectIndex = nearestIndex(sentenceTokens, i + 1, 1, function (t) {
+      const tag = getTag(t);
+      return isNounLikeTag(tag) || tag === "CD" || tag === "PRP";
+    });
+    if (objectIndex < 0) {
+      continue;
+    }
+
+    const head = sentenceTokens[headIndex];
+    const object = sentenceTokens[objectIndex];
+    const prepSurface = String(marker.surface || "").toLowerCase();
+    const key = [head.id, marker.id, object.id].join("|");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    const span = {
+      start: head.span.start < object.span.start ? head.span.start : object.span.start,
+      end: head.span.end > object.span.end ? head.span.end : object.span.end
+    };
+    const exact = spanTextFromCanonical(canonicalText, span, unit);
+    const source = annotationSource();
+    source[0].evidence = {
+      framework: "heuristic",
+      pattern: "pp_head_object",
+      prep_surface: prepSurface,
+      marker_token_id: marker.id,
+      attachment_rule: attachmentRule
+    };
+
+    observations.push({
+      id: createDeterministicId("pp", { head: head.id, marker: marker.id, object: object.id, prep: prepSurface }),
+      kind: "pp_attachment",
+      status: "observation",
+      label: "pp_" + prepSurface,
+      prep_surface: prepSurface,
+      head: { id: head.id },
+      marker: { id: marker.id },
+      object: { id: object.id },
+      anchor: {
+        selectors: [
+          { type: "TextQuoteSelector", exact: exact },
+          { type: "TextPositionSelector", span: span },
+          { type: "TokenSelector", token_ids: [head.id, marker.id, object.id] }
+        ]
+      },
+      sources: source
+    });
+  }
+
+  return observations;
+}
+
+const NEGATION_SURFACES = new Set(["not", "n't", "never"]);
+
+function isLexicalVerbToken(token) {
+  const tag = getTag(token);
+  return /^VB/.test(tag) && tag !== "MD";
+}
+
+function findOperatorTargetIndex(sentenceTokens, markerIndex) {
+  const right = nearestIndex(sentenceTokens, markerIndex + 1, 1, function (t) {
+    return isLexicalVerbToken(t);
+  });
+  if (right >= 0) {
+    return right;
+  }
+  return nearestIndex(sentenceTokens, markerIndex - 1, -1, function (t) {
+    return isLexicalVerbToken(t);
+  });
+}
+
+function collectModalityAndNegationObservations(sentenceTokens, canonicalText, unit) {
+  const observations = [];
+  const seen = new Set();
+  const attachmentRule = "nearest_lexical_verb_right_else_left";
+
+  for (let i = 0; i < sentenceTokens.length; i += 1) {
+    const marker = sentenceTokens[i];
+    const markerTag = getTag(marker);
+    const markerSurface = String(marker.surface || "").toLowerCase();
+    const isModality = markerTag === "MD";
+    const isNegation = NEGATION_SURFACES.has(markerSurface);
+    if (!isModality && !isNegation) {
+      continue;
+    }
+
+    const targetIndex = findOperatorTargetIndex(sentenceTokens, i);
+    if (targetIndex < 0) {
+      continue;
+    }
+    const target = sentenceTokens[targetIndex];
+
+    const kind = isModality ? "modality_scope" : "negation_scope";
+    const label = isModality ? "modality_" + markerSurface : "negation_" + markerSurface;
+    const pattern = isModality ? "modal_verb_scope" : "negation_scope";
+    const key = [kind, marker.id, target.id].join("|");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+
+    const span = {
+      start: marker.span.start < target.span.start ? marker.span.start : target.span.start,
+      end: marker.span.end > target.span.end ? marker.span.end : target.span.end
+    };
+    const exact = spanTextFromCanonical(canonicalText, span, unit);
+    const source = annotationSource();
+    source[0].evidence = {
+      framework: "heuristic",
+      pattern: pattern,
+      marker_surface: markerSurface,
+      marker_token_id: marker.id,
+      attachment_rule: attachmentRule
+    };
+
+    observations.push({
+      id: createDeterministicId(isModality ? "mod" : "neg", {
+        marker: marker.id,
+        target: target.id,
+        label: label
+      }),
+      kind: kind,
+      status: "observation",
+      label: label,
+      marker: { id: marker.id },
+      target: { id: target.id },
+      anchor: {
+        selectors: [
+          { type: "TextQuoteSelector", exact: exact },
+          { type: "TextPositionSelector", span: span },
+          { type: "TokenSelector", token_ids: [marker.id, target.id] }
+        ]
+      },
+      sources: source
+    });
+  }
+
+  return observations;
+}
+
 /**
  * Stage 08: linguistic analysis (dependency observation).
  * @param {object} seed Seed document.
@@ -283,7 +773,21 @@ async function runStage(seed) {
 
   for (let i = 0; i < annotations.length; i += 1) {
     const ann = annotations[i];
-    if (ann && (ann.kind === "dependency" || ann.kind === "lemma" || ann.kind === "named_entity" || ann.kind === "noun_phrase")) {
+    if (
+      ann &&
+      (
+        ann.kind === "dependency" ||
+        ann.kind === "lemma" ||
+        ann.kind === "named_entity" ||
+        ann.kind === "noun_phrase" ||
+        ann.kind === "comparative" ||
+        ann.kind === "quantifier_scope" ||
+        ann.kind === "copula_frame" ||
+        ann.kind === "pp_attachment" ||
+        ann.kind === "modality_scope" ||
+        ann.kind === "negation_scope"
+      )
+    ) {
       throw errors.createError(
         errors.ERROR_CODES.E_INVARIANT_VIOLATION,
         "Stage 08 rejects partially parsed documents with existing linguistic observations.",
@@ -326,12 +830,54 @@ async function runStage(seed) {
         anchor: { selectors: [textQuote, textPos, selector] },
         sources: annotationSource()
       };
+      if (edge.coordinationType || edge.coordinatorTokenId) {
+        dependencyAnnotation.sources[0].evidence = {
+          framework: "heuristic",
+          coordination_type: edge.coordinationType || null,
+          coordinator_token_id: edge.coordinatorTokenId || null
+        };
+      }
 
       if (!edge.isRoot && edge.headId) {
         dependencyAnnotation.head = { id: edge.headId };
       }
 
       annotations.push(dependencyAnnotation);
+    }
+  }
+
+  for (const sentenceTokens of tokensBySentence.values()) {
+    const comparativeObservations = collectComparativeObservations(sentenceTokens, out.canonical_text, unit);
+    for (let i = 0; i < comparativeObservations.length; i += 1) {
+      annotations.push(comparativeObservations[i]);
+    }
+  }
+
+  for (const sentenceTokens of tokensBySentence.values()) {
+    const quantifierScopeObservations = collectQuantifierScopeObservations(sentenceTokens, out.canonical_text, unit);
+    for (let i = 0; i < quantifierScopeObservations.length; i += 1) {
+      annotations.push(quantifierScopeObservations[i]);
+    }
+  }
+
+  for (const sentenceTokens of tokensBySentence.values()) {
+    const copulaFrames = collectCopulaFrames(sentenceTokens, out.canonical_text, unit);
+    for (let i = 0; i < copulaFrames.length; i += 1) {
+      annotations.push(copulaFrames[i]);
+    }
+  }
+
+  for (const sentenceTokens of tokensBySentence.values()) {
+    const ppAttachments = collectPpAttachments(sentenceTokens, out.canonical_text, unit);
+    for (let i = 0; i < ppAttachments.length; i += 1) {
+      annotations.push(ppAttachments[i]);
+    }
+  }
+
+  for (const sentenceTokens of tokensBySentence.values()) {
+    const operatorScopeObservations = collectModalityAndNegationObservations(sentenceTokens, out.canonical_text, unit);
+    for (let i = 0; i < operatorScopeObservations.length; i += 1) {
+      annotations.push(operatorScopeObservations[i]);
     }
   }
 

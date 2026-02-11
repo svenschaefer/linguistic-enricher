@@ -562,7 +562,13 @@
             "named_entity",
             "noun_phrase",
             "lemma",
-            "dependency_surface"
+            "dependency_surface",
+            "comparative",
+            "quantifier_scope",
+            "copula_frame",
+            "pp_attachment",
+            "modality_scope",
+            "negation_scope"
           ]
         },
         "status": {
@@ -829,6 +835,193 @@
         }
       ]
     },
+    "annotation_comparative": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "label",
+            "head",
+            "rhs",
+            "marker"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "head": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "rhs": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "marker": {
+              "$ref": "#/$defs/tokenRef"
+            }
+          }
+        }
+      ]
+    },
+    "annotation_quantifier_scope": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "category",
+            "label",
+            "marker",
+            "target"
+          ],
+          "properties": {
+            "category": {
+              "type": "string",
+              "enum": [
+                "quantifier",
+                "scope"
+              ]
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "marker": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "target": {
+              "$ref": "#/$defs/tokenRef"
+            }
+          }
+        }
+      ]
+    },
+    "annotation_copula_frame": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "label",
+            "subject",
+            "copula",
+            "complement"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subject": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "copula": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "complement": {
+              "$ref": "#/$defs/tokenRef"
+            }
+          }
+        }
+      ]
+    },
+    "annotation_pp_attachment": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "label",
+            "prep_surface",
+            "head",
+            "marker",
+            "object"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "prep_surface": {
+              "type": "string",
+              "minLength": 1
+            },
+            "head": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "marker": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "object": {
+              "$ref": "#/$defs/tokenRef"
+            }
+          }
+        }
+      ]
+    },
+    "annotation_modality_scope": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "label",
+            "marker",
+            "target"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "marker": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "target": {
+              "$ref": "#/$defs/tokenRef"
+            }
+          }
+        }
+      ]
+    },
+    "annotation_negation_scope": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/annotation_common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "label",
+            "marker",
+            "target"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "marker": {
+              "$ref": "#/$defs/tokenRef"
+            },
+            "target": {
+              "$ref": "#/$defs/tokenRef"
+            }
+          }
+        }
+      ]
+    },
     "annotation": {
       "oneOf": [
         {
@@ -938,6 +1131,90 @@
               "properties": {
                 "kind": {
                   "const": "dependency_surface"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_comparative"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "comparative"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_quantifier_scope"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "quantifier_scope"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_copula_frame"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "copula_frame"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_pp_attachment"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "pp_attachment"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_modality_scope"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "modality_scope"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/annotation_negation_scope"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "negation_scope"
                 }
               }
             }
