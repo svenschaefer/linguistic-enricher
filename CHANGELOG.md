@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.3] - 2026-02-11
+
+Compared to `v1.1.2`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Extended Stage 08 noun-like gating to include pronouns (`PRP`, `PRP$`) in deterministic dependency heuristics.
+  - Prevents pronoun dependents in simple finite/transitive clauses from degrading to generic `dep` when subject/object signals are available.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression test locking pronoun subject extraction:
+    - `They want to buy.` -> `nsubj(want, They)`.
+  - Added regression test locking pronoun object extraction:
+    - `People put them into a cart.` -> `obj(put, them)` and no `dep` fallback for `them`.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end regression for pronoun subject relation materialization:
+    - accepted `actor(want, they)`.
+  - Added end-to-end regression for pronoun object relation materialization:
+    - accepted `theme(put, them)`.
+
 ## [1.1.2] - 2026-02-11
 
 Compared to `v1.1.1`.

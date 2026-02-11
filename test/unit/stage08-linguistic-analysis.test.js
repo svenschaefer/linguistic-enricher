@@ -309,3 +309,44 @@ test("stage08 treats no as quantifier_scope only (no negation_scope double count
   assert.equal(negs.length, 0);
   assert.equal(qs.some(function (a) { return a.label === "quantifier_no"; }), true);
 });
+
+test("stage08 emits pronoun nsubj for simple finite clause", async function () {
+  const text = "They want to buy.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 4 }, surface: "They", pos: { tag: "PRP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 5, end: 9 }, surface: "want", pos: { tag: "VBP" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 10, end: 12 }, surface: "to", pos: { tag: "TO" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 13, end: 16 }, surface: "buy", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 16, end: 17 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const pronSubj = deps.find(function (a) {
+    return a.dep && a.dep.id === "t1" && a.label === "nsubj";
+  });
+  assert.ok(pronSubj);
+  assert.equal(pronSubj.head && pronSubj.head.id, "t2");
+});
+
+test("stage08 emits pronoun obj for simple transitive clause", async function () {
+  const text = "People put them into a cart.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 6 }, surface: "People", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 7, end: 10 }, surface: "put", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 11, end: 15 }, surface: "them", pos: { tag: "PRP" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 16, end: 20 }, surface: "into", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 21, end: 22 }, surface: "a", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 23, end: 27 }, surface: "cart", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 27, end: 28 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const pronObj = deps.find(function (a) {
+    return a.dep && a.dep.id === "t3" && a.label === "obj";
+  });
+  assert.ok(pronObj);
+  assert.equal(pronObj.head && pronObj.head.id, "t2");
+  assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t3" && a.label === "dep"; }), false);
+});

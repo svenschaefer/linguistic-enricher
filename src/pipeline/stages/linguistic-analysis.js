@@ -25,7 +25,7 @@ function isPunct(token) {
 }
 
 function isNounLikeTag(tag) {
-  return tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS";
+  return tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS" || tag === "PRP" || tag === "PRP$";
 }
 
 function isAdjLikeTag(tag) {
