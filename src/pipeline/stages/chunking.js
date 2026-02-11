@@ -63,6 +63,63 @@ const AUX_SURFACES = new Set([
   "did"
 ]);
 
+function ppKindFromMarkerSurface(markerSurfaceLower) {
+  const mapping = {
+    "than": "comparative",
+    "of": "genitive",
+    "with": "instrumental",
+    "without": "privative",
+    "about": "topic",
+    "concerning": "topic",
+    "regarding": "topic",
+    "as": "role",
+    "like": "similarity",
+    "to": "goal",
+    "toward": "goal",
+    "towards": "goal",
+    "into": "goal",
+    "onto": "goal",
+    "from": "source",
+    "out of": "source",
+    "through": "path",
+    "across": "path",
+    "along": "path",
+    "via": "path",
+    "in": "locative",
+    "on": "locative",
+    "at": "locative",
+    "under": "locative",
+    "over": "locative",
+    "above": "locative",
+    "below": "locative",
+    "beneath": "locative",
+    "behind": "locative",
+    "between": "locative",
+    "among": "locative",
+    "around": "locative",
+    "near": "locative",
+    "beside": "locative",
+    "within": "locative",
+    "inside": "locative",
+    "outside": "locative",
+    "before": "temporal",
+    "after": "temporal",
+    "during": "temporal",
+    "until": "temporal",
+    "since": "temporal",
+    "by": "agentive",
+    "for": "benefactive",
+    "because of": "cause",
+    "due to": "cause",
+    "despite": "concessive"
+  };
+
+  if (Object.prototype.hasOwnProperty.call(mapping, markerSurfaceLower)) {
+    return mapping[markerSurfaceLower];
+  }
+  return "generic";
+}
+
 function isCoordinatorUnit(unit) {
   if (!unit || unit.kind !== "token") {
     return false;
@@ -288,10 +345,12 @@ function matchPP(run, start) {
   if (!np) {
     return null;
   }
+  const markerSurface = String(run[start].surfaceLower || "");
   return {
     type: "PP",
     end: np.end,
-    marker_surface: run[start].surfaceLower || ""
+    marker_surface: markerSurface,
+    pp_kind: ppKindFromMarkerSurface(markerSurface)
   };
 }
 
@@ -405,7 +464,8 @@ function buildChunks(unitsBySentence, canonicalText, unit) {
           type: chosen.type,
           span: span,
           tokenIds: tokenIds,
-          text: spanTextFromCanonical(canonicalText, span, unit)
+          text: spanTextFromCanonical(canonicalText, span, unit),
+          pp_kind: chosen.type === "PP" ? chosen.pp_kind : undefined
         });
         i = chosen.end + 1;
       }
@@ -494,6 +554,9 @@ async function runStage(seed) {
       },
       sources: [{ name: "chunking-pos-fsm", kind: "rule" }]
     });
+    if (chunk.type === "PP") {
+      annotations[annotations.length - 1].pp_kind = chunk.pp_kind || "generic";
+    }
   }
 
   out.annotations = annotations;

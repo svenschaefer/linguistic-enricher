@@ -217,6 +217,7 @@ test("stage09 keeps for-PP separate from VP under bounded marker policy", async 
   assert.ok(pp);
   assert.equal(vp.label, "may be used");
   assert.equal(pp.label, "for educational purposes");
+  assert.equal(pp.pp_kind, "benefactive");
   assert.equal(chunks.some(function (a) { return a.chunk_type === "VP" && a.label.indexOf("for ") !== -1; }), false);
 });
 
@@ -240,4 +241,35 @@ test("stage09 keeps at-PP separate and preserves starts as VP nucleus", async fu
   assert.ok(pp);
   assert.equal(vp.label, "starts");
   assert.equal(pp.label, "at a minimum value");
+  assert.equal(pp.pp_kind, "locative");
+});
+
+test("stage09 assigns comparative pp_kind for than-PP with NP object", async function () {
+  const text = "greater than value";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 7 }, surface: "greater", pos: { tag: "JJR" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 8, end: 12 }, surface: "than", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 13, end: 18 }, surface: "value", pos: { tag: "NN" }, flags: { is_punct: false } }
+  ];
+
+  const out = await stage09.runStage(buildSeed(text, tokens, []));
+  const pp = out.annotations.find(function (a) { return a.kind === "chunk" && a.chunk_type === "PP"; });
+  assert.ok(pp);
+  assert.equal(pp.label, "than value");
+  assert.equal(pp.pp_kind, "comparative");
+});
+
+test("stage09 assigns generic pp_kind for unmapped marker surfaces", async function () {
+  const text = "against the wall";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 7 }, surface: "against", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 8, end: 11 }, surface: "the", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 12, end: 16 }, surface: "wall", pos: { tag: "NN" }, flags: { is_punct: false } }
+  ];
+
+  const out = await stage09.runStage(buildSeed(text, tokens, []));
+  const pp = out.annotations.find(function (a) { return a.kind === "chunk" && a.chunk_type === "PP"; });
+  assert.ok(pp);
+  assert.equal(pp.label, "against the wall");
+  assert.equal(pp.pp_kind, "generic");
 });
