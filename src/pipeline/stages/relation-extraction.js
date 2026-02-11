@@ -50,6 +50,54 @@ function getSelector(annotation, type) {
   return annotation.anchor.selectors.find(function (s) { return s && s.type === type; }) || null;
 }
 
+function isSupportedIndexUnit(unit) {
+  return unit === "utf16_code_units" || unit === "unicode_codepoints" || unit === "bytes_utf8";
+}
+
+function validateAcceptedChunkHeadCardinality(annotations) {
+  const acceptedChunkIds = new Set();
+  const acceptedChunkHeadCounts = new Map();
+
+  for (let i = 0; i < annotations.length; i += 1) {
+    const annotation = annotations[i];
+    if (annotation && annotation.kind === "chunk" && annotation.status === "accepted" && annotation.id) {
+      acceptedChunkIds.add(annotation.id);
+    }
+  }
+
+  for (let i = 0; i < annotations.length; i += 1) {
+    const annotation = annotations[i];
+    if (
+      annotation &&
+      annotation.kind === "chunk_head" &&
+      annotation.status === "accepted" &&
+      annotation.chunk_id &&
+      annotation.head &&
+      annotation.head.id
+    ) {
+      acceptedChunkHeadCounts.set(annotation.chunk_id, (acceptedChunkHeadCounts.get(annotation.chunk_id) || 0) + 1);
+    }
+  }
+
+  for (const chunkId of acceptedChunkIds.values()) {
+    const count = acceptedChunkHeadCounts.get(chunkId) || 0;
+    if (count === 0) {
+      throw errors.createError(
+        errors.ERROR_CODES.E_INVARIANT_VIOLATION,
+        "Stage 11 requires exactly one accepted chunk_head per accepted chunk: missing chunk_head.",
+        { chunk_id: chunkId }
+      );
+    }
+    if (count > 1) {
+      throw errors.createError(
+        errors.ERROR_CODES.E_INVARIANT_VIOLATION,
+        "Stage 11 requires exactly one accepted chunk_head per accepted chunk: duplicate chunk_head.",
+        { chunk_id: chunkId, count: count }
+      );
+    }
+  }
+}
+
 function buildChunkIndex(annotations) {
   const chunkById = new Map();
   const chunkHeadByChunkId = new Map();
@@ -510,6 +558,20 @@ async function runStage(seed) {
   const tokenById = new Map(tokens.map(function (t) { return [t.id, t]; }));
   const unit = out.index_basis && out.index_basis.unit ? out.index_basis.unit : "utf16_code_units";
 
+  if (out.stage !== "heads_identified") {
+    throw errors.createError(
+      errors.ERROR_CODES.E_INVARIANT_VIOLATION,
+      "Stage 11 requires stage='heads_identified' input."
+    );
+  }
+  if (!isSupportedIndexUnit(unit)) {
+    throw errors.createError(
+      errors.ERROR_CODES.E_INVARIANT_VIOLATION,
+      "Stage 11 received unsupported index_basis.unit.",
+      { unit: unit }
+    );
+  }
+
   for (let i = 0; i < annotations.length; i += 1) {
     if (isExistingStage11Relation(annotations[i])) {
       throw errors.createError(
@@ -518,6 +580,7 @@ async function runStage(seed) {
       );
     }
   }
+  validateAcceptedChunkHeadCardinality(annotations);
 
   const dependencyObs = annotations.filter(function (a) {
     return a && a.kind === "dependency" && a.status === "observation";

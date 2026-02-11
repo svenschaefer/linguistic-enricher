@@ -79,6 +79,15 @@ function seed(text, tokens, annotations) {
   };
 }
 
+function stage11Rels(doc) {
+  return doc.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+}
+
 test("stage11 emits actor/theme/location and complement_clause/coordination relations", async function () {
   const text = "Alice tries to buy products in Berlin and sell services.";
   const tokens = [
@@ -187,7 +196,8 @@ test("stage11 chunk fallback emits relations when dependency labels are weak", a
     chunkHead("h1", "c1", "t1"),
     chunkHead("h2", "c2", "t2"),
     chunkHead("h3", "c3", "t3"),
-    chunkHead("h4", "c5", "t6"),
+    chunkHead("h4", "c4", "t5"),
+    chunkHead("h5", "c5", "t6"),
     depObs("d1", "t1", "t3", "dep", false),
     depObs("d2", "t2", "t3", "dep", false),
     depObs("d3", "t3", null, "root", true),
@@ -212,4 +222,185 @@ test("stage11 chunk fallback emits relations when dependency labels are weak", a
   assert.equal(has("t6", "theme", "t7"), true);
   assert.equal(has("t3", "modality", "t2"), true);
   assert.equal(has("t3", "coordination", "t6"), true);
+});
+
+test("stage11 baseline fixture: webshop copula sentence is deterministic", async function () {
+  const text = "A webshop is an online store.";
+  const tokens = [
+    token("t1", 0, "A", "DT", 0, 1),
+    token("t2", 1, "webshop", "NN", 2, 9),
+    token("t3", 2, "is", "VBZ", 10, 12),
+    token("t4", 3, "an", "DT", 13, 15),
+    token("t5", 4, "online", "JJ", 16, 22),
+    token("t6", 5, "store", "NN", 23, 28),
+    token("t7", 6, ".", ".", 28, 29)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "A webshop", "NP", { start: 0, end: 9 }),
+    chunk("c2", ["t3"], "is", "VP", { start: 10, end: 12 }),
+    chunk("c3", ["t4", "t5", "t6"], "an online store", "NP", { start: 13, end: 28 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t6"),
+    depObs("d1", "t2", "t3", "nsubj", false),
+    depObs("d2", "t6", "t3", "attr", false),
+    depObs("d3", "t3", null, "root", true)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  assert.equal(out.stage, "relations_extracted");
+  const rels = stage11Rels(out);
+  const ids = rels.map(function (r) { return r.id; }).sort();
+  assert.deepEqual(ids, [
+    "rel-5f399bb777eb",
+    "rel-9e2becd51d1f",
+    "rel-cf728745529f"
+  ]);
+  assert.equal(rels.some(function (r) { return r.head.id === "t3" && r.label === "actor" && r.dep.id === "t2"; }), true);
+  assert.equal(rels.some(function (r) { return r.head.id === "t3" && r.label === "attribute" && r.dep.id === "t6"; }), true);
+});
+
+test("stage11 baseline fixture: generated primes sentence has stable relation ids", async function () {
+  const text = "Generated primes may be used for educational purposes.";
+  const tokens = [
+    token("t1", 0, "Generated", "JJ", 0, 9),
+    token("t2", 1, "primes", "NNS", 10, 16),
+    token("t3", 2, "may", "MD", 17, 20),
+    token("t4", 3, "be", "VB", 21, 23),
+    token("t5", 4, "used", "VBN", 24, 28),
+    token("t6", 5, "for", "IN", 29, 32),
+    token("t7", 6, "educational", "JJ", 33, 44),
+    token("t8", 7, "purposes", "NNS", 45, 53),
+    token("t9", 8, ".", ".", 53, 54)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "Generated primes", "NP", { start: 0, end: 16 }),
+    chunk("c2", ["t3", "t4", "t5"], "may be used", "VP", { start: 17, end: 28 }),
+    chunk("c3", ["t6", "t7", "t8"], "for educational purposes", "PP", { start: 29, end: 53 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t5"),
+    chunkHead("h3", "c3", "t6"),
+    depObs("d1", "t5", null, "root", true),
+    depObs("d2", "t3", "t5", "aux", false),
+    depObs("d3", "t2", "t5", "nsubjpass", false),
+    depObs("d4", "t6", "t5", "prep", false),
+    depObs("d5", "t8", "t6", "pobj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  assert.equal(out.stage, "relations_extracted");
+  const rels = stage11Rels(out);
+  const ids = rels.map(function (r) { return r.id; }).sort();
+  assert.deepEqual(ids, [
+    "rel-08d21b21c09c",
+    "rel-0b7175799c82",
+    "rel-a7a441ad585e",
+    "rel-c6e1aa6149b4"
+  ]);
+});
+
+test("stage11 invariant: rejects missing chunk_head for accepted chunk", async function () {
+  const text = "A webshop is an online store.";
+  const tokens = [
+    token("t1", 0, "A", "DT", 0, 1),
+    token("t2", 1, "webshop", "NN", 2, 9),
+    token("t3", 2, "is", "VBZ", 10, 12),
+    token("t4", 3, "an", "DT", 13, 15),
+    token("t5", 4, "online", "JJ", 16, 22),
+    token("t6", 5, "store", "NN", 23, 28),
+    token("t7", 6, ".", ".", 28, 29)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "A webshop", "NP", { start: 0, end: 9 }),
+    chunk("c2", ["t3"], "is", "VP", { start: 10, end: 12 }),
+    chunk("c3", ["t4", "t5", "t6"], "an online store", "NP", { start: 13, end: 28 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t3"),
+    depObs("d1", "t2", "t3", "nsubj", false),
+    depObs("d2", "t6", "t3", "attr", false),
+    depObs("d3", "t3", null, "root", true)
+  ];
+
+  await assert.rejects(
+    stage11.runStage(seed(text, tokens, annotations)),
+    function (error) {
+      assert.equal(error.code, errors.ERROR_CODES.E_INVARIANT_VIOLATION);
+      assert.equal(String(error.message || "").indexOf("missing chunk_head") !== -1, true);
+      return true;
+    }
+  );
+});
+
+test("stage11 invariant: rejects duplicate chunk_head for same chunk", async function () {
+  const text = "A webshop is an online store.";
+  const tokens = [
+    token("t1", 0, "A", "DT", 0, 1),
+    token("t2", 1, "webshop", "NN", 2, 9),
+    token("t3", 2, "is", "VBZ", 10, 12),
+    token("t4", 3, "an", "DT", 13, 15),
+    token("t5", 4, "online", "JJ", 16, 22),
+    token("t6", 5, "store", "NN", 23, 28),
+    token("t7", 6, ".", ".", 28, 29)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "A webshop", "NP", { start: 0, end: 9 }),
+    chunk("c2", ["t3"], "is", "VP", { start: 10, end: 12 }),
+    chunk("c3", ["t4", "t5", "t6"], "an online store", "NP", { start: 13, end: 28 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t6"),
+    chunkHead("h4", "c3", "t5"),
+    depObs("d1", "t2", "t3", "nsubj", false),
+    depObs("d2", "t6", "t3", "attr", false),
+    depObs("d3", "t3", null, "root", true)
+  ];
+
+  await assert.rejects(
+    stage11.runStage(seed(text, tokens, annotations)),
+    function (error) {
+      assert.equal(error.code, errors.ERROR_CODES.E_INVARIANT_VIOLATION);
+      assert.equal(String(error.message || "").indexOf("duplicate chunk_head") !== -1, true);
+      return true;
+    }
+  );
+});
+
+test("stage11 invariant: rejects non-heads_identified stage and unsupported index unit", async function () {
+  const text = "A webshop is an online store.";
+  const tokens = [
+    token("t1", 0, "A", "DT", 0, 1),
+    token("t2", 1, "webshop", "NN", 2, 9),
+    token("t3", 2, "is", "VBZ", 10, 12),
+    token("t4", 3, "an", "DT", 13, 15),
+    token("t5", 4, "online", "JJ", 16, 22),
+    token("t6", 5, "store", "NN", 23, 28),
+    token("t7", 6, ".", ".", 28, 29)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "A webshop", "NP", { start: 0, end: 9 }),
+    chunkHead("h1", "c1", "t2"),
+    depObs("d1", "t3", null, "root", true)
+  ];
+
+  const badStage = seed(text, tokens, annotations);
+  badStage.stage = "chunked";
+  await assert.rejects(
+    stage11.runStage(badStage),
+    function (error) {
+      assert.equal(error.code, errors.ERROR_CODES.E_INVARIANT_VIOLATION);
+      assert.equal(String(error.message || "").indexOf("requires stage='heads_identified'") !== -1, true);
+      return true;
+    }
+  );
+
+  const badUnit = seed(text, tokens, annotations);
+  badUnit.index_basis = { unit: "unknown_unit" };
+  await assert.rejects(
+    stage11.runStage(badUnit),
+    function (error) {
+      assert.equal(error.code, errors.ERROR_CODES.E_INVARIANT_VIOLATION);
+      assert.equal(String(error.message || "").indexOf("unsupported index_basis.unit") !== -1, true);
+      return true;
+    }
+  );
 });
