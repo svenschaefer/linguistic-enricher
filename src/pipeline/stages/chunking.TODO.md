@@ -29,6 +29,20 @@
     - `It starts at a minimum value.` -> `VP("starts")` + `PP("at a minimum value")`
     - `Ships to Berlin` remains `VP("Ships to Berlin")`.
 
+- 2026-02-11 (Cycle 4, completed): PP subtype metadata (`pp_kind`) landed.
+  - PP chunks now carry deterministic surface-only `pp_kind` metadata.
+  - Unknown marker surfaces default to `pp_kind="generic"`.
+  - VP absorption policy is unchanged (e.g., `Ships to Berlin` remains absorbed as `VP`).
+
+- 2026-02-11 (Cycle 5, completed): MWE integration hardening landed.
+  - MWE atomicity is constrained to an explicit NP-only allow-list.
+  - NP-internal POS guard is enforced for accepted MWE materialization.
+  - Non-allowed/non-NP MWEs are ignored to keep VP/PP chunk structure stable.
+
+- 2026-02-11 (Cycle 6, completed): NP participle-modifier hardening landed.
+  - NP modifier support was extended to `JJ/JJR/JJS/VBN/VBG`.
+  - This enables PP object matching for patterns like `at a given minimum value`.
+
 This stage produces deterministic shallow phrase chunks (NP/PP/VP) using a POS-driven finite state machine (FSM).
 It is intentionally conservative and library-independent, and it must remain fully replayable.
 
@@ -122,7 +136,7 @@ Why this matters:
 Required optimization:
 - Introduce PP subtypes or markers for:
   - comparative PP (“than”)
-  - purpose PP (“for”)
+  - benefactive PP (“for”)
   - location PP (“at/in/on”)
 - Ensure PP boundaries consistently include the object head
 - Preserve the preposition surface token as evidence
@@ -188,12 +202,12 @@ Acceptance criteria:
 
 ## Proposed implementation plan (deterministic increments)
 
-### 1) Coordination-aware chunk boundaries
+### 1) Coordination-aware chunk boundaries (completed)
 - Add a pre-scan that marks coordinator positions.
 - Ensure the FSM never matches across coordinators.
 - Optionally emit coordinator markers for downstream use.
 
-### 2) VP pattern refinement
+### 2) VP pattern refinement (completed)
 - Split VP matching into:
   - AUX/MD chain (optional)
   - lexical verb group (required)
@@ -201,17 +215,19 @@ Acceptance criteria:
   - optional adjacent PP complement (IN/TO + NP) for a bounded set of prepositions (role-bearing)
 - Keep the greedy behavior but within the refined grammar.
 
-### 3) PP subtype markers (minimal)
+### 3) PP subtype markers (minimal, completed)
 - Keep PP as a chunk type but attach a `pp_kind` metadata field based on surface preposition:
   - comparative (“than”)
-  - purpose (“for”)
+  - benefactive (“for”)
   - location/time (“at”, “in”, “on”, “during”, etc.)
 - This is structural metadata, not semantics; it improves downstream role mapping deterministically.
 
-### 4) MWE integration hardening
+### 4) MWE integration hardening (completed)
 - Restrict MWE atomicity to NP contexts by default.
 - Provide explicit allow-list for VP/PP MWE atomicity if needed, but keep it small and deterministic.
 - Ensure internal token boundaries remain available for Stage 10/11 when required.
+
+Note: Cycle 6 added an additional deterministic hardening step beyond the original plan by extending NP modifier POS coverage to include `VBN/VBG`.
 
 ---
 
