@@ -25,6 +25,26 @@ function isVerbLikeTag(tag) {
   return tag === "VB" || tag === "VBD" || tag === "VBG" || tag === "VBN" || tag === "VBP" || tag === "VBZ" || tag === "MD";
 }
 
+function isLexicalVerbTag(tag) {
+  return tag === "VB" || tag === "VBD" || tag === "VBG" || tag === "VBN" || tag === "VBP" || tag === "VBZ";
+}
+
+function lowerSurface(token) {
+  return String(token && token.surface ? token.surface : "").toLowerCase();
+}
+
+function isDemotedVerbish(token) {
+  const tag = getTag(token);
+  if (tag === "MD") {
+    return true;
+  }
+  return [
+    "be", "am", "is", "are", "was", "were", "been", "being",
+    "do", "does", "did",
+    "have", "has", "had"
+  ].indexOf(lowerSurface(token)) !== -1;
+}
+
 function isNominalLikeTag(tag) {
   return (
     tag === "NN" ||
@@ -439,7 +459,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
   void relations;
 }
 
-function maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById) {
+function maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById, resolvePredicateHeadId) {
   const bySentence = new Map();
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
@@ -459,7 +479,7 @@ function maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenBy
       if (tag === "MD") {
         const parent = (depByHead.get(token.id) || [])[0];
         if (parent && parent.head && parent.head.id) {
-          addRelation(parent.head.id, token.id, "modality", {
+          addRelation(resolvePredicateHeadId(parent.head.id), token.id, "modality", {
             pattern: "token_heuristic",
             dependency_label: parent.label || "dep",
             sentence_id: token.segment_id
@@ -626,6 +646,27 @@ async function runStage(seed) {
     return tokenId;
   }
 
+  function resolvePredicateForRelation(headTokenId) {
+    if (!headTokenId || !tokenById.has(headTokenId)) {
+      return null;
+    }
+    const projected = chunkIndex.tokenToChunkHead.has(headTokenId)
+      ? chunkIndex.tokenToChunkHead.get(headTokenId)
+      : headTokenId;
+    if (projected === headTokenId) {
+      return headTokenId;
+    }
+    const headTok = tokenById.get(headTokenId);
+    const projectedTok = tokenById.get(projected);
+    if (!headTok || !projectedTok) {
+      return projected;
+    }
+    if (isLexicalVerbTag(getTag(headTok)) && isDemotedVerbish(projectedTok)) {
+      return headTokenId;
+    }
+    return projected;
+  }
+
   const relations = [];
   const seen = new Set();
 
@@ -658,11 +699,14 @@ async function runStage(seed) {
       continue;
     }
     const depTok = tokenById.get(dep.dep.id);
-      const headTok = tokenById.get(dep.head.id);
-      const mappedRole = roleFromDepLabel(dep.label, getTag(depTok), getTag(headTok));
+    const headTok = tokenById.get(dep.head.id);
+    const mappedRole = roleFromDepLabel(dep.label, getTag(depTok), getTag(headTok));
     if (mappedRole) {
+      const normalizedHead = isVerbLikeTag(getTag(headTok))
+        ? resolvePredicateForRelation(dep.head.id)
+        : resolvePredicate(dep.head.id);
       addRelation(
-        resolvePredicate(dep.head.id),
+        normalizedHead,
         dep.dep.id,
         mappedRole,
         {
@@ -675,7 +719,12 @@ async function runStage(seed) {
   }
 
   maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead);
-  maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById);
+  maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById, function (headId) {
+    const headTok = tokenById.get(headId);
+    return isVerbLikeTag(getTag(headTok))
+      ? resolvePredicateForRelation(headId)
+      : resolvePredicate(headId);
+  });
 
   for (let i = 0; i < dependencyObs.length; i += 1) {
     const dep = dependencyObs[i];
@@ -697,7 +746,9 @@ async function runStage(seed) {
         continue;
       }
       addRelation(
-        resolvePredicate(dep.head.id),
+        isVerbLikeTag(getTag(tokenById.get(dep.head.id)))
+          ? resolvePredicateForRelation(dep.head.id)
+          : resolvePredicate(dep.head.id),
         pobj.dep.id,
         role,
         {
@@ -719,7 +770,10 @@ async function runStage(seed) {
     }
     const depBase = baseDepLabel(dep.label);
     if (depBase === "xcomp" || depBase === "ccomp" || depBase === "advcl" || depBase === "relcl") {
-      const pred = resolvePredicate(dep.head.id);
+      const headTok = tokenById.get(dep.head.id);
+      const pred = isVerbLikeTag(getTag(headTok))
+        ? resolvePredicateForRelation(dep.head.id)
+        : resolvePredicate(dep.head.id);
       const argPred = resolvePredicate(dep.dep.id);
       const predTok = tokenById.get(pred);
       const argTok = tokenById.get(argPred);
@@ -749,7 +803,10 @@ async function runStage(seed) {
       }
     }
     if (depBase === "conj") {
-      const pred = resolvePredicate(dep.head.id);
+      const headTok = tokenById.get(dep.head.id);
+      const pred = isVerbLikeTag(getTag(headTok))
+        ? resolvePredicateForRelation(dep.head.id)
+        : resolvePredicate(dep.head.id);
       const argPred = resolvePredicate(dep.dep.id);
       const predTok = tokenById.get(pred);
       const argTok = tokenById.get(argPred);

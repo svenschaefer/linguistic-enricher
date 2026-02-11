@@ -404,3 +404,26 @@ test("stage11 invariant: rejects non-heads_identified stage and unsupported inde
     }
   );
 });
+
+test("stage11 preserves lexical VP predicate when chunk_head is demoted verbish", async function () {
+  const text = "primes be used";
+  const tokens = [
+    token("t1", 0, "primes", "NNS", 0, 6),
+    token("t2", 1, "be", "VB", 7, 9),
+    token("t3", 2, "used", "VBN", 10, 14)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "primes", "NP", { start: 0, end: 6 }),
+    chunk("c2", ["t2", "t3"], "be used", "VP", { start: 7, end: 14 }),
+    chunkHead("h1", "c1", "t1"),
+    // Intentional distortion setup: VP chunk head points to demoted aux-like token.
+    chunkHead("h2", "c2", "t2"),
+    depObs("d1", "t3", null, "root", true),
+    depObs("d2", "t1", "t3", "nsubjpass", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.head.id === "t3" && r.label === "patient" && r.dep.id === "t1"; }), true);
+  assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "patient" && r.dep.id === "t1"; }), false);
+});
