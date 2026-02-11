@@ -182,6 +182,23 @@ function compareRelationLabelFromSurface(surfaceLower) {
   return "compare";
 }
 
+function normalizeCompareLabel(label, headToken) {
+  const value = String(label || "").toLowerCase();
+  if (value === "compare_gt" || value === "compare_lt" || value === "compare") {
+    return value;
+  }
+  return compareRelationLabelFromSurface(lowerSurface(headToken));
+}
+
+function quantifierRoleFromObservation(annotation) {
+  const category = String(annotation && annotation.category ? annotation.category : "").toLowerCase();
+  const label = String(annotation && annotation.label ? annotation.label : "").toLowerCase();
+  if (category === "scope" || label.startsWith("scope_")) {
+    return "scope_quantifier";
+  }
+  return "quantifier";
+}
+
 function baseDepLabel(label) {
   const value = String(label || "").toLowerCase();
   const idx = value.indexOf(":");
@@ -718,6 +735,12 @@ async function runStage(seed) {
   const dependencyObs = annotations.filter(function (a) {
     return a && a.kind === "dependency" && a.status === "observation";
   });
+  const comparativeObs = annotations.filter(function (a) {
+    return a && a.kind === "comparative" && a.status === "observation";
+  });
+  const quantifierScopeObs = annotations.filter(function (a) {
+    return a && a.kind === "quantifier_scope" && a.status === "observation";
+  });
 
   const depByHead = new Map();
   const depByDep = new Map();
@@ -1129,6 +1152,64 @@ async function runStage(seed) {
         }
       );
     }
+  }
+
+  for (let i = 0; i < comparativeObs.length; i += 1) {
+    const cmp = comparativeObs[i];
+    const headId = cmp && cmp.head && cmp.head.id ? cmp.head.id : null;
+    const rhsId = cmp && cmp.rhs && cmp.rhs.id ? cmp.rhs.id : null;
+    const markerId = cmp && cmp.marker && cmp.marker.id ? cmp.marker.id : null;
+    if (!headId || !rhsId || !tokenById.has(headId) || !tokenById.has(rhsId)) {
+      continue;
+    }
+    const headTok = tokenById.get(headId);
+    const lhsId = isVerbLikeTag(getTag(headTok))
+      ? resolvePredicateForRelation(headId)
+      : resolvePredicate(headId);
+    addRelation(
+      lhsId,
+      rhsId,
+      normalizeCompareLabel(cmp.label, headTok),
+      {
+        pattern: "comparative_observation",
+        source_annotation_id: cmp.id,
+        compare_surface: lowerSurface(headTok),
+        compare_token_id: headId,
+        prep_surface: markerId && tokenById.has(markerId) ? lowerSurface(tokenById.get(markerId)) : null,
+        prep_token_id: markerId,
+        rhs_token_id: rhsId,
+        sentence_id: headTok.segment_id
+      }
+    );
+  }
+
+  for (let i = 0; i < quantifierScopeObs.length; i += 1) {
+    const q = quantifierScopeObs[i];
+    const markerId = q && q.marker && q.marker.id ? q.marker.id : null;
+    const targetId = q && q.target && q.target.id ? q.target.id : null;
+    if (!markerId || !targetId || !tokenById.has(markerId) || !tokenById.has(targetId)) {
+      continue;
+    }
+    const targetTok = tokenById.get(targetId);
+    const targetPred = isVerbLikeTag(getTag(targetTok))
+      ? resolvePredicateForRelation(targetId)
+      : resolvePredicate(targetId);
+    const markerTok = tokenById.get(markerId);
+    addRelation(
+      targetPred,
+      markerId,
+      quantifierRoleFromObservation(q),
+      {
+        pattern: "quantifier_scope_observation",
+        source_annotation_id: q.id,
+        category: q.category || null,
+        label: q.label || null,
+        marker_surface: lowerSurface(markerTok),
+        marker_token_id: markerId,
+        target_token_id: targetId,
+        sentence_id: targetTok.segment_id
+      }
+    );
   }
 
   relations.sort(function (a, b) {

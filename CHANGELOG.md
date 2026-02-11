@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.1] - 2026-02-11
+
+Compared to `v1.1.0`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Added deterministic bridging from Stage 08 observation annotations into Stage 11 accepted relations:
+    - `comparative` observations now materialize accepted `compare_*` dependency relations.
+    - `quantifier_scope` observations now materialize accepted `quantifier`/`scope_quantifier` dependency relations.
+  - This keeps relation output consumable by downstream stages that project only relation-extraction dependencies.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added regression coverage for comparative-observation bridge and quantifier-scope-observation bridge.
+
 ## [1.1.0] - 2026-02-11
 
 Compared to `v1.0.0`.

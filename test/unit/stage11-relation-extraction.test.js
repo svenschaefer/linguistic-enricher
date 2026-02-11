@@ -37,6 +37,46 @@ function depObs(id, depId, headId, label, isRoot) {
   return out;
 }
 
+function comparativeObs(id, label, headId, markerId, rhsId, exact, span) {
+  return {
+    id: id,
+    kind: "comparative",
+    status: "observation",
+    label: label,
+    head: { id: headId },
+    marker: { id: markerId },
+    rhs: { id: rhsId },
+    anchor: {
+      selectors: [
+        { type: "TextQuoteSelector", exact: exact },
+        { type: "TextPositionSelector", span: span },
+        { type: "TokenSelector", token_ids: [headId, markerId, rhsId] }
+      ]
+    },
+    sources: [{ name: "linguistic-analysis", kind: "model" }]
+  };
+}
+
+function quantifierScopeObs(id, category, label, markerId, targetId, exact, span) {
+  return {
+    id: id,
+    kind: "quantifier_scope",
+    status: "observation",
+    category: category,
+    label: label,
+    marker: { id: markerId },
+    target: { id: targetId },
+    anchor: {
+      selectors: [
+        { type: "TextQuoteSelector", exact: exact },
+        { type: "TextPositionSelector", span: span },
+        { type: "TokenSelector", token_ids: [markerId, targetId] }
+      ]
+    },
+    sources: [{ name: "linguistic-analysis", kind: "model" }]
+  };
+}
+
 function chunk(id, tokenIds, label, type, span) {
   return {
     id: id,
@@ -638,6 +678,67 @@ test("stage11 emits compare_lt relation for less than RHS pattern", async functi
   assert.equal(evidence.prep_surface, "than");
   assert.equal(evidence.prep_token_id, "t2");
   assert.equal(evidence.rhs_token_id, "t3");
+});
+
+test("stage11 bridges comparative observation into compare relation", async function () {
+  const text = "numbers greater than 1";
+  const tokens = [
+    token("t1", 0, "numbers", "NNS", 0, 7),
+    token("t2", 1, "greater", "JJR", 8, 15),
+    token("t3", 2, "than", "IN", 16, 20),
+    token("t4", 3, "1", "CD", 21, 22)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "numbers", "NP", { start: 0, end: 7 }),
+    chunk("c2", ["t2", "t3", "t4"], "greater than 1", "NP", { start: 8, end: 22 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t2"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t2", "t1", "amod", false),
+    comparativeObs("cmp1", "compare_gt", "t2", "t3", "t4", "greater than 1", { start: 8, end: 22 })
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const compare = rels.find(function (r) { return r.label === "compare_gt" && r.head.id === "t2" && r.dep.id === "t4"; });
+  assert.ok(compare);
+  const evidence = compare.sources.find(function (src) { return src && src.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.pattern, "comparative_observation");
+  assert.equal(evidence.source_annotation_id, "cmp1");
+  assert.equal(evidence.prep_surface, "than");
+  assert.equal(evidence.prep_token_id, "t3");
+});
+
+test("stage11 bridges quantifier_scope observation into quantifier roles", async function () {
+  const text = "each number only value";
+  const tokens = [
+    token("t1", 0, "each", "DT", 0, 4),
+    token("t2", 1, "number", "NN", 5, 11),
+    token("t3", 2, "only", "JJ", 12, 16),
+    token("t4", 3, "value", "NN", 17, 22)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "each number", "NP", { start: 0, end: 11 }),
+    chunk("c2", ["t3", "t4"], "only value", "NP", { start: 12, end: 22 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t4"),
+    depObs("d1", "t2", null, "root", true),
+    quantifierScopeObs("q1", "quantifier", "quantifier_each", "t1", "t2", "each number", { start: 0, end: 11 }),
+    quantifierScopeObs("q2", "scope", "scope_only", "t3", "t4", "only value", { start: 12, end: 22 })
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const q = rels.find(function (r) { return r.label === "quantifier" && r.head.id === "t2" && r.dep.id === "t1"; });
+  const scopeQ = rels.find(function (r) { return r.label === "scope_quantifier" && r.head.id === "t4" && r.dep.id === "t3"; });
+  assert.ok(q);
+  assert.ok(scopeQ);
+  const qEvidence = q.sources.find(function (src) { return src && src.name === "relation-extraction"; }).evidence;
+  const sEvidence = scopeQ.sources.find(function (src) { return src && src.name === "relation-extraction"; }).evidence;
+  assert.equal(qEvidence.pattern, "quantifier_scope_observation");
+  assert.equal(qEvidence.source_annotation_id, "q1");
+  assert.equal(sEvidence.pattern, "quantifier_scope_observation");
+  assert.equal(sEvidence.source_annotation_id, "q2");
 });
 
 test("stage11 emits copula frame for passive-like considered clauses", async function () {
