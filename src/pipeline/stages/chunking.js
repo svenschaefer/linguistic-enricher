@@ -5,6 +5,23 @@ const { createDeterministicId } = require("../../util/ids");
 const errors = require("../../util/errors");
 
 const VP_PP_ABSORB_DENY = new Set(["for", "at", "in", "than"]);
+const NP_MWE_ALLOW_LIST = new Set([
+  "online store",
+  "new york",
+  "united states"
+]);
+const NP_INTERNAL_MWE_POS = new Set([
+  "DT",
+  "PDT",
+  "PRP$",
+  "JJ",
+  "JJR",
+  "JJS",
+  "NN",
+  "NNS",
+  "NNP",
+  "NNPS"
+]);
 
 function getTag(token) {
   if (!token || !token.pos) {
@@ -197,6 +214,20 @@ function buildMweCandidates(seed, tokenById) {
       end: tokenObjs[tokenObjs.length - 1].span.end
     };
     const text = annotation.label || annotation.surface || tokenObjs.map(function (t) { return t.surface; }).join(" ");
+
+    // Stage 09 only materializes explicitly allowed nominal MWEs.
+    const surfaceLower = String(text).toLowerCase();
+    if (!NP_MWE_ALLOW_LIST.has(surfaceLower)) {
+      continue;
+    }
+
+    // Skip MWE spans that are not NP-internal so VP/PP boundaries stay untouched.
+    const npInternal = tokenObjs.every(function (t) {
+      return NP_INTERNAL_MWE_POS.has(getTag(t));
+    });
+    if (!npInternal) {
+      continue;
+    }
 
     out.push({
       id: annotation.id,

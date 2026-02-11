@@ -26,6 +26,20 @@ function buildSeed(text, tokens, annotations) {
   };
 }
 
+function chunkSignature(out) {
+  return out.annotations
+    .filter(function (a) { return a.kind === "chunk"; })
+    .map(function (a) {
+      const tokenSelector = a.anchor.selectors.find(function (s) { return s.type === "TokenSelector"; });
+      return {
+        type: a.chunk_type,
+        label: a.label,
+        token_ids: tokenSelector ? tokenSelector.token_ids : [],
+        pp_kind: a.pp_kind
+      };
+    });
+}
+
 test("stage09 emits NP and O chunks including punctuation", async function () {
   const text = "Online store.";
   const tokens = [
@@ -65,11 +79,11 @@ test("stage09 emits VP with adjacent PP complement under refined VP matching", a
 });
 
 test("stage09 treats accepted MWE annotations as atomic noun units", async function () {
-  const text = "online store works";
+  const text = "United States works";
   const tokens = [
-    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 6 }, surface: "online", pos: { tag: "JJ" }, flags: { is_punct: false } },
-    { id: "t2", i: 1, segment_id: "s1", span: { start: 7, end: 12 }, surface: "store", pos: { tag: "NN" }, flags: { is_punct: false } },
-    { id: "t3", i: 2, segment_id: "s1", span: { start: 13, end: 18 }, surface: "works", pos: { tag: "VBZ" }, flags: { is_punct: false } }
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 6 }, surface: "United", pos: { tag: "NNP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 7, end: 13 }, surface: "States", pos: { tag: "NNPS" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 14, end: 19 }, surface: "works", pos: { tag: "VBZ" }, flags: { is_punct: false } }
   ];
 
   const annotations = [
@@ -77,11 +91,11 @@ test("stage09 treats accepted MWE annotations as atomic noun units", async funct
       id: "mwe-1",
       kind: "mwe",
       status: "accepted",
-      label: "online store",
+      label: "United States",
       anchor: {
         selectors: [
           { type: "TokenSelector", token_ids: ["t1", "t2"] },
-          { type: "TextPositionSelector", span: { start: 0, end: 12 } }
+          { type: "TextPositionSelector", span: { start: 0, end: 13 } }
         ]
       },
       sources: [{ name: "mwe-materialization", kind: "rule" }]
@@ -96,7 +110,7 @@ test("stage09 treats accepted MWE annotations as atomic noun units", async funct
     np.anchor.selectors.find(function (s) { return s.type === "TokenSelector"; }).token_ids,
     ["t1", "t2"]
   );
-  assert.equal(np.label, "online store");
+  assert.equal(np.label, "United States");
 });
 
 test("stage09 rejects partially chunked inputs", async function () {
@@ -272,4 +286,95 @@ test("stage09 assigns generic pp_kind for unmapped marker surfaces", async funct
   assert.ok(pp);
   assert.equal(pp.label, "against the wall");
   assert.equal(pp.pp_kind, "generic");
+});
+
+test("stage09 keeps VP boundaries stable when NP-internal MWE appears inside VP object NP", async function () {
+  const text = "Visit United States museums.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "Visit", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 6, end: 12 }, surface: "United", pos: { tag: "NNP" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 13, end: 19 }, surface: "States", pos: { tag: "NNPS" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 20, end: 27 }, surface: "museums", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 27, end: 28 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+  const annotations = [
+    {
+      id: "mwe-1",
+      kind: "mwe",
+      status: "accepted",
+      label: "United States",
+      anchor: {
+        selectors: [
+          { type: "TokenSelector", token_ids: ["t2", "t3"] },
+          { type: "TextPositionSelector", span: { start: 6, end: 19 } }
+        ]
+      },
+      sources: [{ name: "mwe-materialization", kind: "rule" }]
+    }
+  ];
+
+  const outPlain = await stage09.runStage(buildSeed(text, tokens, []));
+  const outMwe = await stage09.runStage(buildSeed(text, tokens, annotations));
+  assert.deepEqual(chunkSignature(outMwe), chunkSignature(outPlain));
+});
+
+test("stage09 keeps PP span and marker stable when NP-internal MWE appears inside PP object NP", async function () {
+  const text = "into New York";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 4 }, surface: "into", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 5, end: 8 }, surface: "New", pos: { tag: "NNP" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 9, end: 13 }, surface: "York", pos: { tag: "NNP" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    {
+      id: "mwe-1",
+      kind: "mwe",
+      status: "accepted",
+      label: "New York",
+      anchor: {
+        selectors: [
+          { type: "TokenSelector", token_ids: ["t2", "t3"] },
+          { type: "TextPositionSelector", span: { start: 5, end: 13 } }
+        ]
+      },
+      sources: [{ name: "mwe-materialization", kind: "rule" }]
+    }
+  ];
+
+  const outPlain = await stage09.runStage(buildSeed(text, tokens, []));
+  const outMwe = await stage09.runStage(buildSeed(text, tokens, annotations));
+  assert.deepEqual(chunkSignature(outMwe), chunkSignature(outPlain));
+});
+
+test("stage09 ignores non-NP MWE candidates so phrasal-verb MWE does not alter VP structure", async function () {
+  const text = "She will have taken over the company.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "She", pos: { tag: "PRP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 8 }, surface: "will", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 9, end: 13 }, surface: "have", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 14, end: 19 }, surface: "taken", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 20, end: 24 }, surface: "over", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 25, end: 28 }, surface: "the", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 29, end: 36 }, surface: "company", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 36, end: 37 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+  const annotations = [
+    {
+      id: "mwe-1",
+      kind: "mwe",
+      status: "accepted",
+      label: "taken over",
+      anchor: {
+        selectors: [
+          { type: "TokenSelector", token_ids: ["t4", "t5"] },
+          { type: "TextPositionSelector", span: { start: 14, end: 24 } }
+        ]
+      },
+      sources: [{ name: "mwe-materialization", kind: "rule" }]
+    }
+  ];
+
+  const outPlain = await stage09.runStage(buildSeed(text, tokens, []));
+  const outMwe = await stage09.runStage(buildSeed(text, tokens, annotations));
+  assert.deepEqual(chunkSignature(outMwe), chunkSignature(outPlain));
 });
