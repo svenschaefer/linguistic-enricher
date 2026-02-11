@@ -1,5 +1,9 @@
 # Chunking - TODO
 
+Status: Completed (Cycles 1-8)
+Runtime behavior stable.
+All unit/integration tests green.
+
 ## Progress (small optimization cycles)
 
 - 2026-02-11 (Cycle 1, completed): coordination boundary policy landed.
@@ -90,104 +94,37 @@ This is deterministic, but it is also **structurally coarse**.
 
 ## Gap patterns and why chunking contributes
 
-### A) VP is too coarse and misses common verb-complex patterns
-Current VP roughly matches:
-- (AUX/MD)* + VERB+ + (NP)?
-
-It does *not* represent:
-- VP + PP complements (“starts at X”, “used for Y”, “tests ... for Z”)
-- VP coordination (“starts ... and tests ...”)
-- VP + clausal complements (“needs to ensure ...”, “want to buy ...”)
-- participle attachments that should be subordinate (“given minimum value”)
-
-Why this matters:
-- If a VP chunk includes a participle-like verb (VBN/VBG) alongside the true matrix verb,
-  Stage 10 may pick the participle as `chunk_head` in some cases.
-- Stage 11 then normalizes predicates onto that head, yielding distortions like `given` becoming the predicate.
-
-Required optimization:
-- Refine VP to model verb complexes more accurately without becoming a full parser:
-  - explicitly model AUX/MD chains separately from lexical verbs
-  - keep participles from becoming “structural heads” by chunk shape (not by semantic guessing)
-  - allow optional PP complements as part of VP chunk when they are syntactically adjacent
-  - allow simple infinitival complements (“to” + VB) as part of a VP complex
-
-Acceptance criteria:
-- In “starts at a given minimum value”, the lexical verb “starts” remains the VP head candidate
-  and the PP complement is represented consistently (either inside VP or as a stable attached PP chunk).
-- In “may be used for X or Y”, the “used” predicate remains the VP center, not “be”.
+### A) VP structural fidelity
+Addressed in Cycles 2, 3, and 6.
+- VP matching now uses an optional AUX/MD chain plus required lexical verb nucleus.
+- Optional NP object and optional infinitival complement (`to` + verb complex) are supported.
+- Adjacent PP handling is deterministic via absorb policy with deny-list boundaries.
+- NP modifier support includes `VBN/VBG`, which stabilizes patterns like `a given minimum value`.
 
 ---
 
-### B) PP is too simplistic for role-bearing phrases and comparatives
-PP currently triggers on IN/TO and then consumes NP-like content.
-
-This fails structurally for:
-- comparative markers (“than 1”, “as ... as ...”)
-- multiword prepositions (“in front of”, “because of”) unless handled as MWEs
-- nested PPs or chained prepositions
-- cases where the PP object is not a simple NP sequence
-
-Why this matters:
-- Stage 11 expects prep/object relations and uses them for slot roles later.
-- Comparatives and numeric constraints often flow through “than” and related markers,
-  which are preposition-like but semantically distinct and require explicit structure.
-
-Required optimization:
-- Introduce PP subtypes or markers for:
-  - comparative PP (“than”)
-  - benefactive PP (“for”)
-  - location PP (“at/in/on”)
-- Ensure PP boundaries consistently include the object head
-- Preserve the preposition surface token as evidence
-
-Acceptance criteria:
-- “greater than 1” yields a stable PP-like chunk for “than 1” and does not get absorbed incorrectly into NP/VP.
-- “used for educational purposes” yields a PP chunk that can be attached downstream without guesswork.
+### B) PP structure and subtype metadata
+Addressed in Cycles 3, 4, and 6.
+- PP detection remains deterministic on preposition + NP-like object.
+- VP absorption deny-list keeps `for/at/in/than` as separate PP chunks.
+- Emitted PP chunks carry surface-only `pp_kind` metadata with deterministic fallback `generic`.
+- Comparative and modifier-bearing PP objects are covered by deterministic NP matching rules.
 
 ---
 
-### C) Coordination is not represented as a chunk boundary
-Currently, coordinators (“and/or”) are treated as ordinary tokens for chunk matching,
-and the greedy matcher may either:
-- include parts on both sides into one larger chunk, or
-- split chunks in ways that are not aligned with coordination structure.
-
-Why this matters:
-- Downstream coordination group detection becomes brittle if chunking masks conjunct boundaries.
-- OR-lists in particular need stable boundaries so later stages can model disjunction.
-
-Required optimization:
-- Treat coordinators (`CC`, plus surfaces “and”, “or”) as explicit chunk boundary markers:
-  - end the current chunk before the coordinator
-  - do not consume across the coordinator in a single chunk match
-  - optionally emit a “COORD” pseudo-chunk or metadata marker that later stages can use
-
-Acceptance criteria:
-- Lists like “educational purposes or basic numerical experiments” yield two parallel NP chunks
-  separated by a coordinator marker, rather than a single fused NP chunk.
+### C) Coordination boundary handling
+Addressed in Cycle 1.
+- Coordinators (`CC`, `and`, `or`) are hard boundaries.
+- The matcher does not consume across coordinators.
+- Coordinators are emitted as `O` chunks, preserving deterministic token coverage and conjunct separation.
 
 ---
 
-### D) Interaction with accepted MWEs can amplify errors
-Accepted MWEs are turned into token-like units for chunking.
-This is valuable, but can also:
-- make chunks overconfidently large,
-- hide internal structure needed for later relation mapping,
-- force heads to the last token of the MWE (Stage 07 rule), which might not be ideal for chunk-level roles.
-
-Why this matters:
-- Chunk-level head selection relies on token sets; if MWEs are too coarse,
-  the head candidates available to Stage 10 may be reduced or skewed.
-
-Required optimization:
-- Ensure chunking retains the ability to express:
-  - MWE as a span mention, but not necessarily as the only structural unit inside the chunk
-- Consider “MWE-as-atom” only for NP chunks and not for VP/PP patterns unless explicitly beneficial.
-
-Acceptance criteria:
-- MWEs do not cause VP chunk heads to drift away from lexical verbs.
-- NP chunking still benefits from noun MWEs (“prime number generator”, “numerical experiments”).
+### D) MWE interaction policy
+Addressed in Cycle 5.
+- MWE atomicity is constrained to explicit NP-only allow-list entries.
+- NP-internal POS guard is required for materialization.
+- Non-allowed and non-NP MWEs are ignored so VP/PP boundaries and heads remain stable.
 
 ---
 
@@ -233,24 +170,26 @@ Note: Cycle 6 added an additional deterministic hardening step beyond the origin
 
 ## Tests (golden and invariants)
 
-Add golden fixtures focused on structural expectations:
-- VP does not select participles as the only plausible head when a lexical verb exists.
-- VP+PP complements yield stable chunk boundaries.
-- Coordinated lists yield parallel chunks separated by coordinator markers.
-- Comparative constructs yield stable PP/NP chunk boundaries.
-- MWE atomicity does not collapse predicate structure.
+Golden fixtures and regression locks added in Cycles 1-6:
+- VP/PP tie-break behavior remains stable (`VP > PP > NP`).
+- VP absorption deny-list behavior is locked (`for/at/in/than` remain separate PP).
+- `pp_kind` mapping is deterministic with explicit fallback `generic`.
+- NP-only MWE allow-list behavior is locked; non-NP MWEs do not alter VP/PP structure.
+- NP modifier support includes `JJ/JJR/JJS/VBN/VBG` and is regression-covered.
+- Coordinator boundary handling is locked (`and/or` emitted as `O`, no cross-coordinator chunking).
 
-All tests must operate on deterministic artifacts and assert byte-stable outputs.
+All checks run on deterministic artifacts with stable outputs.
 
 ---
 
 ## Deliverables
 
-1) Updated Stage 09 chunker with coordination-aware boundaries and refined VP/PP patterns.
-2) Documentation of:
-   - FSM patterns
-   - tie-break rules
-   - coordinator boundary policy
-   - PP kind metadata
-3) New golden fixtures and invariants for the upgraded chunker.
-4) Notes for Stage 10/11 consumers if chunk metadata changes (e.g., `pp_kind`).
+Completed deliverables:
+1) Deterministic POS-based chunking FSM implemented with coordination-aware boundaries and refined VP/PP patterns.
+2) Stable tie-break policy documented and preserved (`VP > PP > NP`).
+3) Surface-only `pp_kind` metadata implemented for PP chunks.
+4) NP-only MWE integration policy implemented with deterministic allow-list behavior.
+5) Deterministic NP modifier support implemented (`JJ/JJR/JJS/VBN/VBG`).
+6) Regression test coverage added and maintained across unit/integration suites.
+
+Stage 09 (chunking-pos-fsm) is considered functionally complete.
