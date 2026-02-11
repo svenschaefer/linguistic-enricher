@@ -266,7 +266,8 @@ test("stage11 baseline fixture: webshop copula sentence is deterministic", async
     chunkHead("h3", "c3", "t6"),
     depObs("d1", "t2", "t3", "nsubj", false),
     depObs("d2", "t6", "t3", "attr", false),
-    depObs("d3", "t3", null, "root", true)
+    depObs("d3", "t3", null, "root", true),
+    depObs("d4", "t3", "t6", "cop", false)
   ];
 
   const out = await stage11.runStage(seed(text, tokens, annotations));
@@ -276,10 +277,19 @@ test("stage11 baseline fixture: webshop copula sentence is deterministic", async
   assert.deepEqual(ids, [
     "rel-5f399bb777eb",
     "rel-9e2becd51d1f",
-    "rel-cf728745529f"
+    "rel-cf728745529f",
+    "rel-fbcee64e8e78"
   ]);
   assert.equal(rels.some(function (r) { return r.head.id === "t3" && r.label === "actor" && r.dep.id === "t2"; }), true);
   assert.equal(rels.some(function (r) { return r.head.id === "t3" && r.label === "attribute" && r.dep.id === "t6"; }), true);
+  const copula = rels.find(function (r) { return r.head.id === "t3" && r.label === "copula" && r.dep.id === "t6"; });
+  assert.ok(copula);
+  const evidence = copula.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.pattern, "copula_frame");
+  assert.equal(evidence.subject_token_id, "t2");
+  assert.equal(evidence.complement_token_id, "t6");
+  assert.equal(evidence.copula_token_id, "t3");
+  assert.equal(evidence.complement_kind, "nominal");
 });
 
 test("stage11 baseline fixture: generated primes sentence has stable relation ids", async function () {
@@ -628,6 +638,41 @@ test("stage11 emits compare_lt relation for less than RHS pattern", async functi
   assert.equal(evidence.prep_surface, "than");
   assert.equal(evidence.prep_token_id, "t2");
   assert.equal(evidence.rhs_token_id, "t3");
+});
+
+test("stage11 emits copula frame for passive-like considered clauses", async function () {
+  const text = "Primes are considered numbers.";
+  const tokens = [
+    token("t1", 0, "Primes", "NNS", 0, 6),
+    token("t2", 1, "are", "VBP", 7, 10),
+    token("t3", 2, "considered", "VBN", 11, 21),
+    token("t4", 3, "numbers", "NNS", 22, 29),
+    token("t5", 4, ".", ".", 29, 30)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "Primes", "NP", { start: 0, end: 6 }),
+    chunk("c2", ["t2", "t3"], "are considered", "VP", { start: 7, end: 21 }),
+    chunk("c3", ["t4"], "numbers", "NP", { start: 22, end: 29 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t4"),
+    depObs("d1", "t3", null, "root", true),
+    depObs("d2", "t1", "t3", "nsubjpass", false),
+    depObs("d3", "t4", "t3", "attr", false),
+    depObs("d4", "t2", "t3", "cop", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const copula = rels.find(function (r) { return r.label === "copula" && r.head.id === "t3" && r.dep.id === "t4"; });
+  assert.ok(copula);
+  const evidence = copula.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.pattern, "copula_frame");
+  assert.equal(evidence.verb_token_id, "t3");
+  assert.equal(evidence.subject_token_id, "t1");
+  assert.equal(evidence.complement_token_id, "t4");
+  assert.equal(evidence.copula_token_id, "t2");
+  assert.equal(evidence.complement_kind, "nominal");
 });
 
 test("stage11 modality tie-break prefers rightward lexical verb at equal distance", async function () {

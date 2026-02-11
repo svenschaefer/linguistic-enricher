@@ -1,8 +1,8 @@
 # Relation Extraction - TODO
 
-Status: Baseline + Modifier + Coordination + Comparative + Unified modality locked (Cycles 1-6)
+Status: Baseline + Modifier + Coordination + Comparative + Unified modality + Copula frame locked (Cycles 1-7)
 Runtime behavior unchanged.
-Stage 11 invariants, predicate preservation, modifier projection, coordination metadata, comparative extraction, and unified modality binding harness are in place.
+Stage 11 invariants, predicate preservation, modifier projection, coordination metadata, comparative extraction, unified modality binding, and copula-frame mapping harness are in place.
 
 This stage projects deterministic dependency observations (Stage 08) and chunk heads (Stage 10) into a labeled,
 token/mention-level relation layer (`relations_extracted`).

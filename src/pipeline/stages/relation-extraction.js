@@ -161,6 +161,16 @@ function isComparativeHeadToken(token) {
   return tag === "JJR" || tag === "RBR" || comparativeSurface.has(surface);
 }
 
+function isComplementNominalLike(tag) {
+  const value = String(tag || "");
+  return /^NN/.test(value) || value === "PRP" || value === "PRP$" || value === "CD";
+}
+
+function isComplementAdjectivalLike(tag) {
+  const value = String(tag || "");
+  return /^JJ/.test(value) || /^RB/.test(value);
+}
+
 function compareRelationLabelFromSurface(surfaceLower) {
   const value = String(surfaceLower || "").toLowerCase();
   if (value === "greater" || value === "more") {
@@ -794,6 +804,97 @@ async function runStage(seed) {
       role: role,
       evidence: evidence
     });
+  }
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const vTok = tokens[i];
+    if (!isVerbLikeTag(getTag(vTok))) {
+      continue;
+    }
+    const vId = vTok.id;
+    const outgoing = depByHead.get(vId) || [];
+    const subjects = outgoing.filter(function (d) {
+      const base = baseDepLabel(d.label);
+      return (base === "nsubj" || base === "nsubjpass") && d.dep && d.dep.id && tokenById.has(d.dep.id);
+    }).map(function (d) { return tokenById.get(d.dep.id); });
+    const complements = outgoing.filter(function (d) {
+      const base = baseDepLabel(d.label);
+      return (base === "attr" || base === "acomp") && d.dep && d.dep.id && tokenById.has(d.dep.id);
+    }).map(function (d) { return tokenById.get(d.dep.id); });
+    if (subjects.length === 0 || complements.length === 0) {
+      continue;
+    }
+    subjects.sort(function (a, b) {
+      if (a.i !== b.i) {
+        return a.i - b.i;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+    complements.sort(function (a, b) {
+      if (a.i !== b.i) {
+        return a.i - b.i;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+    const subject = subjects[0];
+    const complement = complements[0];
+
+    const copCandidates = [];
+    const depSide = (depByDep.get(vId) || []).filter(function (d) { return baseDepLabel(d.label) === "cop"; });
+    for (let j = 0; j < depSide.length; j += 1) {
+      const d = depSide[j];
+      if (d.head && d.head.id && tokenById.has(d.head.id)) {
+        copCandidates.push(tokenById.get(d.head.id));
+      }
+    }
+    const headAtVerb = (depByHead.get(vId) || []).filter(function (d) { return baseDepLabel(d.label) === "cop"; });
+    for (let j = 0; j < headAtVerb.length; j += 1) {
+      const d = headAtVerb[j];
+      if (d.dep && d.dep.id && tokenById.has(d.dep.id)) {
+        copCandidates.push(tokenById.get(d.dep.id));
+      }
+    }
+    const headSide = (depByHead.get(complement.id) || []).filter(function (d) { return baseDepLabel(d.label) === "cop"; });
+    for (let j = 0; j < headSide.length; j += 1) {
+      const d = headSide[j];
+      if (d.dep && d.dep.id && tokenById.has(d.dep.id)) {
+        copCandidates.push(tokenById.get(d.dep.id));
+      }
+    }
+    copCandidates.sort(function (a, b) {
+      if (a.i !== b.i) {
+        return a.i - b.i;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+    const copTok = copCandidates.length > 0 ? copCandidates[0] : null;
+
+    let complementKind = "other";
+    const compTag = getTag(complement);
+    if (isComplementNominalLike(compTag)) {
+      complementKind = "nominal";
+    } else if (isComplementAdjectivalLike(compTag)) {
+      complementKind = "adjectival";
+    }
+
+    const predId = isVerbLikeTag(getTag(vTok))
+      ? resolvePredicateForRelation(vId)
+      : resolvePredicate(vId);
+    const compId = resolvePredicate(complement.id);
+    addRelation(
+      predId,
+      compId,
+      "copula",
+      {
+        pattern: "copula_frame",
+        verb_token_id: vId,
+        subject_token_id: subject.id,
+        complement_token_id: complement.id,
+        copula_token_id: copTok ? copTok.id : null,
+        complement_kind: complementKind,
+        sentence_id: vTok.segment_id
+      }
+    );
   }
 
   for (let i = 0; i < dependencyObs.length; i += 1) {
