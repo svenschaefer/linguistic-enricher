@@ -94,6 +94,31 @@ function isNominalLikeTag(tag) {
   );
 }
 
+function isComparativeHeadToken(token) {
+  if (!token) {
+    return false;
+  }
+  const tag = getTag(token);
+  const surface = lowerSurface(token);
+  const comparativeSurface = new Set(["greater", "less", "more", "fewer"]);
+  const adjOrAdv = tag === "JJ" || tag === "JJR" || tag === "RB" || tag === "RBR";
+  if (!adjOrAdv) {
+    return false;
+  }
+  return tag === "JJR" || tag === "RBR" || comparativeSurface.has(surface);
+}
+
+function compareRelationLabelFromSurface(surfaceLower) {
+  const value = String(surfaceLower || "").toLowerCase();
+  if (value === "greater" || value === "more") {
+    return "compare_gt";
+  }
+  if (value === "less" || value === "fewer") {
+    return "compare_lt";
+  }
+  return "compare";
+}
+
 function baseDepLabel(label) {
   const value = String(label || "").toLowerCase();
   const idx = value.indexOf(":");
@@ -887,6 +912,50 @@ async function runStage(seed) {
           }
         );
       }
+    }
+  }
+
+  for (let i = 0; i < dependencyObs.length; i += 1) {
+    const dep = dependencyObs[i];
+    if (dep.is_root || !dep.dep || !dep.dep.id || !dep.head || !dep.head.id) {
+      continue;
+    }
+    if (baseDepLabel(dep.label) !== "prep") {
+      continue;
+    }
+    const compHeadTok = tokenById.get(dep.head.id);
+    const prepTok = tokenById.get(dep.dep.id);
+    if (!compHeadTok || !prepTok) {
+      continue;
+    }
+    if (lowerSurface(prepTok) !== "than") {
+      continue;
+    }
+    if (!isComparativeHeadToken(compHeadTok)) {
+      continue;
+    }
+    const rhsEdges = (depByHead.get(dep.dep.id) || []).filter(function (d) {
+      return d && baseDepLabel(d.label) === "pobj" && d.dep && d.dep.id && tokenById.has(d.dep.id);
+    });
+    for (let j = 0; j < rhsEdges.length; j += 1) {
+      const rhs = rhsEdges[j];
+      const lhsId = isVerbLikeTag(getTag(compHeadTok))
+        ? resolvePredicateForRelation(dep.head.id)
+        : resolvePredicate(dep.head.id);
+      addRelation(
+        lhsId,
+        rhs.dep.id,
+        compareRelationLabelFromSurface(lowerSurface(compHeadTok)),
+        {
+          pattern: "comparative",
+          compare_surface: lowerSurface(compHeadTok),
+          compare_token_id: compHeadTok.id,
+          prep_surface: "than",
+          prep_token_id: prepTok.id,
+          rhs_token_id: rhs.dep.id,
+          sentence_id: compHeadTok.segment_id
+        }
+      );
     }
   }
 

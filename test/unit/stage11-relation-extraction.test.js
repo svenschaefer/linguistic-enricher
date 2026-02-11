@@ -143,6 +143,12 @@ test("stage11 emits actor/theme/location and complement_clause/coordination rela
   assert.equal(has("t4", "location", "t7"), true);
   assert.equal(has("t2", "complement_clause", "t4"), true);
   assert.equal(has("t4", "coordination", "t9"), true);
+  const locationRel = rels.find(function (r) { return r.head.id === "t4" && r.label === "location" && r.dep.id === "t7"; });
+  assert.ok(locationRel);
+  const locationEvidence = locationRel.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(locationEvidence.prep_surface, "in");
+  assert.equal(locationEvidence.prep_token_id, "t6");
+  assert.equal(locationEvidence.pobj_token_id, "t7");
 });
 
 test("stage11 rejects partially relation-extracted docs", async function () {
@@ -546,4 +552,65 @@ test("stage11 coordination evidence carries AND metadata from dependency cc/conj
     evidence.coord_group_id,
     createDeterministicId("coord", { members: [coord.head.id, coord.dep.id].sort(function (a, b) { return a.localeCompare(b); }) })
   );
+});
+
+test("stage11 emits compare_gt relation for greater than RHS pattern", async function () {
+  const text = "greater than 1";
+  const tokens = [
+    token("t1", 0, "greater", "JJR", 0, 7),
+    token("t2", 1, "than", "IN", 8, 12),
+    token("t3", 2, "1", "CD", 13, 14)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "greater", "NP", { start: 0, end: 7 }),
+    chunk("c2", ["t2", "t3"], "than 1", "PP", { start: 8, end: 14 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t2"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t2", "t1", "prep", false),
+    depObs("d3", "t3", "t2", "pobj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const compare = rels.find(function (r) { return r.label === "compare_gt"; });
+  assert.ok(compare);
+  assert.equal(compare.head.id, "t1");
+  assert.equal(compare.dep.id, "t3");
+  const evidence = compare.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.pattern, "comparative");
+  assert.equal(evidence.compare_surface, "greater");
+  assert.equal(evidence.compare_token_id, "t1");
+  assert.equal(evidence.prep_surface, "than");
+  assert.equal(evidence.prep_token_id, "t2");
+  assert.equal(evidence.rhs_token_id, "t3");
+});
+
+test("stage11 emits compare_lt relation for less than RHS pattern", async function () {
+  const text = "less than 10";
+  const tokens = [
+    token("t1", 0, "less", "JJR", 0, 4),
+    token("t2", 1, "than", "IN", 5, 9),
+    token("t3", 2, "10", "CD", 10, 12)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "less", "NP", { start: 0, end: 4 }),
+    chunk("c2", ["t2", "t3"], "than 10", "PP", { start: 5, end: 12 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t2"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t2", "t1", "prep", false),
+    depObs("d3", "t3", "t2", "pobj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const compare = rels.find(function (r) { return r.label === "compare_lt"; });
+  assert.ok(compare);
+  assert.equal(compare.head.id, "t1");
+  assert.equal(compare.dep.id, "t3");
+  const evidence = compare.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.prep_surface, "than");
+  assert.equal(evidence.prep_token_id, "t2");
+  assert.equal(evidence.rhs_token_id, "t3");
 });
