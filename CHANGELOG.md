@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.2] - 2026-02-11
+
+Compared to `v1.1.1`.
+
+### Changed
+- `src/pipeline/stages/pos-tagging.js`
+  - Added deterministic finite-verb disambiguation for a narrow `NNS -> VBZ` error class in clause context.
+  - Corrects coordinated finite verb patterns such as:
+    - `It starts ... and tests ...`
+  - Keeps noun-list behavior stable by applying bounded contextual checks only.
+
+### Tests
+- `test/unit/stage04-pos-tagging.test.js`
+  - Added regression test locking `starts/tests` as `VBZ`/`VERB` in coordinated finite-verb context.
+  - Added negative-control test locking noun coordination (`cats and dogs`) as nominal.
+
 ## [1.1.1] - 2026-02-11
 
 Compared to `v1.1.0`.

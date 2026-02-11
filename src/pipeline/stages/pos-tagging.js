@@ -10,6 +10,8 @@ const POSSESSIVE_SUFFIX_MARKERS = new Set(["'s", "’s", "ʼs", "＇s"]);
 const POSSESSIVE_TERMINAL_MARKERS = new Set(["'", "’", "ʼ", "＇"]);
 const POSSESSIVE_ALLOWED_PREV = new Set(["NN", "NNS", "NNP", "NNPS"]);
 const POSSESSIVE_ALLOWED_NEXT = new Set(["NN", "NNS", "NNP", "NNPS", "JJ", "JJR", "JJS", "DT"]);
+const FINITE_VERB_CONTEXT_NEXT = new Set(["IN", "TO", "DT", "RB", "RBR", "RBS", "JJ", "JJR", "JJS", "PRP", "PRP$", "CD"]);
+const CLAUSE_BOUNDARY_SURFACES = new Set([".", ",", ";", ":", "!", "?"]);
 
 function toCoarsePennTag(tag) {
   if (tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS") {
@@ -74,6 +76,77 @@ function applyPossessiveOverride(tokens, tagged, index) {
     return "VBZ";
   }
   return pos;
+}
+
+function isLikelyFiniteVerbSurface(surface) {
+  return /^[A-Za-z]+s$/.test(String(surface || ""));
+}
+
+function isClauseBoundaryToken(token) {
+  if (!token) {
+    return false;
+  }
+  if (token.flags && token.flags.is_punct === true) {
+    return true;
+  }
+  return CLAUSE_BOUNDARY_SURFACES.has(String(token.surface || ""));
+}
+
+function previousNonPunctIndex(tokens, index) {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (!isClauseBoundaryToken(tokens[i])) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function nextNonPunctIndex(tokens, index) {
+  for (let i = index + 1; i < tokens.length; i += 1) {
+    if (!isClauseBoundaryToken(tokens[i])) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function hasVerbInClauseToLeft(tokens, resolvedTags, index) {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (isClauseBoundaryToken(tokens[i])) {
+      break;
+    }
+    const tag = resolvedTags[i];
+    if (typeof tag === "string" && (/^VB/.test(tag) || tag === "MD")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function applyFiniteVerbDisambiguation(tokens, resolvedTags, index) {
+  const currentTag = resolvedTags[index];
+  if (currentTag !== "NNS") {
+    return currentTag;
+  }
+  if (!isLikelyFiniteVerbSurface(tokens[index] && tokens[index].surface)) {
+    return currentTag;
+  }
+
+  const prevIdx = previousNonPunctIndex(tokens, index);
+  const nextIdx = nextNonPunctIndex(tokens, index);
+  const prevTag = prevIdx >= 0 ? resolvedTags[prevIdx] : null;
+  const nextTag = nextIdx >= 0 ? resolvedTags[nextIdx] : null;
+  if (!nextTag || !FINITE_VERB_CONTEXT_NEXT.has(nextTag)) {
+    return currentTag;
+  }
+
+  if (prevTag === "PRP") {
+    return "VBZ";
+  }
+  if (prevTag === "CC" && hasVerbInClauseToLeft(tokens, resolvedTags, index)) {
+    return "VBZ";
+  }
+  return currentTag;
 }
 
 function mapQueryEvidence(response) {
@@ -152,9 +225,17 @@ async function runStage(seed, context) {
     );
   }
 
+  const resolvedTags = new Array(tokens.length);
+  for (let i = 0; i < tokens.length; i += 1) {
+    resolvedTags[i] = applyPossessiveOverride(tokens, tagged, i);
+  }
+  for (let i = 0; i < tokens.length; i += 1) {
+    resolvedTags[i] = applyFiniteVerbDisambiguation(tokens, resolvedTags, i);
+  }
+
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
-    const finalTag = applyPossessiveOverride(tokens, tagged, i);
+    const finalTag = resolvedTags[i];
     if (!finalTag || typeof finalTag !== "string") {
       throw errors.createError(
         errors.ERROR_CODES.E_INVARIANT_VIOLATION,
