@@ -51,6 +51,10 @@ function isAdj(tag) {
   return tag === "JJ" || tag === "JJR" || tag === "JJS";
 }
 
+function isNpModifier(tag) {
+  return isAdj(tag) || tag === "VBN" || tag === "VBG";
+}
+
 function isNoun(tag) {
   return tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS";
 }
@@ -355,7 +359,7 @@ function matchNP(run, start) {
   if (i < run.length && run[i].det) {
     i += 1;
   }
-  while (i < run.length && run[i].adj) {
+  while (i < run.length && run[i].unit.kind === "token" && isNpModifier(run[i].unit.pos)) {
     i += 1;
   }
   const nounStart = i;

@@ -378,3 +378,45 @@ test("stage09 ignores non-NP MWE candidates so phrasal-verb MWE does not alter V
   const outMwe = await stage09.runStage(buildSeed(text, tokens, annotations));
   assert.deepEqual(chunkSignature(outMwe), chunkSignature(outPlain));
 });
+
+test("stage09 matches PP object NP with VBN modifier in a given minimum value pattern", async function () {
+  const text = "It starts at a given minimum value.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 2 }, surface: "It", pos: { tag: "PRP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 3, end: 9 }, surface: "starts", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 10, end: 12 }, surface: "at", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 13, end: 14 }, surface: "a", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 15, end: 20 }, surface: "given", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 21, end: 28 }, surface: "minimum", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 29, end: 34 }, surface: "value", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 34, end: 35 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage09.runStage(buildSeed(text, tokens, []));
+  const chunks = out.annotations.filter(function (a) { return a.kind === "chunk"; });
+  const vp = chunks.find(function (a) { return a.chunk_type === "VP"; });
+  const pp = chunks.find(function (a) { return a.chunk_type === "PP"; });
+  assert.ok(vp);
+  assert.ok(pp);
+  assert.equal(vp.label, "starts");
+  assert.equal(pp.label, "at a given minimum value");
+  assert.equal(pp.pp_kind, "locative");
+  assert.equal(chunks.some(function (a) { return a.chunk_type === "VP" && a.label.indexOf("at ") !== -1; }), false);
+});
+
+test("stage09 matches comparative than-PP when NP object includes VBN modifier", async function () {
+  const text = "greater than a given value";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 7 }, surface: "greater", pos: { tag: "JJR" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 8, end: 12 }, surface: "than", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 13, end: 14 }, surface: "a", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 15, end: 20 }, surface: "given", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 21, end: 26 }, surface: "value", pos: { tag: "NN" }, flags: { is_punct: false } }
+  ];
+
+  const out = await stage09.runStage(buildSeed(text, tokens, []));
+  const pp = out.annotations.find(function (a) { return a.kind === "chunk" && a.chunk_type === "PP"; });
+  assert.ok(pp);
+  assert.equal(pp.label, "than a given value");
+  assert.equal(pp.pp_kind, "comparative");
+});
