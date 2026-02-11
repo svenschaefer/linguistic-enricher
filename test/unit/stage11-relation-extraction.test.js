@@ -284,7 +284,9 @@ test("stage11 baseline fixture: generated primes sentence has stable relation id
     depObs("d2", "t3", "t5", "aux", false),
     depObs("d3", "t2", "t5", "nsubjpass", false),
     depObs("d4", "t6", "t5", "prep", false),
-    depObs("d5", "t8", "t6", "pobj", false)
+    depObs("d5", "t8", "t6", "pobj", false),
+    depObs("d6", "t1", "t2", "amod", false),
+    depObs("d7", "t7", "t8", "amod", false)
   ];
 
   const out = await stage11.runStage(seed(text, tokens, annotations));
@@ -294,9 +296,13 @@ test("stage11 baseline fixture: generated primes sentence has stable relation id
   assert.deepEqual(ids, [
     "rel-08d21b21c09c",
     "rel-0b7175799c82",
+    "rel-3158448a5294",
+    "rel-a14a8d95cc70",
     "rel-a7a441ad585e",
     "rel-c6e1aa6149b4"
   ]);
+  assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "modifier" && r.dep.id === "t1"; }), true);
+  assert.equal(rels.some(function (r) { return r.head.id === "t6" && r.label === "modifier" && r.dep.id === "t7"; }), true);
 });
 
 test("stage11 invariant: rejects missing chunk_head for accepted chunk", async function () {
@@ -426,4 +432,22 @@ test("stage11 preserves lexical VP predicate when chunk_head is demoted verbish"
   const rels = stage11Rels(out);
   assert.equal(rels.some(function (r) { return r.head.id === "t3" && r.label === "patient" && r.dep.id === "t1"; }), true);
   assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "patient" && r.dep.id === "t1"; }), false);
+});
+
+test("stage11 emits modifier relation for nummod", async function () {
+  const text = "two stores";
+  const tokens = [
+    token("t1", 0, "two", "CD", 0, 3),
+    token("t2", 1, "stores", "NNS", 4, 10)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "two stores", "NP", { start: 0, end: 10 }),
+    chunkHead("h1", "c1", "t2"),
+    depObs("d1", "t2", null, "root", true),
+    depObs("d2", "t1", "t2", "nummod", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "modifier" && r.dep.id === "t1"; }), true);
 });

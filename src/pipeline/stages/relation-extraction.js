@@ -198,6 +198,9 @@ function roleFromDepLabel(depLabel, depTokenTag, headTokenTag) {
   if (base === "advmod" || base === "npadvmod") {
     return "modifier";
   }
+  if (base === "amod" || base === "compound" || base === "nummod") {
+    return "modifier";
+  }
   return null;
 }
 
