@@ -12,10 +12,14 @@ Compared to `v1.1.0`.
     - `comparative` observations now materialize accepted `compare_*` dependency relations.
     - `quantifier_scope` observations now materialize accepted `quantifier`/`scope_quantifier` dependency relations.
   - This keeps relation output consumable by downstream stages that project only relation-extraction dependencies.
+  - Duplicate relation-key handling now preserves observation provenance deterministically:
+    - when a duplicate compare/quantifier edge is encountered, `source_annotation_id` from
+      `comparative_observation` / `quantifier_scope_observation` is merged instead of being dropped.
 
 ### Tests
 - `test/unit/stage11-relation-extraction.test.js`
   - Added regression coverage for comparative-observation bridge and quantifier-scope-observation bridge.
+  - Added regression coverage for duplicate-edge provenance merge on both comparative and quantifier bridges.
 
 ## [1.1.0] - 2026-02-11
 
