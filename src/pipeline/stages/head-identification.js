@@ -173,7 +173,10 @@ function chooseMatrixLexVerb(tokens, inChunkSet, degreeMap) {
     }
     return String(a.id).localeCompare(String(b.id));
   });
-  return sorted[0];
+  return {
+    head: sorted[0],
+    candidates: sorted
+  };
 }
 
 function chooseByPosition(tokens, rightmost) {
@@ -235,23 +238,33 @@ function selectHeadToken(chunkType, tokens, depMap) {
     allowAny
   );
   if (depChoice) {
-    return depChoice;
+    return {
+      head: depChoice,
+      candidates: candidates.slice(),
+      rule: "dependency_root",
+      allowAny: allowAny
+    };
   }
-  return chunkType === "NP" ? chooseByPosition(candidates, true) : chooseByPosition(candidates, false);
+  return {
+    head: chunkType === "NP" ? chooseByPosition(candidates, true) : chooseByPosition(candidates, false),
+    candidates: candidates.slice(),
+    rule: allowAny ? "allow_any_fallback" : "positional_fallback",
+    allowAny: allowAny
+  };
 }
 
 function maybeApplyVpLexicalOverride(chunkType, selectedHead, tokens) {
   if (chunkType !== "VP") {
-    return { head: selectedHead, fired: false };
+    return { head: selectedHead, fired: false, candidates: [] };
   }
   if (!isVerb(getTag(selectedHead)) || !isVpDemotedToken(selectedHead, tokens)) {
-    return { head: selectedHead, fired: false };
+    return { head: selectedHead, fired: false, candidates: [] };
   }
   const lexicalCandidates = tokens.filter(function (t) { return isVerb(getTag(t)) && !isVpDemotedToken(t, tokens); });
   if (lexicalCandidates.length === 0) {
-    return { head: selectedHead, fired: false };
+    return { head: selectedHead, fired: false, candidates: [] };
   }
-  return { head: chooseByPosition(lexicalCandidates, false), fired: true };
+  return { head: chooseByPosition(lexicalCandidates, false), fired: true, candidates: lexicalCandidates.slice() };
 }
 
 /**
@@ -303,19 +316,34 @@ async function runStage(seed) {
     chunkTokens.sort(function (a, b) { return a.i - b.i; });
 
     const chunkType = ann.chunk_type || "O";
-    let selected = selectHeadToken(chunkType, chunkTokens, depMap);
+    const initialSelection = selectHeadToken(chunkType, chunkTokens, depMap);
+    let selected = initialSelection.head;
+    let decisionCandidates = initialSelection.candidates.slice();
+    let decisionRule = initialSelection.rule;
+    const decisionTieBreak = {};
     let matrixPreferenceFired = false;
     if (chunkType === "VP" && isVpDemotedToken(selected, chunkTokens)) {
       const chunkSet = inChunkIdSet(chunkTokens);
       const degreeMap = buildIncidentDegreeMap(chunkTokens, depMap, chunkSet, annotations);
       const matrixLex = chooseMatrixLexVerb(chunkTokens, chunkSet, degreeMap);
       if (matrixLex) {
-        selected = matrixLex;
+        selected = matrixLex.head;
         matrixPreferenceFired = true;
+        decisionCandidates = matrixLex.candidates.map(function (t) { return t; });
+        decisionRule = "matrix_lexical_preference";
+        decisionTieBreak.degree = degreeMap.get(selected.id) || 0;
+        decisionTieBreak.index = selected.i;
       }
     }
 
     const maybeOverridden = maybeApplyVpLexicalOverride(chunkType, selected, chunkTokens);
+    if (maybeOverridden.fired) {
+      decisionCandidates = maybeOverridden.candidates.slice();
+      decisionRule = "vp_lexical_override";
+      decisionTieBreak.override = true;
+    } else if (decisionRule === "positional_fallback") {
+      decisionTieBreak.index = selected.i;
+    }
     const headTokenId = maybeOverridden.head.id;
     const headSpan = maybeOverridden.head.span;
     const headLabel = spanTextFromCanonical(out.canonical_text, headSpan, unit);
@@ -351,6 +379,12 @@ async function runStage(seed) {
         ]
       },
       sources: [{ name: "head-identification", kind: "rule" }]
+    };
+    newAnnotation.head_decision = {
+      candidates: decisionCandidates.map(function (t) { return t.id; }),
+      chosen: headTokenId,
+      rule: decisionRule,
+      tie_break: decisionTieBreak
     };
 
     if (chunkSurface) {

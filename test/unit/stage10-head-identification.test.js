@@ -88,6 +88,11 @@ test("stage10 identifies NP head using dependency root-over-chunk", async functi
   assert.ok(head);
   assert.equal(head.head.id, "t3");
   assert.equal(head.label, "store");
+  assert.ok(head.head_decision);
+  assert.deepEqual(head.head_decision.candidates, ["t3"]);
+  assert.equal(head.head_decision.chosen, "t3");
+  assert.equal(head.head_decision.rule, "dependency_root");
+  assert.deepEqual(head.head_decision.tie_break, {});
 });
 
 test("stage10 applies VP lexical override for demoted auxiliary-like head", async function () {
@@ -109,6 +114,12 @@ test("stage10 applies VP lexical override for demoted auxiliary-like head", asyn
   assert.ok(head);
   assert.equal(head.head.id, "t1");
   assert.equal(head.notes, "vp_matrix_lexical_preference=true");
+  assert.ok(head.head_decision);
+  assert.equal(head.head_decision.rule, "matrix_lexical_preference");
+  assert.equal(head.head_decision.chosen, "t1");
+  assert.deepEqual(head.head_decision.candidates, ["t1"]);
+  assert.equal(typeof head.head_decision.tie_break.degree, "number");
+  assert.equal(head.head_decision.tie_break.index, 0);
 });
 
 test("stage10 rejects partially head-identified docs", async function () {
@@ -186,8 +197,7 @@ test("stage10 allows MD fallback as VP head when no lexical verb exists", async 
     { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "may", pos: { tag: "MD" }, flags: { is_punct: false } }
   ];
   const annotations = [
-    chunkAnnotation("chunk-vp", "VP", ["t1"], { start: 0, end: 3 }, "may"),
-    depAnnotation("dep-1", "t1", null, true, { start: 0, end: 3 }, "may", ["t1"])
+    chunkAnnotation("chunk-vp", "VP", ["t1"], { start: 0, end: 3 }, "may")
   ];
 
   const out = await stage10.runStage(buildSeed(text, tokens, annotations));
@@ -195,6 +205,9 @@ test("stage10 allows MD fallback as VP head when no lexical verb exists", async 
   assert.ok(head);
   assert.equal(head.head.id, "t1");
   assert.equal(head.label, "may");
+  assert.ok(head.head_decision);
+  assert.equal(head.head_decision.chosen, "t1");
+  assert.ok(["positional_fallback", "allow_any_fallback"].indexOf(head.head_decision.rule) !== -1);
 });
 
 test("stage10 prefers matrix lexical verb over demoted VP root in may be used", async function () {
@@ -217,6 +230,11 @@ test("stage10 prefers matrix lexical verb over demoted VP root in may be used", 
   assert.equal(head.head.id, "t3");
   assert.equal(head.label, "used");
   assert.equal(head.notes, "vp_matrix_lexical_preference=true");
+  assert.ok(head.head_decision);
+  assert.equal(head.head_decision.rule, "matrix_lexical_preference");
+  assert.equal(head.head_decision.chosen, "t3");
+  assert.equal(typeof head.head_decision.tie_break.degree, "number");
+  assert.equal(head.head_decision.tie_break.index, 2);
 });
 
 test("stage10 prefers matrix lexical participle over copula root in are considered", async function () {
@@ -375,4 +393,23 @@ test("stage10 keeps VBN head when no non-demoted lexical alternative exists", as
   assert.ok(head);
   assert.equal(head.head.id, "t2");
   assert.equal(head.label, "assigned");
+});
+
+test("stage10 records positional fallback decision metadata when no dependency root is available", async function () {
+  const text = "run quickly";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "run", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 11 }, surface: "quickly", pos: { tag: "RB" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2"], { start: 0, end: 11 }, "run quickly")
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t1");
+  assert.ok(head.head_decision);
+  assert.equal(head.head_decision.rule, "positional_fallback");
+  assert.equal(head.head_decision.tie_break.index, 0);
 });
