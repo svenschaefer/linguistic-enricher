@@ -82,6 +82,59 @@ function findCcTokenIdForConj(conjTokenId, depByHead, tokenById) {
   return candidates.length > 0 ? candidates[0].id : null;
 }
 
+function isBoundaryToken(token) {
+  const surface = lowerSurface(token);
+  if (surface === "and" || surface === "or") {
+    return true;
+  }
+  return surface === "." || surface === "," || surface === ";" || surface === ":" || surface === "!" || surface === "?";
+}
+
+function getClauseWindowTokens(sentenceTokens, mdIndex) {
+  let left = mdIndex;
+  let right = mdIndex;
+  while (left - 1 >= 0 && !isBoundaryToken(sentenceTokens[left - 1])) {
+    left -= 1;
+  }
+  while (right + 1 < sentenceTokens.length && !isBoundaryToken(sentenceTokens[right + 1])) {
+    right += 1;
+  }
+  return sentenceTokens.slice(left, right + 1);
+}
+
+function chooseModalityPredicate(mdToken, windowTokens) {
+  const lexicalCandidates = windowTokens.filter(function (t) {
+    return isLexicalVerbTag(getTag(t)) && !isDemotedVerbish(t) && t.id !== mdToken.id;
+  });
+  if (lexicalCandidates.length === 0) {
+    return null;
+  }
+  const rightward = lexicalCandidates.filter(function (t) { return t.i > mdToken.i; });
+  const pool = rightward.length > 0
+    ? rightward
+    : lexicalCandidates.filter(function (t) { return t.i < mdToken.i; });
+  if (pool.length === 0) {
+    return null;
+  }
+  const sorted = pool.slice().sort(function (a, b) {
+    const distA = Math.abs(a.i - mdToken.i);
+    const distB = Math.abs(b.i - mdToken.i);
+    if (distA !== distB) {
+      return distA - distB;
+    }
+    const aRight = a.i > mdToken.i ? 1 : 0;
+    const bRight = b.i > mdToken.i ? 1 : 0;
+    if (aRight !== bRight) {
+      return bRight - aRight;
+    }
+    if (a.i !== b.i) {
+      return a.i - b.i;
+    }
+    return String(a.id).localeCompare(String(b.id));
+  });
+  return sorted[0];
+}
+
 function isNominalLikeTag(tag) {
   return (
     tag === "NN" ||
@@ -253,9 +306,6 @@ function roleFromDepLabel(depLabel, depTokenTag, headTokenTag) {
   }
   if (base === "iobj" && isVerbLikeTag(headTokenTag)) {
     return "recipient";
-  }
-  if ((base === "aux" || base === "auxpass") && depTokenTag === "MD") {
-    return "modality";
   }
   if (base === "advmod" || base === "npadvmod") {
     return "modifier";
@@ -486,17 +536,6 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
       }
     }
 
-    if (getTag(predTok) === "MD") {
-      const nextVP = nearestNextVP(i);
-      if (nextVP) {
-        const nextPred = chunkHeadByChunkId.get(nextVP.id);
-        addRelation(nextPred, predicateId, "modality", {
-          pattern: "chunk_fallback",
-          dependency_label: "aux",
-          sentence_id: sentenceId
-        });
-      }
-    }
   }
 
   for (let i = 1; i + 1 < chunks.length; i += 1) {
@@ -539,7 +578,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
   void relations;
 }
 
-function maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById, resolvePredicateHeadId) {
+function maybeAddTokenHeuristicRelations(addRelation, tokens) {
   const bySentence = new Map();
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
@@ -553,21 +592,6 @@ function maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenBy
   }
 
   for (const sentenceTokens of bySentence.values()) {
-    for (let i = 0; i < sentenceTokens.length; i += 1) {
-      const token = sentenceTokens[i];
-      const tag = getTag(token);
-      if (tag === "MD") {
-        const parent = (depByHead.get(token.id) || [])[0];
-        if (parent && parent.head && parent.head.id) {
-          addRelation(resolvePredicateHeadId(parent.head.id), token.id, "modality", {
-            pattern: "token_heuristic",
-            dependency_label: parent.label || "dep",
-            sentence_id: token.segment_id
-          });
-        }
-      }
-    }
-
     for (let i = 1; i + 1 < sentenceTokens.length; i += 1) {
       const current = sentenceTokens[i];
       if (String(current.surface || "").toLowerCase() !== "to") {
@@ -600,7 +624,6 @@ function maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenBy
     }
   }
 
-  void tokenById;
 }
 
 function isExistingStage11Relation(annotation) {
@@ -799,12 +822,60 @@ async function runStage(seed) {
   }
 
   maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead);
-  maybeAddTokenHeuristicRelations(addRelation, tokens, depByHead, tokenById, function (headId) {
-    const headTok = tokenById.get(headId);
-    return isVerbLikeTag(getTag(headTok))
-      ? resolvePredicateForRelation(headId)
-      : resolvePredicate(headId);
-  });
+  maybeAddTokenHeuristicRelations(addRelation, tokens);
+
+  const bySentence = new Map();
+  for (let i = 0; i < tokens.length; i += 1) {
+    const tok = tokens[i];
+    if (!bySentence.has(tok.segment_id)) {
+      bySentence.set(tok.segment_id, []);
+    }
+    bySentence.get(tok.segment_id).push(tok);
+  }
+  for (const list of bySentence.values()) {
+    list.sort(function (a, b) {
+      if (a.i !== b.i) {
+        return a.i - b.i;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }
+  const mdSeen = new Set();
+  for (const entry of bySentence.entries()) {
+    const sentenceId = entry[0];
+    const sentenceTokens = entry[1];
+    for (let i = 0; i < sentenceTokens.length; i += 1) {
+      const mdTok = sentenceTokens[i];
+      if (getTag(mdTok) !== "MD") {
+        continue;
+      }
+      const mdKey = sentenceId + "|" + mdTok.id;
+      if (mdSeen.has(mdKey)) {
+        continue;
+      }
+      const windowTokens = getClauseWindowTokens(sentenceTokens, i);
+      const chosen = chooseModalityPredicate(mdTok, windowTokens);
+      if (!chosen) {
+        continue;
+      }
+      const normalizedHead = isVerbLikeTag(getTag(chosen))
+        ? resolvePredicateForRelation(chosen.id)
+        : resolvePredicate(chosen.id);
+      addRelation(
+        normalizedHead,
+        mdTok.id,
+        "modality",
+        {
+          pattern: "modality_unified",
+          md_token_id: mdTok.id,
+          sentence_id: sentenceId,
+          md_surface: lowerSurface(mdTok),
+          chosen_predicate_token_id: chosen.id
+        }
+      );
+      mdSeen.add(mdKey);
+    }
+  }
 
   for (let i = 0; i < dependencyObs.length; i += 1) {
     const dep = dependencyObs[i];

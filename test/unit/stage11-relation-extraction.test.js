@@ -229,6 +229,12 @@ test("stage11 chunk fallback emits relations when dependency labels are weak", a
   assert.equal(has("t6", "theme", "t7"), true);
   assert.equal(has("t3", "modality", "t2"), true);
   assert.equal(has("t3", "coordination", "t6"), true);
+  const modalityForCan = rels.filter(function (r) { return r.label === "modality" && r.dep.id === "t2"; });
+  assert.equal(modalityForCan.length, 1);
+  const modEvidence = modalityForCan[0].sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(modEvidence.pattern, "modality_unified");
+  assert.equal(modEvidence.md_token_id, "t2");
+  assert.equal(modEvidence.chosen_predicate_token_id, "t3");
   const coord = rels.find(function (r) { return r.head.id === "t3" && r.label === "coordination" && r.dep.id === "t6"; });
   assert.ok(coord);
   const evidence = coord.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
@@ -319,6 +325,15 @@ test("stage11 baseline fixture: generated primes sentence has stable relation id
   ]);
   assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "modifier" && r.dep.id === "t1"; }), true);
   assert.equal(rels.some(function (r) { return r.head.id === "t6" && r.label === "modifier" && r.dep.id === "t7"; }), true);
+  const modality = rels.filter(function (r) { return r.label === "modality"; });
+  assert.equal(modality.length, 1);
+  assert.equal(modality[0].head.id, "t5");
+  assert.equal(modality[0].dep.id, "t3");
+  const modEvidence = modality[0].sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(modEvidence.pattern, "modality_unified");
+  assert.equal(modEvidence.md_token_id, "t3");
+  assert.equal(modEvidence.md_surface, "may");
+  assert.equal(modEvidence.chosen_predicate_token_id, "t5");
 });
 
 test("stage11 invariant: rejects missing chunk_head for accepted chunk", async function () {
@@ -613,4 +628,29 @@ test("stage11 emits compare_lt relation for less than RHS pattern", async functi
   assert.equal(evidence.prep_surface, "than");
   assert.equal(evidence.prep_token_id, "t2");
   assert.equal(evidence.rhs_token_id, "t3");
+});
+
+test("stage11 modality tie-break prefers rightward lexical verb at equal distance", async function () {
+  const text = "run may use";
+  const tokens = [
+    token("t1", 0, "run", "VB", 0, 3),
+    token("t2", 1, "may", "MD", 4, 7),
+    token("t3", 2, "use", "VB", 8, 11)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "run", "VP", { start: 0, end: 3 }),
+    chunk("c2", ["t2", "t3"], "may use", "VP", { start: 4, end: 11 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t3"),
+    depObs("d1", "t3", null, "root", true)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const modality = rels.filter(function (r) { return r.label === "modality" && r.dep.id === "t2"; });
+  assert.equal(modality.length, 1);
+  assert.equal(modality[0].head.id, "t3");
+  const evidence = modality[0].sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.pattern, "modality_unified");
+  assert.equal(evidence.chosen_predicate_token_id, "t3");
 });
