@@ -804,7 +804,21 @@ async function runStage(seed) {
   }
 
   const relations = [];
-  const seen = new Set();
+  const relationIndexByKey = new Map();
+
+  function mergeDuplicateEvidence(existingEvidence, incomingEvidence) {
+    const existing = existingEvidence && typeof existingEvidence === "object" ? existingEvidence : {};
+    const incoming = incomingEvidence && typeof incomingEvidence === "object" ? incomingEvidence : {};
+    if (
+      (incoming.pattern === "comparative_observation" || incoming.pattern === "quantifier_scope_observation") &&
+      typeof incoming.source_annotation_id === "string" &&
+      incoming.source_annotation_id.length > 0 &&
+      typeof existing.source_annotation_id !== "string"
+    ) {
+      existing.source_annotation_id = incoming.source_annotation_id;
+    }
+    return existing;
+  }
 
   function addRelation(predicateId, argumentId, role, evidence) {
     if (!predicateId || !argumentId || !role || predicateId === argumentId) {
@@ -816,17 +830,21 @@ async function runStage(seed) {
       return;
     }
     const key = [p.segment_id, predicateId, argumentId, role].join("|");
-    if (seen.has(key)) {
+    if (relationIndexByKey.has(key)) {
+      const existingIndex = relationIndexByKey.get(key);
+      const current = relations[existingIndex];
+      current.evidence = mergeDuplicateEvidence(current.evidence, evidence);
       return;
     }
-    seen.add(key);
-    relations.push({
+    const rel = {
       sentenceId: p.segment_id,
       predicateId: predicateId,
       argumentId: argumentId,
       role: role,
       evidence: evidence
-    });
+    };
+    relationIndexByKey.set(key, relations.length);
+    relations.push(rel);
   }
 
   for (let i = 0; i < tokens.length; i += 1) {

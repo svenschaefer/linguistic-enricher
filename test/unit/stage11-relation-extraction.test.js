@@ -680,6 +680,33 @@ test("stage11 emits compare_lt relation for less than RHS pattern", async functi
   assert.equal(evidence.rhs_token_id, "t3");
 });
 
+test("stage11 preserves comparative observation provenance on duplicate compare relation", async function () {
+  const text = "greater than 1";
+  const tokens = [
+    token("t1", 0, "greater", "JJR", 0, 7),
+    token("t2", 1, "than", "IN", 8, 12),
+    token("t3", 2, "1", "CD", 13, 14)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "greater", "NP", { start: 0, end: 7 }),
+    chunk("c2", ["t2", "t3"], "than 1", "PP", { start: 8, end: 14 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t2"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t2", "t1", "prep", false),
+    depObs("d3", "t3", "t2", "pobj", false),
+    comparativeObs("cmp1", "compare_gt", "t1", "t2", "t3", "greater than 1", { start: 0, end: 14 })
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out).filter(function (r) {
+    return r.label === "compare_gt" && r.head.id === "t1" && r.dep.id === "t3";
+  });
+  assert.equal(rels.length, 1);
+  const evidence = rels[0].sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.source_annotation_id, "cmp1");
+});
+
 test("stage11 bridges comparative observation into compare relation", async function () {
   const text = "numbers greater than 1";
   const tokens = [
