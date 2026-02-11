@@ -1,8 +1,8 @@
 # Relation Extraction - TODO
 
-Status: Baseline + Modifier coverage locked (Cycles 1-3)
+Status: Baseline + Modifier + Coordination metadata locked (Cycles 1-4)
 Runtime behavior unchanged.
-Stage 11 invariants, predicate preservation, and modifier projection harness are in place.
+Stage 11 invariants, predicate preservation, modifier projection, and coordination metadata harness are in place.
 
 This stage projects deterministic dependency observations (Stage 08) and chunk heads (Stage 10) into a labeled,
 token/mention-level relation layer (`relations_extracted`).

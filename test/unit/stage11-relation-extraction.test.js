@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const stage11 = require("../../src/pipeline/stages/relation-extraction");
 const errors = require("../../src/util/errors");
+const { createDeterministicId } = require("../../src/util/ids");
 
 function token(id, i, surface, tag, start, end) {
   return {
@@ -222,6 +223,15 @@ test("stage11 chunk fallback emits relations when dependency labels are weak", a
   assert.equal(has("t6", "theme", "t7"), true);
   assert.equal(has("t3", "modality", "t2"), true);
   assert.equal(has("t3", "coordination", "t6"), true);
+  const coord = rels.find(function (r) { return r.head.id === "t3" && r.label === "coordination" && r.dep.id === "t6"; });
+  assert.ok(coord);
+  const evidence = coord.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.coord_type, "and");
+  assert.equal(evidence.coord_token_id, "t5");
+  assert.equal(
+    evidence.coord_group_id,
+    createDeterministicId("coord", { members: ["t3", "t6"].sort(function (a, b) { return a.localeCompare(b); }) })
+  );
 });
 
 test("stage11 baseline fixture: webshop copula sentence is deterministic", async function () {
@@ -450,4 +460,90 @@ test("stage11 emits modifier relation for nummod", async function () {
   const out = await stage11.runStage(seed(text, tokens, annotations));
   const rels = stage11Rels(out);
   assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "modifier" && r.dep.id === "t1"; }), true);
+});
+
+test("stage11 coordination evidence carries OR metadata from dependency cc/conj", async function () {
+  const text = "Generated primes may be used for educational purposes or research.";
+  const tokens = [
+    token("t1", 0, "Generated", "JJ", 0, 9),
+    token("t2", 1, "primes", "NNS", 10, 16),
+    token("t3", 2, "may", "MD", 17, 20),
+    token("t4", 3, "be", "VB", 21, 23),
+    token("t5", 4, "used", "VBN", 24, 28),
+    token("t6", 5, "for", "IN", 29, 32),
+    token("t7", 6, "educational", "JJ", 33, 44),
+    token("t8", 7, "purposes", "NNS", 45, 53),
+    token("t9", 8, "or", "CC", 54, 56),
+    token("t10", 9, "research", "NN", 57, 65),
+    token("t11", 10, ".", ".", 65, 66)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "Generated primes", "NP", { start: 0, end: 16 }),
+    chunk("c2", ["t3", "t4", "t5"], "may be used", "VP", { start: 17, end: 28 }),
+    chunk("c3", ["t6", "t7", "t8"], "for educational purposes", "PP", { start: 29, end: 53 }),
+    chunk("c4", ["t10"], "research", "NP", { start: 57, end: 65 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t5"),
+    chunkHead("h3", "c3", "t6"),
+    chunkHead("h4", "c4", "t10"),
+    depObs("d1", "t5", null, "root", true),
+    depObs("d2", "t3", "t5", "aux", false),
+    depObs("d3", "t2", "t5", "nsubjpass", false),
+    depObs("d4", "t6", "t5", "prep", false),
+    depObs("d5", "t8", "t6", "pobj", false),
+    depObs("d6", "t10", "t8", "conj", false),
+    depObs("d7", "t9", "t10", "cc", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const coord = rels.find(function (r) { return r.label === "coordination"; });
+  assert.ok(coord);
+  const evidence = coord.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.coord_type, "or");
+  assert.equal(evidence.coord_token_id, "t9");
+  assert.equal(
+    evidence.coord_group_id,
+    createDeterministicId("coord", { members: [coord.head.id, coord.dep.id].sort(function (a, b) { return a.localeCompare(b); }) })
+  );
+});
+
+test("stage11 coordination evidence carries AND metadata from dependency cc/conj", async function () {
+  const text = "A webshop sells books and tools.";
+  const tokens = [
+    token("t1", 0, "A", "DT", 0, 1),
+    token("t2", 1, "webshop", "NN", 2, 9),
+    token("t3", 2, "sells", "VBZ", 10, 15),
+    token("t4", 3, "books", "NNS", 16, 21),
+    token("t5", 4, "and", "CC", 22, 25),
+    token("t6", 5, "tools", "NNS", 26, 31),
+    token("t7", 6, ".", ".", 31, 32)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "A webshop", "NP", { start: 0, end: 9 }),
+    chunk("c2", ["t3"], "sells", "VP", { start: 10, end: 15 }),
+    chunk("c3", ["t4"], "books", "NP", { start: 16, end: 21 }),
+    chunk("c4", ["t6"], "tools", "NP", { start: 26, end: 31 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t4"),
+    chunkHead("h4", "c4", "t6"),
+    depObs("d1", "t3", null, "root", true),
+    depObs("d2", "t2", "t3", "nsubj", false),
+    depObs("d3", "t4", "t3", "obj", false),
+    depObs("d4", "t6", "t4", "conj", false),
+    depObs("d5", "t5", "t6", "cc", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const coord = rels.find(function (r) { return r.label === "coordination" && r.head.id === "t4" && r.dep.id === "t6"; });
+  assert.ok(coord);
+  const evidence = coord.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.coord_type, "and");
+  assert.equal(evidence.coord_token_id, "t5");
+  assert.equal(
+    evidence.coord_group_id,
+    createDeterministicId("coord", { members: [coord.head.id, coord.dep.id].sort(function (a, b) { return a.localeCompare(b); }) })
+  );
 });

@@ -45,6 +45,43 @@ function isDemotedVerbish(token) {
   ].indexOf(lowerSurface(token)) !== -1;
 }
 
+function coordTypeFromSurface(surfaceLower) {
+  const value = String(surfaceLower || "").toLowerCase();
+  if (value === "and") {
+    return "and";
+  }
+  if (value === "or") {
+    return "or";
+  }
+  return "unknown";
+}
+
+function coordGroupIdFromMembers(memberTokenIds) {
+  const sorted = (Array.isArray(memberTokenIds) ? memberTokenIds.slice() : [])
+    .filter(function (id) { return id !== null && id !== undefined; })
+    .map(function (id) { return String(id); })
+    .sort(function (a, b) { return a.localeCompare(b); });
+  return createDeterministicId("coord", { members: sorted });
+}
+
+function findCcTokenIdForConj(conjTokenId, depByHead, tokenById) {
+  if (!conjTokenId) {
+    return null;
+  }
+  const candidates = (depByHead.get(conjTokenId) || [])
+    .filter(function (d) {
+      return d && d.dep && d.dep.id && baseDepLabel(d.label) === "cc" && tokenById.has(d.dep.id);
+    })
+    .map(function (d) { return tokenById.get(d.dep.id); })
+    .sort(function (a, b) {
+      if (a.i !== b.i) {
+        return a.i - b.i;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+  return candidates.length > 0 ? candidates[0].id : null;
+}
+
 function isNominalLikeTag(tag) {
   return (
     tag === "NN" ||
@@ -452,10 +489,25 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     if (!leftPred || !rightPred || !tokenById.has(leftPred)) {
       continue;
     }
+    const coordToken = (mid.tokenIds || [])
+      .map(function (id) { return tokenById.get(id); })
+      .filter(Boolean)
+      .sort(function (a, b) {
+        if (a.i !== b.i) {
+          return a.i - b.i;
+        }
+        return String(a.id).localeCompare(String(b.id));
+      })[0] || null;
+    const coordTokenId = coordToken ? coordToken.id : null;
+    const coordType = coordTypeFromSurface(coordToken ? lowerSurface(coordToken) : "");
+    const coordGroupId = coordGroupIdFromMembers([leftPred, rightPred]);
     addRelation(leftPred, rightPred, "coordination", {
       pattern: "chunk_fallback",
       dependency_label: "conj",
-      sentence_id: tokenById.get(leftPred).segment_id
+      sentence_id: tokenById.get(leftPred).segment_id,
+      coord_type: coordType,
+      coord_token_id: coordTokenId,
+      coord_group_id: coordGroupId
     });
   }
 
@@ -814,6 +866,13 @@ async function runStage(seed) {
       const predTok = tokenById.get(pred);
       const argTok = tokenById.get(argPred);
       if (predTok && argTok) {
+        let coordTokenId = findCcTokenIdForConj(dep.dep.id, depByHead, tokenById);
+        if (!coordTokenId) {
+          coordTokenId = findCcTokenIdForConj(dep.head.id, depByHead, tokenById);
+        }
+        const coordTok = coordTokenId && tokenById.has(coordTokenId) ? tokenById.get(coordTokenId) : null;
+        const coordType = coordTypeFromSurface(coordTok ? lowerSurface(coordTok) : "");
+        const coordGroupId = coordGroupIdFromMembers([pred, argPred]);
         addRelation(
           pred,
           argPred,
@@ -821,7 +880,10 @@ async function runStage(seed) {
           {
             pattern: "dep_label",
             dependency_label: dep.label,
-            sentence_id: predTok.segment_id
+            sentence_id: predTok.segment_id,
+            coord_type: coordType,
+            coord_token_id: coordTokenId,
+            coord_group_id: coordGroupId
           }
         );
       }
