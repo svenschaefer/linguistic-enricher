@@ -23,11 +23,17 @@ Compared to `v1.0.0`.
   - `pp_kind` with deterministic surface mapping and `generic` fallback.
 - Stage 10 head audit metadata on every `chunk_head` annotation:
   - `head_decision` payload with deterministic rule/tie-break trace.
+- Stage 10 deterministic VP participle demotion for contextual `given` and conservative `DT + VBN + NP-like` patterns (VP head stabilization).
 - Stage 11 relation coverage additions:
   - modifier mapping for `amod` (plus deterministic `compound`/`nummod` handling)
   - coordination metadata evidence (`coord_type`, `coord_token_id`, `coord_group_id`)
   - explicit comparative relations for `than` patterns (`compare_*`)
   - copula relation with frame evidence and `complement_kind`.
+- Stage 11 unified modality binding:
+  - exactly one modality relation per `MD`
+  - deterministic clause-window selection
+  - rightward lexical-verb preference
+  - evidence payload (`pattern: modality_unified`, `md_token_id`, `chosen_predicate_token_id`)
 
 ### Changed
 - `schema.json`
