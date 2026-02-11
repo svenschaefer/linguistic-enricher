@@ -768,6 +768,29 @@ test("stage11 bridges quantifier_scope observation into quantifier roles", async
   assert.equal(sEvidence.source_annotation_id, "q2");
 });
 
+test("stage11 preserves quantifier observation provenance on duplicate quantifier relation", async function () {
+  const text = "each numbers";
+  const tokens = [
+    token("t1", 0, "each", "DT", 0, 4),
+    token("t2", 1, "numbers", "NNS", 5, 12)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "each numbers", "NP", { start: 0, end: 12 }),
+    chunkHead("h1", "c1", "t2"),
+    depObs("d1", "t2", null, "root", true),
+    depObs("d2", "t1", "t2", "det", false),
+    quantifierScopeObs("q1", "quantifier", "quantifier_each", "t1", "t2", "each numbers", { start: 0, end: 12 })
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out).filter(function (r) {
+    return r.label === "quantifier" && r.head.id === "t2" && r.dep.id === "t1";
+  });
+  assert.equal(rels.length, 1);
+  const evidence = rels[0].sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.source_annotation_id, "q1");
+});
+
 test("stage11 emits copula frame for passive-like considered clauses", async function () {
   const text = "Primes are considered numbers.";
   const tokens = [
