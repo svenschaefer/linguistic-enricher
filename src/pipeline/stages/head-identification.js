@@ -29,9 +29,17 @@ function isPrep(tag) {
   return tag === "IN" || tag === "TO";
 }
 
+function lowerSurface(token) {
+  return String(token && token.surface ? token.surface : "").toLowerCase();
+}
+
+function isNpLikePos(tag) {
+  return ["DT", "JJ", "JJR", "JJS", "VBN", "VBG", "NN", "NNS", "NNP", "NNPS", "PRP"].indexOf(String(tag || "")) !== -1;
+}
+
 function isDemotedVerbish(token) {
   const tag = getTag(token);
-  const surface = String(token && token.surface ? token.surface : "").toLowerCase();
+  const surface = lowerSurface(token);
   if (["be", "am", "is", "are", "was", "were", "been", "being", "do", "does", "did", "have", "has", "had"].indexOf(surface) !== -1) {
     return true;
   }
@@ -45,6 +53,33 @@ function isDemotedVerbish(token) {
     return true;
   }
   return false;
+}
+
+function isVpParticipleDemotedByContext(token, tokens) {
+  if (getTag(token) !== "VBN") {
+    return false;
+  }
+  const idx = tokens.findIndex(function (t) { return t.id === token.id; });
+  if (idx === -1) {
+    return false;
+  }
+  const prev = idx > 0 ? tokens[idx - 1] : null;
+  const next = idx + 1 < tokens.length ? tokens[idx + 1] : null;
+  const nextNpLike = Boolean(next) && isNpLikePos(getTag(next));
+
+  // Rule A: "given" immediately followed by NP-like run.
+  if (lowerSurface(token) === "given" && nextNpLike) {
+    return true;
+  }
+  // Rule B: DT + VBN + NP-like immediate context.
+  if (prev && getTag(prev) === "DT" && nextNpLike) {
+    return true;
+  }
+  return false;
+}
+
+function isVpDemotedToken(token, tokens) {
+  return isDemotedVerbish(token) || isVpParticipleDemotedByContext(token, tokens);
 }
 
 function spanTextFromCanonical(canonicalText, span, unit) {
@@ -122,7 +157,7 @@ function buildIncidentDegreeMap(tokens, depMap, inChunkSet, annotations) {
 function chooseMatrixLexVerb(tokens, inChunkSet, degreeMap) {
   const candidates = tokens.filter(function (t) {
     const tag = getTag(t);
-    return isVerb(tag) && tag !== "MD" && !isDemotedVerbish(t) && inChunkSet.has(t.id);
+    return isVerb(tag) && tag !== "MD" && !isVpDemotedToken(t, tokens) && inChunkSet.has(t.id);
   });
   if (candidates.length === 0) {
     return null;
@@ -209,10 +244,10 @@ function maybeApplyVpLexicalOverride(chunkType, selectedHead, tokens) {
   if (chunkType !== "VP") {
     return { head: selectedHead, fired: false };
   }
-  if (!isVerb(getTag(selectedHead)) || !isDemotedVerbish(selectedHead)) {
+  if (!isVerb(getTag(selectedHead)) || !isVpDemotedToken(selectedHead, tokens)) {
     return { head: selectedHead, fired: false };
   }
-  const lexicalCandidates = tokens.filter(function (t) { return isVerb(getTag(t)) && !isDemotedVerbish(t); });
+  const lexicalCandidates = tokens.filter(function (t) { return isVerb(getTag(t)) && !isVpDemotedToken(t, tokens); });
   if (lexicalCandidates.length === 0) {
     return { head: selectedHead, fired: false };
   }
@@ -270,7 +305,7 @@ async function runStage(seed) {
     const chunkType = ann.chunk_type || "O";
     let selected = selectHeadToken(chunkType, chunkTokens, depMap);
     let matrixPreferenceFired = false;
-    if (chunkType === "VP" && isDemotedVerbish(selected)) {
+    if (chunkType === "VP" && isVpDemotedToken(selected, chunkTokens)) {
       const chunkSet = inChunkIdSet(chunkTokens);
       const degreeMap = buildIncidentDegreeMap(chunkTokens, depMap, chunkSet, annotations);
       const matrixLex = chooseMatrixLexVerb(chunkTokens, chunkSet, degreeMap);

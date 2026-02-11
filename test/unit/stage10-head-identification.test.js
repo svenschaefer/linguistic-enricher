@@ -281,3 +281,98 @@ test("stage10 matrix lexical preference uses earliest index when lexical degrees
   assert.equal(head.head.id, "t2");
   assert.equal(head.notes, "vp_matrix_lexical_preference=true");
 });
+
+test("stage10 demotes given-pattern participle root inside VP and selects lexical matrix verb", async function () {
+  const text = "starts at a given minimum value";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 6 }, surface: "starts", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 7, end: 9 }, surface: "at", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 10, end: 11 }, surface: "a", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 12, end: 17 }, surface: "given", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 18, end: 25 }, surface: "minimum", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 26, end: 31 }, surface: "value", pos: { tag: "NN" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2", "t3", "t4", "t5", "t6"], { start: 0, end: 31 }, "starts at a given minimum value"),
+    depAnnotation("dep-1", "t4", null, true, { start: 12, end: 17 }, "given", ["t4"]),
+    depAnnotation("dep-2", "t1", "t4", false, { start: 0, end: 6 }, "starts", ["t1", "t4"]),
+    depAnnotation("dep-3", "t2", "t1", false, { start: 7, end: 9 }, "at", ["t2", "t1"]),
+    depAnnotation("dep-4", "t3", "t6", false, { start: 10, end: 11 }, "a", ["t3", "t6"]),
+    depAnnotation("dep-5", "t5", "t6", false, { start: 18, end: 25 }, "minimum", ["t5", "t6"]),
+    depAnnotation("dep-6", "t6", "t4", false, { start: 26, end: 31 }, "value", ["t6", "t4"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t1");
+  assert.equal(head.label, "starts");
+  assert.equal(head.notes, "vp_matrix_lexical_preference=true");
+});
+
+test("stage10 demotes given-pattern root in tests a given value and keeps lexical verb head", async function () {
+  const text = "tests a given value";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "tests", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 6, end: 7 }, surface: "a", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 8, end: 13 }, surface: "given", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 14, end: 19 }, surface: "value", pos: { tag: "NN" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2", "t3", "t4"], { start: 0, end: 19 }, "tests a given value"),
+    depAnnotation("dep-1", "t3", null, true, { start: 8, end: 13 }, "given", ["t3"]),
+    depAnnotation("dep-2", "t1", "t3", false, { start: 0, end: 5 }, "tests", ["t1", "t3"]),
+    depAnnotation("dep-3", "t2", "t4", false, { start: 6, end: 7 }, "a", ["t2", "t4"]),
+    depAnnotation("dep-4", "t4", "t3", false, { start: 14, end: 19 }, "value", ["t4", "t3"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t1");
+  assert.equal(head.label, "tests");
+  assert.equal(head.notes, "vp_matrix_lexical_preference=true");
+});
+
+test("stage10 demotes DT+VBN+NP modifier root and keeps lexical matrix verb head", async function () {
+  const text = "computes the assigned value";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 8 }, surface: "computes", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 9, end: 12 }, surface: "the", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 13, end: 21 }, surface: "assigned", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 22, end: 27 }, surface: "value", pos: { tag: "NN" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2", "t3", "t4"], { start: 0, end: 27 }, "computes the assigned value"),
+    depAnnotation("dep-1", "t3", null, true, { start: 13, end: 21 }, "assigned", ["t3"]),
+    depAnnotation("dep-2", "t1", "t3", false, { start: 0, end: 8 }, "computes", ["t1", "t3"]),
+    depAnnotation("dep-3", "t2", "t4", false, { start: 9, end: 12 }, "the", ["t2", "t4"]),
+    depAnnotation("dep-4", "t4", "t3", false, { start: 22, end: 27 }, "value", ["t4", "t3"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t1");
+  assert.equal(head.label, "computes");
+  assert.equal(head.notes, "vp_matrix_lexical_preference=true");
+});
+
+test("stage10 keeps VBN head when no non-demoted lexical alternative exists", async function () {
+  const text = "is assigned";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 2 }, surface: "is", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 3, end: 11 }, surface: "assigned", pos: { tag: "VBN" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2"], { start: 0, end: 11 }, "is assigned"),
+    depAnnotation("dep-1", "t2", null, true, { start: 3, end: 11 }, "assigned", ["t2"]),
+    depAnnotation("dep-2", "t1", "t2", false, { start: 0, end: 2 }, "is", ["t1", "t2"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t2");
+  assert.equal(head.label, "assigned");
+});
