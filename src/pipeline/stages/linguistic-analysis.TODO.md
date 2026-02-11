@@ -48,7 +48,8 @@
 - 2026-02-11 (Cycle 8, completed): added deterministic modality/negation scope observations.
   - Stage 08 now emits:
     - `modality_scope` for modal markers (`MD`)
-    - `negation_scope` for bounded negation markers (`not`, `n't`, `never`, `no`)
+    - `negation_scope` for bounded negation markers (`not`, `n't`, `never`)
+  - Policy refinement: `no` is exclusively modeled as `quantifier_scope` (`quantifier_no`) to avoid double-counting.
   - Deterministic attachment policy: nearest lexical verb to the right, otherwise nearest lexical verb to the left.
   - Added explicit evidence payload fields:
     - modality: `pattern=modal_verb_scope`
