@@ -128,8 +128,7 @@ function inChunkIdSet(tokens) {
   return new Set(tokens.map(function (t) { return t.id; }));
 }
 
-function buildIncidentDegreeMap(tokens, depMap, inChunkSet, annotations) {
-  void depMap;
+function buildIncidentDegreeMap(tokens, inChunkSet, annotations) {
   const degreeMap = new Map(tokens.map(function (t) { return [t.id, 0]; }));
   const deps = Array.isArray(annotations) ? annotations : [];
 
@@ -324,7 +323,7 @@ async function runStage(seed) {
     let matrixPreferenceFired = false;
     if (chunkType === "VP" && isVpDemotedToken(selected, chunkTokens)) {
       const chunkSet = inChunkIdSet(chunkTokens);
-      const degreeMap = buildIncidentDegreeMap(chunkTokens, depMap, chunkSet, annotations);
+      const degreeMap = buildIncidentDegreeMap(chunkTokens, chunkSet, annotations);
       const matrixLex = chooseMatrixLexVerb(chunkTokens, chunkSet, degreeMap);
       if (matrixLex) {
         selected = matrixLex.head;
