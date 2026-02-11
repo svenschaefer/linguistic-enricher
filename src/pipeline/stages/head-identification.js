@@ -126,7 +126,9 @@ function selectHeadToken(chunkType, tokens, depMap) {
   if (chunkType === "NP") {
     candidates = tokens.filter(function (t) { return isNoun(getTag(t)); });
   } else if (chunkType === "VP") {
-    candidates = tokens.filter(function (t) { return isVerb(getTag(t)); });
+    const verbTokens = tokens.filter(function (t) { return isVerb(getTag(t)); });
+    const lexicalVerbTokens = verbTokens.filter(function (t) { return getTag(t) !== "MD"; });
+    candidates = lexicalVerbTokens.length > 0 ? lexicalVerbTokens : verbTokens;
   } else if (chunkType === "PP") {
     candidates = tokens.filter(function (t) { return isPrep(getTag(t)); });
   } else {

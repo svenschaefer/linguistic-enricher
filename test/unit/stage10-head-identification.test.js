@@ -138,3 +138,61 @@ test("stage10 rejects partially head-identified docs", async function () {
     }
   );
 });
+
+test("stage10 excludes MD as VP head when lexical verb exists and dep root is MD", async function () {
+  const text = "may use credentials";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "may", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 7 }, surface: "use", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 8, end: 19 }, surface: "credentials", pos: { tag: "NNS" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2", "t3"], { start: 0, end: 19 }, "may use credentials"),
+    depAnnotation("dep-1", "t1", null, true, { start: 0, end: 3 }, "may", ["t1"]),
+    depAnnotation("dep-2", "t2", "t1", false, { start: 4, end: 7 }, "use", ["t2", "t1"]),
+    depAnnotation("dep-3", "t3", "t2", false, { start: 8, end: 19 }, "credentials", ["t3", "t2"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t2");
+  assert.equal(head.label, "use");
+  assert.equal(Boolean(head.notes), false);
+});
+
+test("stage10 selects lexical verb as VP head in MD + VB chunk", async function () {
+  const text = "may authenticate";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "may", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 16 }, surface: "authenticate", pos: { tag: "VB" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1", "t2"], { start: 0, end: 16 }, "may authenticate"),
+    depAnnotation("dep-1", "t2", null, true, { start: 4, end: 16 }, "authenticate", ["t2"]),
+    depAnnotation("dep-2", "t1", "t2", false, { start: 0, end: 3 }, "may", ["t1", "t2"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t2");
+  assert.equal(head.label, "authenticate");
+});
+
+test("stage10 allows MD fallback as VP head when no lexical verb exists", async function () {
+  const text = "may";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "may", pos: { tag: "MD" }, flags: { is_punct: false } }
+  ];
+  const annotations = [
+    chunkAnnotation("chunk-vp", "VP", ["t1"], { start: 0, end: 3 }, "may"),
+    depAnnotation("dep-1", "t1", null, true, { start: 0, end: 3 }, "may", ["t1"])
+  ];
+
+  const out = await stage10.runStage(buildSeed(text, tokens, annotations));
+  const head = out.annotations.find(function (a) { return a.kind === "chunk_head" && a.chunk_id === "chunk-vp"; });
+  assert.ok(head);
+  assert.equal(head.head.id, "t1");
+  assert.equal(head.label, "may");
+});
