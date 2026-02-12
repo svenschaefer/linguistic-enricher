@@ -350,3 +350,26 @@ test("stage08 emits pronoun obj for simple transitive clause", async function ()
   assert.equal(pronObj.head && pronObj.head.id, "t2");
   assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t3" && a.label === "dep"; }), false);
 });
+
+test("stage08 emits passive subject for modal be + VBN construction", async function () {
+  const text = "Generated primes may be used for educational purposes.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 9 }, surface: "Generated", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 10, end: 16 }, surface: "primes", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 17, end: 20 }, surface: "may", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 21, end: 23 }, surface: "be", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 24, end: 28 }, surface: "used", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 29, end: 32 }, surface: "for", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 33, end: 44 }, surface: "educational", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 45, end: 53 }, surface: "purposes", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t9", i: 8, segment_id: "s1", span: { start: 53, end: 54 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const passiveSubj = deps.find(function (a) {
+    return a.dep && a.dep.id === "t2" && a.label === "nsubjpass";
+  });
+  assert.ok(passiveSubj);
+  assert.equal(passiveSubj.head && passiveSubj.head.id, "t5");
+});

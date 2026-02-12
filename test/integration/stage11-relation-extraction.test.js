@@ -82,3 +82,27 @@ test("runPipeline relations_extracted emits object-role relation for pronoun obj
     true
   );
 });
+
+test("runPipeline relations_extracted emits passive subject relation for may be used pattern", async function () {
+  const text = "Generated primes may be used for educational purposes or basic numerical experiments.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const usedId = tokenBySurface.get("used");
+  const primesId = tokenBySurface.get("primes");
+  assert.ok(usedId);
+  assert.ok(primesId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "patient" && r.head.id === usedId && r.dep.id === primesId; }),
+    true
+  );
+});

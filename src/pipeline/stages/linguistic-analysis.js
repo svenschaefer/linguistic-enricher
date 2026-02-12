@@ -80,7 +80,45 @@ function isComparativeHeadToken(token) {
   return lower === "greater" || lower === "more" || lower === "less" || lower === "fewer";
 }
 
+const BE_SURFACES = new Set(["be", "am", "is", "are", "was", "were", "been", "being"]);
+
+function detectPassiveHeadIndex(tokens) {
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    const tag = getTag(token);
+    const lower = String(token && token.surface ? token.surface : "").toLowerCase();
+    if (!/^VB/.test(tag) || !BE_SURFACES.has(lower)) {
+      continue;
+    }
+
+    const participleIndex = nearestIndex(tokens, i + 1, 1, function (t) {
+      const tTag = getTag(t);
+      return /^VB/.test(tTag) && tTag === "VBN";
+    });
+    if (participleIndex < 0) {
+      continue;
+    }
+
+    let blocked = false;
+    for (let j = i + 1; j < participleIndex; j += 1) {
+      const between = tokens[j];
+      if (isPunct(between) || coordinationTypeFromSurface(between.surface)) {
+        blocked = true;
+        break;
+      }
+    }
+    if (!blocked) {
+      return participleIndex;
+    }
+  }
+  return -1;
+}
+
 function detectRootIndex(tokens) {
+  const passiveHeadIndex = detectPassiveHeadIndex(tokens);
+  if (passiveHeadIndex >= 0) {
+    return passiveHeadIndex;
+  }
   for (let i = 0; i < tokens.length; i += 1) {
     if (isVerbLikeTag(getTag(tokens[i])) && String(tokens[i].surface || "").toLowerCase() !== "to") {
       return i;
@@ -100,6 +138,7 @@ function nearestIndex(tokens, from, step, predicate) {
 
 function buildSentenceDependencies(sentenceTokens) {
   const rootIndex = detectRootIndex(sentenceTokens);
+  const passiveHeadIndex = detectPassiveHeadIndex(sentenceTokens);
   const rootToken = sentenceTokens[rootIndex];
   const edges = [];
 
@@ -252,8 +291,12 @@ function buildSentenceDependencies(sentenceTokens) {
       }
       edges.push({
         depId: token.id,
-        headId: rootToken.id,
-        label: i < rootIndex ? "nsubj" : "obj",
+        headId: passiveHeadIndex >= 0 && i < passiveHeadIndex
+          ? sentenceTokens[passiveHeadIndex].id
+          : rootToken.id,
+        label: passiveHeadIndex >= 0 && i < passiveHeadIndex
+          ? "nsubjpass"
+          : (i < rootIndex ? "nsubj" : "obj"),
         isRoot: false
       });
       continue;

@@ -1,0 +1,168 @@
+# NPM Release Process
+
+This document captures the release flow used in recent `linguistic-enricher` releases.
+
+## Scope
+
+- Applies to patch/minor releases published to npm as `linguistic-enricher`.
+- Goal: deterministic, test-first, no retroactive history edits.
+
+## 1) Prepare Changes
+
+1. Implement only the scoped fix/feature.
+2. Add or update regression tests for the changed behavior.
+3. Update `CHANGELOG.md` with a new version section.
+4. Bump version locally:
+
+```powershell
+npm version <x.y.z> --no-git-tag-version
+```
+
+## 2) Validate in Main Repo
+
+Run full validation before any release commit/tag:
+
+```powershell
+npm test
+```
+
+## 3) Smoke-Test Packaged Artifact (Pre-Publish, Local Tarball)
+
+Create tarball from current workspace:
+
+```powershell
+npm pack
+```
+
+Create a clean smoke workspace (example):
+
+```powershell
+New-Item -ItemType Directory -Path C:\code\linguistic-enricher-smoke-test\published-<x.y.z>-smoke -Force
+cd C:\code\linguistic-enricher-smoke-test\published-<x.y.z>-smoke
+npm init -y
+npm install C:\code\linguistic-enricher\linguistic-enricher-<x.y.z>.tgz
+```
+
+Run smoke checks:
+
+```powershell
+node -e "console.log(require('linguistic-enricher/package.json').version)"
+npx linguistic-enricher --help
+npx linguistic-enricher doctor
+```
+
+Run at least one pipeline sanity run:
+
+```powershell
+node -e "const api=require('linguistic-enricher'); api.runPipeline('A webshop is an online store.',{target:'relations_extracted'}).then(o=>console.log(o.stage)).catch(e=>{console.error(e); process.exit(1);});"
+```
+
+Optional service-mode checks:
+- Without `WIKI_INDEX_ENDPOINT`
+- With `WIKI_INDEX_ENDPOINT=http://127.0.0.1:32123`
+
+## 4) Commit + Tag + Push
+
+Commit release contents:
+
+```powershell
+git add CHANGELOG.md package.json package-lock.json src test
+git commit -m "release: v<x.y.z>"
+```
+
+Push branch and tag (annotated tag only):
+
+```powershell
+git push origin main
+git tag -a v<x.y.z> -m "v<x.y.z> - <short release note>"
+git push origin v<x.y.z>
+```
+
+Rules:
+- Do not amend release commit after tagging.
+- If anything is wrong after publish/tag, ship a new patch version.
+
+## 5) Publish to npm
+
+Login/auth:
+
+```powershell
+npm login
+npm whoami
+```
+
+Publish:
+
+```powershell
+npm publish --access public
+```
+
+## 6) Verify npm Propagation
+
+Run explicit registry checks:
+
+```powershell
+npm view linguistic-enricher versions --json --registry=https://registry.npmjs.org/
+npm view linguistic-enricher@<x.y.z> version --registry=https://registry.npmjs.org/
+npm info linguistic-enricher dist-tags --registry=https://registry.npmjs.org/
+```
+
+Expected:
+- `<x.y.z>` present in `versions`
+- `npm view linguistic-enricher@<x.y.z> version` returns `<x.y.z>`
+- `dist-tags.latest` points to `<x.y.z>`
+
+Note: short propagation delay can occur right after publish.
+
+## 7) Smoke-Test Published Package (Post-Publish, Public npm)
+
+After npm propagation confirms the new version is available, perform a second smoke test from the public registry.
+
+Create a clean smoke workspace (example):
+
+```powershell
+New-Item -ItemType Directory -Path C:\code\linguistic-enricher-smoke-test\published-<x.y.z>-public-smoke -Force
+cd C:\code\linguistic-enricher-smoke-test\published-<x.y.z>-public-smoke
+npm init -y
+npm install linguistic-enricher@<x.y.z>
+```
+
+Run smoke checks:
+
+```powershell
+node -e "console.log(require('linguistic-enricher/package.json').version)"
+npx linguistic-enricher --help
+npx linguistic-enricher doctor
+```
+
+Run at least one pipeline sanity run:
+
+```powershell
+node -e "const api=require('linguistic-enricher'); api.runPipeline('A webshop is an online store.',{target:'relations_extracted'}).then(o=>console.log(o.stage)).catch(e=>{console.error(e); process.exit(1);});"
+```
+
+Optional service-mode checks:
+- Without `WIKI_INDEX_ENDPOINT`
+- With `WIKI_INDEX_ENDPOINT=http://127.0.0.1:32123`
+
+## 8) Create GitHub Release
+
+Create release for the pushed tag using the matching `CHANGELOG.md` section:
+
+```powershell
+gh release create v<x.y.z> --title "v<x.y.z>" --notes-file <notes-file>
+```
+
+Verify:
+
+```powershell
+gh release view v<x.y.z> --json name,tagName,url,isDraft,isPrerelease,publishedAt
+```
+
+## 9) Final Checklist
+
+- `git status` is clean.
+- `main` is synced with `origin/main`.
+- npm package is live with expected `latest` tag.
+- post-publish smoke test with public npm package passed.
+- GitHub release exists for `v<x.y.z>`.

@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.4] - 2026-02-11
+
+Compared to `v1.1.3`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Added deterministic passive-head detection for `be + VBN` constructions.
+  - Stage 08 now emits `nsubjpass` for pre-verbal nominal subjects in passive constructions (e.g. `Generated primes may be used ...`).
+  - Root selection in passive `be + VBN` clauses now prefers the participle head (e.g. `used`) instead of earlier participial modifiers.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression test locking passive subject extraction for:
+    - `Generated primes may be used for educational purposes.`
+    - expected `nsubjpass(used, primes)`.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end regression lock for passive subject projection:
+    - accepted `patient(used, primes)` in `relations_extracted`.
+
 ## [1.1.3] - 2026-02-11
 
 Compared to `v1.1.2`.

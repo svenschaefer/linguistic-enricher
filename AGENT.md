@@ -13,10 +13,11 @@
 ## Current Phase
 
 - Baseline implementation is in place (pipeline shell + stage modules + CLI + validation + Python bridge + tests).
-- Active focus is semantic-parity hardening:
-  - align stage behavior with the legacy linguistics semantic corpus (00..11 scope),
-  - increase deterministic fidelity of stage outputs,
-  - close remaining functional gaps while preserving CommonJS-only constraints.
+- Active focus is deterministic maintenance and release hardening:
+  - keep stage behavior stable across released `1.1.x` versions,
+  - land narrowly scoped fixes with regression tests,
+  - maintain release discipline via `NPM_RELEASE.md`,
+  - preserve CommonJS-only constraints and non-breaking stage contracts.
 
 ## Scope
 
@@ -26,7 +27,7 @@
   - Stage 03 tokenization: `wink-tokenizer`.
   - Stage 04 POS tagging: `wink-pos-tagger`.
   - Stage 05 MWE candidate extraction: spaCy variant (`05-mwe-candidate-extraction-spacy`).
-  - Stage 08 linguistic analysis: spaCy (Python) observational analysis.
+  - Stage 08 linguistic analysis: deterministic heuristic observational analysis (JavaScript).
   - Stage 09 chunking: POS-FSM variant (`09-chunking-pos-fsm`).
 - Exclude:
   - Stage 12.
@@ -57,7 +58,7 @@
 - `05-mwe-candidate-extraction`: multiple baseline variants evaluated; core selected variant is `spaCy` (`05-mwe-candidate-extraction-spacy`).
 - `06-mwe-candidate-construction`: no external linguistic library (deterministic pattern/rule logic; optional external lexicon service signals).
 - `07-mwe-materialization`: no external linguistic library (deterministic materialization logic).
-- `08-linguistic-analysis`: `spaCy` (Python) for observational linguistic analysis.
+- `08-linguistic-analysis`: no external linguistic library (deterministic heuristic observational analysis in JavaScript).
 - `09-chunking`: multiple baseline variants evaluated; core selected variant is `POS-FSM` (`09-chunking-pos-fsm`).
 - `10-head-identification`: no external linguistic library (deterministic rule logic).
 - `11-relation-extraction`: no external linguistic library (deterministic ruleset logic).
@@ -93,6 +94,17 @@
 - All tests for the current phase MUST pass before any next-phase implementation work is started.
 - Proceeding to a new phase without tests is NOT ALLOWED.
 - A phase without passing tests is considered incomplete.
+
+## NPM Release Process (Mandatory)
+
+- For every npm release preparation and publication, `NPM_RELEASE.md` MUST be followed.
+- `NPM_RELEASE.md` is the mandatory release checklist and process authority for:
+  - version bump and changelog preparation,
+  - full test and smoke-test validation,
+  - git commit/tag/push sequencing,
+  - npm publish and propagation checks,
+  - GitHub release creation.
+- Deviations are NOT ALLOWED unless explicitly requested by the user.
 
 ## Linting and Static Checks (Mandatory)
 
@@ -202,6 +214,7 @@ Phases must be implemented sequentially in order.
 - Polish error messages and documentation (excluding `README.md`/`schema.json` unless explicitly requested).
 - Add end-to-end integration tests for CLI.
 - Prepare independent versioning and publish configuration.
+- Execute release steps strictly according to `NPM_RELEASE.md`.
 
 Each phase MUST include corresponding tests before the next phase begins.
 Phases without passing tests and lint are considered incomplete and MUST be resolved before advancing.
