@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.12] - 2026-02-13
+
+Compared to `v1.1.11`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Hardened Stage 08 inline multi-verb list handling for comma-separated coordinated predicates.
+  - In bounded verb-list contexts, intermediate verbs are emitted as `conj` (instead of generic `dep`) to preserve coordinated predicate structure.
+  - Added guard to avoid applying comma-list verb coordination inside `such as` exemplar spans.
+- `src/pipeline/stages/relation-extraction.js`
+  - Retained deterministic actor propagation across verb coordination, now benefiting from improved Stage 08 conj structure in inline lists.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression lock for:
+    - `Users can request changes, update reports, and assign supervisors.`
+    - asserts `conj(update <- request)` and `conj(assign <- update)` plus per-verb object attachment (`request->changes`, `update->reports`, `assign->supervisors`).
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for inline multi-verb coverage:
+    - `actor(request, users)` + `theme(request, changes)`
+    - `actor(update, users)` + `theme(update, reports)`
+    - `actor(assign, users)` + `theme(assign, supervisors)`.
+
 ## [1.1.11] - 2026-02-13
 
 Compared to `v1.1.10`.

@@ -535,3 +535,42 @@ test("stage08 keeps sequential coordinated-verb attachments local to each predic
   assert.equal(integerObj.head && integerObj.head.id, "t8");
   assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t11" && a.head && a.head.id === "t2" && a.label === "obj"; }), false);
 });
+
+test("stage08 treats comma-separated inline verb lists as coordinated verbs", async function () {
+  const text = "Users can request changes, update reports, and assign supervisors.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "Users", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 6, end: 9 }, surface: "can", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 10, end: 17 }, surface: "request", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 18, end: 25 }, surface: "changes", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 25, end: 26 }, surface: ",", pos: { tag: "," }, flags: { is_punct: true } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 27, end: 33 }, surface: "update", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 34, end: 41 }, surface: "reports", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 41, end: 42 }, surface: ",", pos: { tag: "," }, flags: { is_punct: true } },
+    { id: "t9", i: 8, segment_id: "s1", span: { start: 43, end: 46 }, surface: "and", pos: { tag: "CC" }, flags: { is_punct: false } },
+    { id: "t10", i: 9, segment_id: "s1", span: { start: 47, end: 53 }, surface: "assign", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t11", i: 10, segment_id: "s1", span: { start: 54, end: 65 }, surface: "supervisors", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t12", i: 11, segment_id: "s1", span: { start: 65, end: 66 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+
+  const updateConj = deps.find(function (a) { return a.dep && a.dep.id === "t6" && a.label === "conj"; });
+  const assignConj = deps.find(function (a) { return a.dep && a.dep.id === "t10" && a.label === "conj"; });
+  const requestObj = deps.find(function (a) { return a.dep && a.dep.id === "t4" && a.label === "obj"; });
+  const updateObj = deps.find(function (a) { return a.dep && a.dep.id === "t7" && a.label === "obj"; });
+  const assignObj = deps.find(function (a) { return a.dep && a.dep.id === "t11" && a.label === "obj"; });
+
+  assert.ok(updateConj);
+  assert.equal(updateConj.head && updateConj.head.id, "t3");
+  assert.ok(assignConj);
+  assert.equal(assignConj.head && assignConj.head.id, "t6");
+  assert.ok(requestObj);
+  assert.equal(requestObj.head && requestObj.head.id, "t3");
+  assert.ok(updateObj);
+  assert.equal(updateObj.head && updateObj.head.id, "t6");
+  assert.ok(assignObj);
+  assert.equal(assignObj.head && assignObj.head.id, "t10");
+  assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t6" && a.label === "dep"; }), false);
+});

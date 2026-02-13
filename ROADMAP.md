@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.10`
+Current published version: `1.1.11`
 
 ## Delivery Rule
 

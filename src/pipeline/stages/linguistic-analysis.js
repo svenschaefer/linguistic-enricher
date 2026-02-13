@@ -248,6 +248,44 @@ function nearestVerbForObjectAttachmentLeft(tokens, nounIndex) {
   return -1;
 }
 
+function findCoordinatorTokenIdToRight(tokens, fromIndex) {
+  for (let i = fromIndex + 1; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (isPunct(token)) {
+      continue;
+    }
+    const coordType = coordinationTypeFromSurface(token.surface);
+    if (coordType) {
+      return token.id;
+    }
+    const tag = getTag(token);
+    if (isVerbLikeTag(tag)) {
+      break;
+    }
+  }
+  return null;
+}
+
+function isSuchAsExemplarContext(tokens, index) {
+  for (let i = index - 1; i >= 1; i -= 1) {
+    const token = tokens[i];
+    if (isPunct(token)) {
+      continue;
+    }
+    if (coordinationTypeFromSurface(token.surface)) {
+      break;
+    }
+    if (String(token.surface || "").toLowerCase() !== "as") {
+      continue;
+    }
+    const prev = tokens[i - 1];
+      if (prev && String(prev.surface || "").toLowerCase() === "such") {
+        return true;
+      }
+  }
+  return false;
+}
+
 function buildAsWellAsHints(tokens) {
   const fixedByIndex = new Map();
   const conjByRightIndex = new Map();
@@ -484,6 +522,26 @@ function buildSentenceDependencies(sentenceTokens) {
           coordinatorTokenId: prev.id
         });
         continue;
+      }
+      if (prev && isPunct(prev) && String(prev.surface || "") === ",") {
+        const prevVerbIndex = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+          return isVerbLikeTag(getTag(t));
+        });
+        if (prevVerbIndex >= 0 && !isSuchAsExemplarContext(sentenceTokens, i)) {
+          const coordinatorTokenId = findCoordinatorTokenIdToRight(sentenceTokens, i);
+          const coordinatorToken = coordinatorTokenId
+            ? sentenceTokens.find(function (t) { return t.id === coordinatorTokenId; })
+            : null;
+          edges.push({
+            depId: token.id,
+            headId: sentenceTokens[prevVerbIndex].id,
+            label: "conj",
+            isRoot: false,
+            coordinationType: coordinatorToken ? coordinationTypeFromSurface(coordinatorToken.surface) : null,
+            coordinatorTokenId: coordinatorTokenId
+          });
+          continue;
+        }
       }
       edges.push({
         depId: token.id,
