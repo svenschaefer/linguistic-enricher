@@ -370,6 +370,9 @@ Tracking rule:
 - Public API is CommonJS-only and library-first.
 - CLI is optional and thin, backed by same API.
 - Pipeline executes deterministically through `relations_extracted`.
+- Stage 11 semantic extraction contract is explicit and test-locked:
+  - canonical accepted semantic edges are validated in `kind="dependency"` (current contract),
+  - release smoke/integration gates assert accepted semantic labels, not `kind="relation"` counts.
 - No stage 12/`xx-*` functionality included.
 - Optional wikipedia-title-index endpoint works when configured and is safely optional when absent.
 - Output conforms to `schema.json` and runtime invariants.

@@ -188,3 +188,19 @@ gh release view v<x.y.z> --json name,tagName,url,isDraft,isPrerelease,publishedA
 - npm package is live with expected `latest` tag.
 - post-publish smoke test with public npm package passed.
 - GitHub release exists for `v<x.y.z>`.
+
+## 10) Semantic Output Contract Gate (Mandatory)
+
+Canonical contract decision (current):
+- Stage 11 extracted semantics are validated as `status="accepted"` edges in `kind="dependency"`.
+- Smoke checks MUST NOT rely on counting `kind="relation"` annotations.
+
+Mandatory smoke assertion rule:
+- Assert semantic edge presence by label in the canonical kind (for example: `patient`, `agent`, `modality`, `theme`, `actor`, `attribute`), with `status="accepted"`.
+- Keep sentence-specific expected labels deterministic and versioned in release notes/tests.
+
+Mandatory integration guard:
+- Maintain at least one integration test that fails if Stage 11 stops emitting accepted extracted semantic edges in the canonical kind for `relations_extracted`.
+
+Future migration note:
+- If public contract is changed to `kind="relation"`, ship as a controlled compatibility migration (likely minor release), with schema/docs/test updates and explicit migration notes.

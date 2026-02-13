@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.9`
+Current published version: `1.1.10`
 
 ## Delivery Rule
 
@@ -76,3 +76,6 @@ For each degrading cycle, use the same mandatory cycle template and full release
   - propagation checks
   - post-publish public npm smoke
   - GitHub release
+- Semantic-output contract gate:
+  - smoke + integration checks validate accepted semantic edge labels in canonical `kind="dependency"` output for `relations_extracted`,
+  - do not use `kind="relation"` count as release pass/fail signal.
