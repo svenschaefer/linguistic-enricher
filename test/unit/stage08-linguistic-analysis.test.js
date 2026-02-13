@@ -421,3 +421,28 @@ test("stage08 attaches adverb in be+VBN passive chain to participle head", async
   assert.ok(advmod);
   assert.equal(advmod.head && advmod.head.id, "t5");
 });
+
+test("stage08 emits pobj for for+VBG purpose chain and coordinated nominal tail", async function () {
+  const text = "Actions are recorded for auditing and security analysis.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 7 }, surface: "Actions", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 8, end: 11 }, surface: "are", pos: { tag: "VBP" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 12, end: 20 }, surface: "recorded", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 21, end: 24 }, surface: "for", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 25, end: 33 }, surface: "auditing", pos: { tag: "VBG" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 34, end: 37 }, surface: "and", pos: { tag: "CC" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 38, end: 46 }, surface: "security", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 47, end: 55 }, surface: "analysis", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t9", i: 8, segment_id: "s1", span: { start: 55, end: 56 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const pobj = deps.find(function (a) { return a.dep && a.dep.id === "t5" && a.label === "pobj"; });
+  const conj = deps.find(function (a) { return a.dep && a.dep.id === "t7" && a.label === "conj"; });
+  assert.ok(pobj);
+  assert.equal(pobj.head && pobj.head.id, "t4");
+  assert.ok(conj);
+  assert.equal(conj.head && conj.head.id, "t5");
+  assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t5" && a.label === "dep"; }), false);
+});

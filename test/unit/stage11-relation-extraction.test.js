@@ -286,6 +286,44 @@ test("stage11 chunk fallback emits relations when dependency labels are weak", a
   );
 });
 
+test("stage11 chunk fallback skips VP heads that are prep objects", async function () {
+  const text = "Actions are recorded for auditing and security analysis.";
+  const tokens = [
+    token("t1", 0, "Actions", "NNS", 0, 7),
+    token("t2", 1, "are", "VBP", 8, 11),
+    token("t3", 2, "recorded", "VBN", 12, 20),
+    token("t4", 3, "for", "IN", 21, 24),
+    token("t5", 4, "auditing", "VBG", 25, 33),
+    token("t6", 5, "and", "CC", 34, 37),
+    token("t7", 6, "security", "NN", 38, 46),
+    token("t8", 7, "analysis", "NN", 47, 55),
+    token("t9", 8, ".", ".", 55, 56)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "Actions", "NP", { start: 0, end: 7 }),
+    chunk("c2", ["t2", "t3"], "are recorded", "VP", { start: 8, end: 20 }),
+    chunk("c3", ["t4", "t5"], "for auditing", "PP", { start: 21, end: 33 }),
+    chunk("c4", ["t7", "t8"], "security analysis", "NP", { start: 38, end: 55 }),
+    chunk("c5", ["t5"], "auditing", "VP", { start: 25, end: 33 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t4"),
+    chunkHead("h4", "c4", "t8"),
+    chunkHead("h5", "c5", "t5"),
+    depObs("d1", "t3", null, "root", true),
+    depObs("d2", "t1", "t3", "nsubjpass", false),
+    depObs("d3", "t4", "t3", "prep", false),
+    depObs("d4", "t5", "t4", "pobj", false),
+    depObs("d5", "t7", "t5", "conj", false),
+    depObs("d6", "t8", "t7", "compound", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "beneficiary" && r.head.id === "t3" && r.dep.id === "t5"; }), true);
+  assert.equal(rels.some(function (r) { return r.head.id === "t5" && (r.label === "actor" || r.label === "theme"); }), false);
+});
+
 test("stage11 baseline fixture: webshop copula sentence is deterministic", async function () {
   const text = "A webshop is an online store.";
   const tokens = [

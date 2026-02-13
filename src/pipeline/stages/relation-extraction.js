@@ -413,7 +413,7 @@ function isCoordToken(chunk) {
   return text === "and" || text === "or";
 }
 
-function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead) {
+function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead, depByDep) {
   function nearestPrevNP(idx) {
     for (let i = idx - 1; i >= 0; i -= 1) {
       const c = chunks[i];
@@ -464,6 +464,13 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     }
     const predTok = tokenById.get(predicateId);
     const predDeps = depByHead.get(predicateId) || [];
+    const incomingDeps = depByDep.get(predicateId) || [];
+    const isPrepObjectLike = incomingDeps.some(function (d) {
+      return d && baseDepLabel(d.label) === "pobj";
+    });
+    if (isPrepObjectLike) {
+      continue;
+    }
     const hasCoreSubject = predDeps.some(function (d) { return d && baseDepLabel(d.label) === "nsubj"; });
     const hasCoreObject = predDeps.some(function (d) {
       const label = d ? baseDepLabel(d.label) : "";
@@ -968,7 +975,7 @@ async function runStage(seed) {
     }
   }
 
-  maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead);
+  maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead, depByDep);
   maybeAddTokenHeuristicRelations(addRelation, tokens);
 
   const bySentence = new Map();

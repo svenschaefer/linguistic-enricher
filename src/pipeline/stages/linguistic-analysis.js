@@ -139,7 +139,7 @@ function detectRootIndex(tokens) {
 
 function nearestIndex(tokens, from, step, predicate) {
   for (let i = from; i >= 0 && i < tokens.length; i += step) {
-    if (predicate(tokens[i])) {
+    if (predicate(tokens[i], i)) {
       return i;
     }
   }
@@ -180,6 +180,25 @@ function nearestPassiveParticipleRight(tokens, index) {
     }
   }
   return -1;
+}
+
+function isNounLikeForAttachment(tokens, index) {
+  if (index < 0 || index >= tokens.length) {
+    return false;
+  }
+  const token = tokens[index];
+  const tag = getTag(token);
+  if (isNounLikeTag(tag)) {
+    return true;
+  }
+  if (tag !== "VBG") {
+    return false;
+  }
+  const prev = index > 0 ? tokens[index - 1] : null;
+  if (!prev || !isAdpLikeTag(getTag(prev))) {
+    return false;
+  }
+  return String(prev.surface || "").toLowerCase() === "for";
 }
 
 function buildSentenceDependencies(sentenceTokens) {
@@ -291,6 +310,15 @@ function buildSentenceDependencies(sentenceTokens) {
     }
 
     if (isVerbLikeTag(tag)) {
+      if (tag === "VBG" && prev && isAdpLikeTag(getTag(prev)) && String(prev.surface || "").toLowerCase() === "for") {
+        edges.push({
+          depId: token.id,
+          headId: prev.id,
+          label: "pobj",
+          isRoot: false
+        });
+        continue;
+      }
       if (prev && getTag(prev) === "TO") {
         const prevVerb = nearestIndex(sentenceTokens, i - 2, -1, function (t) { return isVerbLikeTag(getTag(t)); });
         edges.push({
@@ -326,7 +354,9 @@ function buildSentenceDependencies(sentenceTokens) {
     if (isNounLikeTag(tag)) {
       const coordType = coordinationTypeFromSurface(prev ? prev.surface : "");
       if (prev && coordType) {
-        const prevNoun = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isNounLikeTag(getTag(t)); });
+        const prevNoun = nearestIndex(sentenceTokens, i - 1, -1, function (_, idx) {
+          return isNounLikeForAttachment(sentenceTokens, idx);
+        });
         edges.push({
           depId: token.id,
           headId: prevNoun >= 0 ? sentenceTokens[prevNoun].id : rootToken.id,
@@ -346,7 +376,7 @@ function buildSentenceDependencies(sentenceTokens) {
         });
         continue;
       }
-      if (prev && isNounLikeTag(getTag(prev))) {
+      if (prev && isNounLikeForAttachment(sentenceTokens, i - 1)) {
         edges.push({
           depId: token.id,
           headId: prev.id,
