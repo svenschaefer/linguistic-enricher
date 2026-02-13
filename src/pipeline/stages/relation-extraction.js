@@ -519,6 +519,7 @@ function isCoordToken(chunk) {
 
 function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead, depByDep) {
   const ARGUMENT_LIKE_DEP_LABELS = new Set(["nsubj", "nsubjpass", "obj", "dobj", "iobj", "pobj"]);
+  const CLAUSAL_DEP_LABELS = new Set(["xcomp", "ccomp", "advcl", "relcl"]);
 
   function nearestPrevNP(idx) {
     for (let i = idx - 1; i >= 0; i -= 1) {
@@ -579,6 +580,19 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     }
     const hasCoreSubject = predDeps.some(function (d) { return d && baseDepLabel(d.label) === "nsubj"; });
     const hasPassiveSubject = predDeps.some(function (d) { return d && baseDepLabel(d.label) === "nsubjpass"; });
+    const hasExplicitClausalComplement = predDeps.some(function (d) {
+      return d && CLAUSAL_DEP_LABELS.has(baseDepLabel(d.label));
+    });
+    const hasIncomingVerbLinkedPredicate = incomingDeps.some(function (d) {
+      if (!d || !d.head || !d.head.id || !tokenById.has(d.head.id)) {
+        return false;
+      }
+      const base = baseDepLabel(d.label);
+      if (base !== "dep" && base !== "conj" && !CLAUSAL_DEP_LABELS.has(base)) {
+        return false;
+      }
+      return isVerbLikeTag(getTag(tokenById.get(d.head.id)));
+    });
     const hasCoreObject = predDeps.some(function (d) {
       const label = d ? baseDepLabel(d.label) : "";
       return label === "obj" || label === "dobj" || label === "iobj";
@@ -615,7 +629,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     const sentenceId = predTok.segment_id;
 
     const prevNP = nearestPrevNP(i);
-    if (prevNP && !hasCoreSubject && !hasPassiveSubject) {
+    if (prevNP && !hasCoreSubject && !hasPassiveSubject && !hasIncomingVerbLinkedPredicate) {
       const arg = chunkHeadByChunkId.get(prevNP.id);
       addRelation(predicateId, arg, "actor", {
         pattern: "chunk_fallback",
@@ -695,7 +709,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
       });
     }
 
-    if (chunkLower.indexOf(" to ") !== -1 || chunkLower.startsWith("to ")) {
+    if ((chunkLower.indexOf(" to ") !== -1 || chunkLower.startsWith("to ")) && !hasExplicitClausalComplement) {
       const nextVP = nearestNextVP(i);
       if (nextVP) {
         addRelation(predicateId, chunkHeadByChunkId.get(nextVP.id), "complement_clause", {

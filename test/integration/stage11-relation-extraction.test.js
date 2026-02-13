@@ -661,3 +661,79 @@ test("runPipeline relations_extracted anchors passive patient to factorization i
     false
   );
 });
+
+test("runPipeline relations_extracted suppresses fallback actor injection on clausal complement predicate in IRS chain", async function () {
+  const text = "The Incident Reporting System (IRS) is used by employees to submit reports about safety issues, policy violations, or operational incidents.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const usedId = tokenBySurface.get("used");
+  const submitId = tokenBySurface.get("submit");
+  const irsId = tokenBySurface.get("irs");
+  const reportsId = tokenBySurface.get("reports");
+  assert.ok(usedId);
+  assert.ok(submitId);
+  assert.ok(irsId);
+  assert.ok(reportsId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "complement_clause" && r.head.id === usedId && r.dep.id === submitId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === submitId && r.dep.id === reportsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "actor" && r.head.id === submitId && r.dep.id === irsId; }),
+    false
+  );
+});
+
+test("runPipeline relations_extracted suppresses chunk-fallback to-nextVP noise when explicit xcomp exists", async function () {
+  const text = "The shop needs to make sure that items are actually available and the system can take payment and keep a record of the order.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const needsId = tokenBySurface.get("needs");
+  const makeId = tokenBySurface.get("make");
+  const takeId = tokenBySurface.get("take");
+  const systemId = tokenBySurface.get("system");
+  assert.ok(needsId);
+  assert.ok(makeId);
+  assert.ok(takeId);
+  assert.ok(systemId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "complement_clause" && r.head.id === needsId && r.dep.id === makeId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "complement_clause" && r.head.id === needsId && r.dep.id === takeId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "purpose" && r.head.id === needsId && r.dep.id === takeId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "actor" && r.head.id === takeId && r.dep.id === systemId; }),
+    false
+  );
+});

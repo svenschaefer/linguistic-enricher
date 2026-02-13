@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.19] - 2026-02-13
+
+Compared to `v1.1.18`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened Stage 11 chunk-fallback boundaries for long passive/complement chains:
+    - suppresses fallback `actor` injection when a VP predicate is already verb-linked from another predicate (`dep`/`conj`/clausal links),
+      reducing cross-clause role carryover noise.
+    - suppresses `to`-nextVP fallback (`complement_clause`/`purpose`) when explicit clausal complement dependencies already exist
+      on the predicate.
+  - Keeps dependency-driven complement structure authoritative while reducing fallback amplification on long-chain clauses.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added fallback-boundary locks:
+    - no fallback `actor` on verb-linked clausal complement predicates.
+    - no `to`-nextVP fallback when explicit `xcomp` already exists.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end locks for long-chain sentences:
+    - IRS passive/complement chain: no `actor(submit, IRS)` fallback injection.
+    - webshop long chain: no fallback `complement_clause/purpose(needs, take)` and no fallback `actor(take, system)`.
+
 ## [1.1.18] - 2026-02-13
 
 Compared to `v1.1.17`.

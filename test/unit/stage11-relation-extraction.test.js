@@ -409,6 +409,61 @@ test("stage11 suppresses fallback actor/theme when passive subject and by-agent 
   assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t3" && r.dep.id === "t5"; }), false);
 });
 
+test("stage11 suppresses fallback actor when predicate is verb-linked clausal complement", async function () {
+  const text = "used to submit reports";
+  const tokens = [
+    token("t1", 0, "used", "VBN", 0, 4),
+    token("t2", 1, "to", "TO", 5, 7),
+    token("t3", 2, "submit", "VB", 8, 14),
+    token("t4", 3, "reports", "NNS", 15, 22)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2", "t3", "t4"], "used to submit reports", "VP", { start: 0, end: 22 }),
+    chunk("c2", ["t4"], "reports", "NP", { start: 15, end: 22 }),
+    chunkHead("h1", "c1", "t3"),
+    chunkHead("h2", "c2", "t4"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t3", "t1", "xcomp", false),
+    depObs("d3", "t4", "t3", "obj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t3" && r.dep.id === "t4"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t3"; }), false);
+});
+
+test("stage11 skips to-nextVP chunk fallback when explicit xcomp exists", async function () {
+  const text = "needs to make and can take";
+  const tokens = [
+    token("t1", 0, "needs", "VBZ", 0, 5),
+    token("t2", 1, "to", "TO", 6, 8),
+    token("t3", 2, "make", "VB", 9, 13),
+    token("t4", 3, "and", "CC", 14, 17),
+    token("t5", 4, "can", "MD", 18, 21),
+    token("t6", 5, "take", "VB", 22, 26)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2", "t3"], "needs to make", "VP", { start: 0, end: 13 }),
+    chunk("c2", ["t4"], "and", "O", { start: 14, end: 17 }),
+    chunk("c3", ["t5", "t6"], "can take", "VP", { start: 18, end: 26 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t4"),
+    chunkHead("h3", "c3", "t6"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t3", "t1", "xcomp", false),
+    depObs("d3", "t6", "t1", "dep", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+
+  assert.equal(rels.some(function (r) { return r.label === "complement_clause" && r.head.id === "t1" && r.dep.id === "t3"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "complement_clause" && r.head.id === "t1" && r.dep.id === "t6"; }), false);
+  assert.equal(rels.some(function (r) { return r.label === "purpose" && r.head.id === "t1" && r.dep.id === "t6"; }), false);
+});
+
 test("stage11 baseline fixture: webshop copula sentence is deterministic", async function () {
   const text = "A webshop is an online store.";
   const tokens = [
