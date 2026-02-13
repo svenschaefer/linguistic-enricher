@@ -316,10 +316,11 @@ Compared to `v1.0.0`.
 
 ### Added
 - Stage TODO tracking files for all active pipeline stages:
-  - `src/pipeline/stages/linguistic-analysis.TODO.md`
-  - `src/pipeline/stages/chunking.TODO.md`
-  - `src/pipeline/stages/head-identification.TODO.md`
-  - `src/pipeline/stages/relation-extraction.TODO.md`
+  - Stage 08 linguistic-analysis TODO (historical)
+  - Stage 09 chunking TODO (historical)
+  - Stage 10 head-identification TODO (historical)
+  - Stage 11 relation-extraction TODO (historical)
+  - Historical note: these were later consolidated into central `TODO.md` and removed as standalone files.
 - Deterministic Stage 08 observation kinds and evidence coverage for:
   - coordination evidence on `cc`/`conj` (`coordination_type`, `coordinator_token_id`)
   - comparative observations (`compare_gt|compare_lt|compare`, `than` evidence)

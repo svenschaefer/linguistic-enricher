@@ -326,16 +326,17 @@ Authoritative reference:
 - `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` (evaluation-only baseline; target output = `relations_extracted`).
 
 Status update (post `v1.1.12` re-baseline):
-- Resolved and released from original baseline set: `1.2`, `2.1`, `3.1`, `4.1`, `4.2`, `5.1`, `6.1`, `6.2`.
-- Remaining blocker: `2.2` (`Prime factorization is commonly used in mathematics.` passive subject anchor still resolves to `Prime` instead of `factorization`).
+- Resolved and released from original baseline set: `1.2`, `2.1`, `2.2`, `3.1`, `4.1`, `4.2`, `5.1`, `6.1`, `6.2`.
+- `2.2` was resolved in `v1.1.13` (passive subject anchor now lands on `factorization` for the prime-factorization passive case).
 - Residual degrading/noise to monitor: `1.1`, `4.1`, `6.1` (extra modifier/theme artifacts or NP-tail head choices).
 - Execution rule:
-  - treat `2.2` as the next mandatory hardening cycle before declaring full upstream structural-capture success.
+  - keep blocker set at zero while guarding resolved cases with regression locks.
+  - prioritize residual degrading/noise cleanup cycles next.
 
 ### Blockers
 
 - `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve copula/passive core argument structure so copula complements and passive subjects remain explicit and lossless in upstream relations (no collapse of attribute/complement signals, no subject-anchor drift in passive clauses).  
-  Current open item: fix residual `2.2` passive subject anchor drift (`used <- factorization`).
+  Re-baseline status: resolved in `1.1.13` (retain regression lock).
   - Test gate: add/extend a regression unit test at the originating stage.
   - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
 
@@ -377,10 +378,10 @@ Tracking rule:
 ## 12.2) Consolidated Stage TODO Status (Stages 08-11)
 
 This section replaces the former per-stage files:
-- `src/pipeline/stages/linguistic-analysis.TODO.md`
-- `src/pipeline/stages/chunking.TODO.md`
-- `src/pipeline/stages/head-identification.TODO.md`
-- `src/pipeline/stages/relation-extraction.TODO.md`
+- Stage 08 linguistic-analysis TODO (removed after consolidation)
+- Stage 09 chunking TODO (removed after consolidation)
+- Stage 10 head-identification TODO (removed after consolidation)
+- Stage 11 relation-extraction TODO (removed after consolidation)
 
 ### Stage 08 - linguistic-analysis
 
