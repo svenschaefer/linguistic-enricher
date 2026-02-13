@@ -9,6 +9,9 @@ Current published version: `1.1.16`
 - Keep patch releases for regressions or narrowly bounded non-breaking fixes only; use `1.2.x` for planned structural capability increments.
 - Preserve the canonical output contract during `1.2.x` (`relations_extracted` accepted semantic edges as `kind="dependency"`), unless an explicit migration decision is approved.
 
+Exception (active):
+- The currently tracked `LINGUISTIC-ENRICHER-REGRESSION-REPORT.md` integration topics are scheduled on a dedicated `1.1.x` patch line per request, with narrow scope and strict regression gates.
+
 ## Delivery Rule
 
 - Run a strict `one blocker -> one cycle` loop.
@@ -191,6 +194,53 @@ Execution order rule:
   - explicit compatibility plan, schema/doc updates, and migration test matrix.
 - Default:
   - remain deferred; do not execute in patch/minor cycle without explicit decision.
+
+## `1.1.x` Regression-Report Schedule (Patch Line)
+
+Source:
+- `LINGUISTIC-ENRICHER-REGRESSION-REPORT.md`
+- `TODO.md` section `Step-12 Integration Watchlist (Validated, 2026-02-13)`
+
+Execution rule:
+- One problem family per patch release.
+- Keep canonical output contract unchanged (`kind="dependency"` accepted semantic edges).
+- Treat version timing as "first observed in validation track" unless historical tags are replayed.
+
+### `1.1.17` - Connector contract alignment guard (`such`/`as`/`well`)
+- Scope:
+  - lock connector behavior as contract/interface compatibility between Stage 11 connector suppression and downstream unresolved-token expectations.
+- Owners: Stage 11 + integration tests/docs.
+- Required gates:
+  - integration lock on exemplar/additive sentences (`such as`, `as well as`) with explicit connector expectation assertions.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.18` - Clause/PP attachment drift reduction (complex variants)
+- Scope:
+  - reduce complex-sentence clause/PP head drift (`at`/connector-headed relation artifacts) without changing stable simple-case behavior.
+- Owners: Stage 08 (dominant), Stage 11 (secondary).
+- Required gates:
+  - Stage 08/11 unit regressions on complex variants.
+  - end-to-end lock at `relations_extracted` for targeted long-sentence fixtures.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.19` - Fallback-induced role-noise hardening (passive/complement chains)
+- Scope:
+  - tighten fallback boundaries to prevent contradictory/noisy role injection in long passive/complement structures.
+- Owners: Stage 11 (dominant), Stage 08 (secondary).
+- Required gates:
+  - Stage 11 fallback-pattern unit locks (`chunk_fallback` boundaries).
+  - end-to-end stability lock for `irs`/`webshop` long-chain fixtures.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.20` - Carrier precursor guard (`are (low)`) + `given` historical lock
+- Scope:
+  - guard against reproducible `are` low-carrier precursor shapes.
+  - maintain `given` as historical/variant-dependent check (non-blocking unless reproducible under current gates).
+- Owners: Stage 08 + Stage 10 + Stage 11.
+- Required gates:
+  - targeted unit/integration assertions for carrier precursor suppression.
+  - variant-sensitive check for `given` treated as monitor-only unless reproducible.
+  - full test suite + pre/post-publish smoke.
 
 ## Remaining Issues Plan (from `TODO.md` section `12.1` re-baseline)
 

@@ -407,6 +407,61 @@ test("runPipeline relations_extracted normalizes as well as into additive coordi
   );
 });
 
+test("runPipeline relations_extracted keeps connector-token suppression by design while preserving structural edges", async function () {
+  const cases = [
+    {
+      text: "Each role grants permissions such as read, write, or administer.",
+      required: [
+        ["actor", "grants", "role"],
+        ["theme", "grants", "permissions"],
+        ["exemplifies", "permissions", "read"],
+        ["exemplifies", "permissions", "write"],
+        ["exemplifies", "permissions", "administer"]
+      ]
+    },
+    {
+      text: "Reports may include structured fields (category, severity, location) as well as free-form descriptions.",
+      required: [
+        ["actor", "include", "Reports"],
+        ["theme", "include", "fields"],
+        ["coordination", "location", "free-form"]
+      ]
+    }
+  ];
+
+  for (let i = 0; i < cases.length; i += 1) {
+    const c = cases[i];
+    const out = await api.runPipeline(c.text, { target: "relations_extracted" });
+    assert.equal(out.stage, "relations_extracted");
+    const tokenById = new Map(out.tokens.map(function (t) { return [t.id, String(t.surface || "")]; }));
+    const rels = out.annotations.filter(function (a) {
+      return a.kind === "dependency" &&
+        a.status === "accepted" &&
+        Array.isArray(a.sources) &&
+        a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+    });
+
+    const connectorUsed = rels.some(function (r) {
+      const h = String(tokenById.get(r.head.id) || "").toLowerCase();
+      const d = String(tokenById.get(r.dep.id) || "").toLowerCase();
+      return h === "such" || h === "as" || h === "well" || d === "such" || d === "as" || d === "well";
+    });
+    assert.equal(connectorUsed, false);
+
+    for (let j = 0; j < c.required.length; j += 1) {
+      const req = c.required[j];
+      assert.equal(
+        rels.some(function (r) {
+          return r.label === req[0] &&
+            String(tokenById.get(r.head.id) || "").toLowerCase() === req[1].toLowerCase() &&
+            String(tokenById.get(r.dep.id) || "").toLowerCase() === req[2].toLowerCase();
+        }),
+        true
+      );
+    }
+  }
+});
+
 test("runPipeline relations_extracted suppresses contradictory passive fallback roles", async function () {
   const text = "Reports are reviewed by supervisors.";
   const out = await api.runPipeline(text, { target: "relations_extracted" });

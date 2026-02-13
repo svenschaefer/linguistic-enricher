@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.17] - 2026-02-13
+
+Compared to `v1.1.16`.
+
+### Tests
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added explicit connector-contract regression lock for:
+    - `Each role grants permissions such as read, write, or administer.`
+    - `Reports may include structured fields (category, severity, location) as well as free-form descriptions.`
+  - Locks two expectations together:
+    - connector tokens (`such`, `as`, `well`) are not emitted as accepted Stage 11 semantic relation endpoints,
+    - required structural relations (`actor`, `theme`, `exemplifies`, `coordination`) remain present.
+
 ## [1.1.16] - 2026-02-13
 
 Compared to `v1.1.15`.

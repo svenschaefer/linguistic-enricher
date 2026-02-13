@@ -380,6 +380,35 @@ Status update (post `v1.1.16` re-baseline):
 - Keep open separately:
   - webshop-family structural fidelity issues that remain upstream (primarily Stage 08 dependency/subject attachment quality), because those can still degrade final role outputs without being this specific Step-11 boundary-selection defect.
 
+### Step-12 Integration Watchlist (Validated, 2026-02-13)
+
+- Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
+  - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
+  - Downstream unresolved-token expectations may still flag connector tokens.
+  - Confidence: reproducible now as an integration-contract issue, not a standalone upstream defect.
+
+- Clause/PP attachment drift in complex sentence variants remains open:
+  - Reproducible on longer coordinated/complement shapes (non-universal).
+  - Owner focus: Stage 08 structural attachment quality, with Stage 11 normalization sensitivity.
+  - Confidence: reproducible now in complex variants.
+
+- Fallback-induced role noise in long passive/complement chains remains open:
+  - Stage 11 chunk-fallback paths can amplify weak upstream structure in specific long-sentence cases.
+  - Owner focus: Stage 11 fallback boundaries, with Stage 08 structural input quality.
+  - Confidence: reproducible now.
+
+- Low-quality carrier precursor note (`are`):
+  - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).
+  - Keep gated separately from passive/coordination hardening.
+
+- Low-quality carrier note (`given`):
+  - Keep as historical/variant-dependent artifact-track signal.
+  - Not consistently reproducible in current upstream-only checks.
+
+- Attribution rule for release history:
+  - Version-by-version causality is intentionally unproven unless historical tags are replayed.
+  - Use "first observed in validation track" wording in regression tracking.
+
 ### Blockers
 
 - `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve copula/passive core argument structure so copula complements and passive subjects remain explicit and lossless in upstream relations (no collapse of attribute/complement signals, no subject-anchor drift in passive clauses).  
