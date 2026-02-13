@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.16`
+Current published version: `1.1.17`
 
 ## Versioning Strategy
 
@@ -210,6 +210,7 @@ Execution rule:
 - Scope:
   - lock connector behavior as contract/interface compatibility between Stage 11 connector suppression and downstream unresolved-token expectations.
 - Owners: Stage 11 + integration tests/docs.
+- Status: completed and released.
 - Required gates:
   - integration lock on exemplar/additive sentences (`such as`, `as well as`) with explicit connector expectation assertions.
   - full test suite + pre/post-publish smoke.
