@@ -460,3 +460,41 @@ test("runPipeline relations_extracted keeps sequential coordinated verbs structu
     false
   );
 });
+
+test("runPipeline relations_extracted keeps inline multi-verb list coverage per predicate", async function () {
+  const text = "Users can request changes, update reports, and assign supervisors.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const usersId = tokenBySurface.get("users");
+  const requestId = tokenBySurface.get("request");
+  const changesId = tokenBySurface.get("changes");
+  const updateId = tokenBySurface.get("update");
+  const reportsId = tokenBySurface.get("reports");
+  const assignId = tokenBySurface.get("assign");
+  const supervisorsId = tokenBySurface.get("supervisors");
+  assert.ok(usersId);
+  assert.ok(requestId);
+  assert.ok(changesId);
+  assert.ok(updateId);
+  assert.ok(reportsId);
+  assert.ok(assignId);
+  assert.ok(supervisorsId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === requestId && r.dep.id === usersId; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === requestId && r.dep.id === changesId; }), true);
+
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === updateId && r.dep.id === usersId; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === updateId && r.dep.id === reportsId; }), true);
+
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === assignId && r.dep.id === usersId; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === assignId && r.dep.id === supervisorsId; }), true);
+});
