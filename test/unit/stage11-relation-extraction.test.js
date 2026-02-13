@@ -37,6 +37,19 @@ function depObs(id, depId, headId, label, isRoot) {
   return out;
 }
 
+function depObsWithCoord(id, depId, headId, label, coordinationType, coordinatorTokenId) {
+  const out = depObs(id, depId, headId, label, false);
+  out.sources = [{
+    name: "linguistic-analysis",
+    kind: "model",
+    evidence: {
+      coordination_type: coordinationType,
+      coordinator_token_id: coordinatorTokenId
+    }
+  }];
+  return out;
+}
+
 function comparativeObs(id, label, headId, markerId, rhsId, exact, span) {
   return {
     id: id,
@@ -651,6 +664,33 @@ test("stage11 coordination evidence carries OR metadata from dependency cc/conj"
     evidence.coord_group_id,
     createDeterministicId("coord", { members: [coord.head.id, coord.dep.id].sort(function (a, b) { return a.localeCompare(b); }) })
   );
+});
+
+test("stage11 uses coordination metadata from conj dependency evidence when cc lookup is absent", async function () {
+  const text = "fields as well as descriptions";
+  const tokens = [
+    token("t1", 0, "fields", "NNS", 0, 6),
+    token("t2", 1, "as", "IN", 7, 9),
+    token("t3", 2, "well", "RB", 10, 14),
+    token("t4", 3, "as", "IN", 15, 17),
+    token("t5", 4, "descriptions", "NNS", 18, 30)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "fields", "NP", { start: 0, end: 6 }),
+    chunk("c2", ["t5"], "descriptions", "NP", { start: 18, end: 30 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t5"),
+    depObs("d1", "t1", null, "root", true),
+    depObsWithCoord("d2", "t5", "t1", "conj", "and", "t4")
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  const coord = rels.find(function (r) { return r.label === "coordination" && r.head.id === "t1" && r.dep.id === "t5"; });
+  assert.ok(coord);
+  const evidence = coord.sources.find(function (s) { return s && s.name === "relation-extraction"; }).evidence;
+  assert.equal(evidence.coord_type, "and");
+  assert.equal(evidence.coord_token_id, "t4");
 });
 
 test("stage11 coordination evidence carries AND metadata from dependency cc/conj", async function () {

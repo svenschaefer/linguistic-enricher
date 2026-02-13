@@ -304,3 +304,45 @@ test("runPipeline relations_extracted keeps temporal for+CD+noun as prep object 
     false
   );
 });
+
+test("runPipeline relations_extracted normalizes as well as into additive coordination", async function () {
+  const text = "The report includes structured fields as well as free descriptions.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const includesId = tokenBySurface.get("includes");
+  const reportId = tokenBySurface.get("report");
+  const fieldsId = tokenBySurface.get("fields");
+  const descriptionsId = tokenBySurface.get("descriptions");
+  const wellId = tokenBySurface.get("well");
+  assert.ok(includesId);
+  assert.ok(reportId);
+  assert.ok(fieldsId);
+  assert.ok(descriptionsId);
+  assert.ok(wellId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "actor" && r.head.id === includesId && r.dep.id === reportId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === includesId && r.dep.id === fieldsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "coordination" && r.head.id === fieldsId && r.dep.id === descriptionsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.dep.id === wellId; }),
+    false
+  );
+});
