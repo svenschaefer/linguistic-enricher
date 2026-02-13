@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.9] - 2026-02-13
+
+Compared to `v1.1.8`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Added deterministic Stage 08 normalization for additive `as well as` connector patterns in noun coordination contexts.
+  - In this bounded pattern:
+    - connector tokens are emitted as `fixed` dependencies (instead of generic adverb/preposition attachments),
+    - right-hand noun is emitted as `conj` of the left noun,
+    - coordination evidence is attached with:
+      - `coordination_type: "and"`
+      - `coordinator_token_id` set to the second `as` token.
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened Stage 11 `conj` handling to honor Stage 08 coordination evidence when `cc` lookup is absent.
+  - For evidence-backed nominal coordination, relation extraction preserves raw noun conjunct ids (prevents chunk-head collapse onto connector tokens like `as`).
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression lock for:
+    - `The report includes structured fields as well as free descriptions.`
+    - asserts noun `conj(fields, descriptions)` with `and`-coordination evidence and connector tokens emitted as `fixed` (no `advmod(well, ...)`).
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added regression lock for evidence-driven coordination metadata on `conj` edges without `cc` lookup.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for additive coordination:
+    - `actor(includes, report)`
+    - `theme(includes, fields)`
+    - `coordination(fields, descriptions)`
+    - and no relation projections on connector token `well`.
+
 ## [1.1.8] - 2026-02-13
 
 Compared to `v1.1.7`.

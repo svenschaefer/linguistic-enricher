@@ -217,10 +217,49 @@ function isTemporalForPattern(tokens, prepIndex) {
   return isNounLikeTag(getTag(nextNext));
 }
 
+function buildAsWellAsHints(tokens) {
+  const fixedByIndex = new Map();
+  const conjByRightIndex = new Map();
+  for (let i = 0; i + 2 < tokens.length; i += 1) {
+    const first = String(tokens[i].surface || "").toLowerCase();
+    const middle = String(tokens[i + 1].surface || "").toLowerCase();
+    const second = String(tokens[i + 2].surface || "").toLowerCase();
+    if (first !== "as" || middle !== "well" || second !== "as") {
+      continue;
+    }
+    const leftNounIndex = nearestIndex(tokens, i - 1, -1, function (t) {
+      return isNounLikeTag(getTag(t));
+    });
+    const rightNounIndex = nearestIndex(tokens, i + 3, 1, function (t) {
+      if (isClauseBoundaryToken(t)) {
+        return false;
+      }
+      return isNounLikeTag(getTag(t));
+    });
+    if (leftNounIndex < 0 || rightNounIndex < 0) {
+      continue;
+    }
+    const rightHeadId = tokens[rightNounIndex].id;
+    fixedByIndex.set(i, { headId: rightHeadId });
+    fixedByIndex.set(i + 1, { headId: tokens[i + 2].id });
+    fixedByIndex.set(i + 2, { headId: rightHeadId });
+    conjByRightIndex.set(rightNounIndex, {
+      headId: tokens[leftNounIndex].id,
+      coordinatorTokenId: tokens[i + 2].id,
+      coordinationType: "and"
+    });
+  }
+  return {
+    fixedByIndex: fixedByIndex,
+    conjByRightIndex: conjByRightIndex
+  };
+}
+
 function buildSentenceDependencies(sentenceTokens) {
   const rootIndex = detectRootIndex(sentenceTokens);
   const passiveHeadIndex = detectPassiveHeadIndex(sentenceTokens);
   const rootToken = sentenceTokens[rootIndex];
+  const asWellAsHints = buildAsWellAsHints(sentenceTokens);
   const edges = [];
 
   for (let i = 0; i < sentenceTokens.length; i += 1) {
@@ -241,6 +280,30 @@ function buildSentenceDependencies(sentenceTokens) {
         headId: headIndex >= 0 ? sentenceTokens[headIndex].id : rootToken.id,
         label: "punct",
         isRoot: false
+      });
+      continue;
+    }
+
+    const fixedHint = asWellAsHints.fixedByIndex.get(i);
+    if (fixedHint) {
+      edges.push({
+        depId: token.id,
+        headId: fixedHint.headId,
+        label: "fixed",
+        isRoot: false
+      });
+      continue;
+    }
+
+    const asWellAsConj = asWellAsHints.conjByRightIndex.get(i);
+    if (asWellAsConj) {
+      edges.push({
+        depId: token.id,
+        headId: asWellAsConj.headId,
+        label: "conj",
+        isRoot: false,
+        coordinationType: asWellAsConj.coordinationType,
+        coordinatorTokenId: asWellAsConj.coordinatorTokenId
       });
       continue;
     }

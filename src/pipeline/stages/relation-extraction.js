@@ -675,6 +675,27 @@ function isExistingStage11Relation(annotation) {
   );
 }
 
+function depCoordinationEvidence(dep) {
+  if (!dep || !Array.isArray(dep.sources)) {
+    return null;
+  }
+  for (let i = 0; i < dep.sources.length; i += 1) {
+    const src = dep.sources[i];
+    if (!src || !src.evidence) {
+      continue;
+    }
+    const evidence = src.evidence;
+    if (!evidence.coordination_type && !evidence.coordinator_token_id) {
+      continue;
+    }
+    return {
+      coordinationType: evidence.coordination_type || null,
+      coordinatorTokenId: evidence.coordinator_token_id || null
+    };
+  }
+  return null;
+}
+
 function makeRelationAnnotation(out, rel, tokenById, unit) {
   const predTok = tokenById.get(rel.predicateId);
   const argTok = tokenById.get(rel.argumentId);
@@ -1193,19 +1214,34 @@ async function runStage(seed) {
     }
     if (depBase === "conj") {
       const headTok = tokenById.get(dep.head.id);
-      const pred = isVerbLikeTag(getTag(headTok))
-        ? resolvePredicateForRelation(dep.head.id)
-        : resolvePredicate(dep.head.id);
-      const argPred = resolvePredicate(dep.dep.id);
+      const depTok = tokenById.get(dep.dep.id);
+      const depCoord = depCoordinationEvidence(dep);
+      const preserveNominalConjRawIds = Boolean(
+        depCoord &&
+        headTok &&
+        depTok &&
+        isNominalLikeTag(getTag(headTok)) &&
+        isNominalLikeTag(getTag(depTok))
+      );
+      const pred = preserveNominalConjRawIds
+        ? dep.head.id
+        : (isVerbLikeTag(getTag(headTok)) ? resolvePredicateForRelation(dep.head.id) : resolvePredicate(dep.head.id));
+      const argPred = preserveNominalConjRawIds
+        ? dep.dep.id
+        : resolvePredicate(dep.dep.id);
       const predTok = tokenById.get(pred);
       const argTok = tokenById.get(argPred);
       if (predTok && argTok) {
-        let coordTokenId = findCcTokenIdForConj(dep.dep.id, depByHead, tokenById);
+        let coordTokenId = depCoord && depCoord.coordinatorTokenId
+          ? depCoord.coordinatorTokenId
+          : findCcTokenIdForConj(dep.dep.id, depByHead, tokenById);
         if (!coordTokenId) {
           coordTokenId = findCcTokenIdForConj(dep.head.id, depByHead, tokenById);
         }
         const coordTok = coordTokenId && tokenById.has(coordTokenId) ? tokenById.get(coordTokenId) : null;
-        const coordType = coordTypeFromSurface(coordTok ? lowerSurface(coordTok) : "");
+        const coordType = depCoord && depCoord.coordinationType
+          ? depCoord.coordinationType
+          : coordTypeFromSurface(coordTok ? lowerSurface(coordTok) : "");
         const coordGroupId = coordGroupIdFromMembers([pred, argPred]);
         addRelation(
           pred,

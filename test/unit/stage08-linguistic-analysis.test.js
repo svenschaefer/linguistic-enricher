@@ -473,3 +473,36 @@ test("stage08 emits temporal for+CD+noun attachment as prep+pobj with nummod", a
   assert.ok(nummod);
   assert.equal(nummod.head && nummod.head.id, "t8");
 });
+
+test("stage08 normalizes as well as into noun coordination with connector fixed tokens", async function () {
+  const text = "The report includes structured fields as well as free descriptions.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "The", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 10 }, surface: "report", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 11, end: 19 }, surface: "includes", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 20, end: 30 }, surface: "structured", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 31, end: 37 }, surface: "fields", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 38, end: 40 }, surface: "as", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 41, end: 45 }, surface: "well", pos: { tag: "RB" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 46, end: 48 }, surface: "as", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t9", i: 8, segment_id: "s1", span: { start: 49, end: 53 }, surface: "free", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t10", i: 9, segment_id: "s1", span: { start: 54, end: 66 }, surface: "descriptions", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t11", i: 10, segment_id: "s1", span: { start: 66, end: 67 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const conj = deps.find(function (a) { return a.dep && a.dep.id === "t10" && a.label === "conj"; });
+  const well = deps.find(function (a) { return a.dep && a.dep.id === "t7"; });
+  const secondAs = deps.find(function (a) { return a.dep && a.dep.id === "t8"; });
+
+  assert.ok(conj);
+  assert.equal(conj.head && conj.head.id, "t5");
+  assert.equal(conj.sources[0].evidence.coordination_type, "and");
+  assert.equal(conj.sources[0].evidence.coordinator_token_id, "t8");
+  assert.ok(well);
+  assert.equal(well.label, "fixed");
+  assert.ok(secondAs);
+  assert.equal(secondAs.label, "fixed");
+  assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t7" && a.label === "advmod"; }), false);
+});
