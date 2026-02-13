@@ -322,10 +322,29 @@
 
 ## 12.1) Upstream Structural Coverage Evaluation (00-11) - Baseline Findings (2026-02-13)
 
-Authoritative reference:
-- `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` (evaluation-only baseline; target output = `relations_extracted`).
+Scope:
+- Evaluation-only baseline for upstream structural capture with target output `relations_extracted`.
+- This section is the consolidated source of truth (external standalone report retired after consolidation).
 
-Status update (post `v1.1.14` re-baseline):
+Re-baseline snapshot (post `v1.1.16`):
+- `1.1` Simple Passive: Pass
+- `1.2` Passive with Agent: Pass
+- `2.1` Copula with Attribute: Pass
+- `2.2` Copula + Event in Same Sentence: Pass
+- `3.1` Sequential Verbs: Pass
+- `4.1` such as Enumeration: Pass
+- `4.2` as well as: Pass
+- `5.1` Inline List: Pass
+- `6.1` Purpose PP: Pass
+- `6.2` Temporal Modifier: Pass
+
+Overall assessment snapshot:
+- Blockers: none
+- Degrading: none in the original blocker/degrading classes
+- Residual noise: none in the tracked baseline set
+- Success criteria status: met for upstream structural capture baseline
+
+Status update (post `v1.1.16` re-baseline):
 - Resolved and released from original baseline set: `1.2`, `2.1`, `2.2`, `3.1`, `4.1`, `4.2`, `5.1`, `6.1`, `6.2`.
 - `2.2` was resolved in `v1.1.13` (passive subject anchor now lands on `factorization` for the prime-factorization passive case).
 - `1.1` residual fallback noise was reduced in `v1.1.14` (retain regression lock).
@@ -335,7 +354,7 @@ Status update (post `v1.1.14` re-baseline):
 - Residual degrading/noise to monitor: none in the current baseline set.
 - Execution rule:
   - keep blocker set at zero while guarding resolved cases with regression locks.
-  - prioritize residual degrading/noise cleanup cycles next.
+  - run monitor mode and open new cycles only for reproducible regressions/new scope.
 
 ### Webshop subject-edge diagnostic (2026-02-13)
 

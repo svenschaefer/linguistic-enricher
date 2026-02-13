@@ -97,9 +97,9 @@ Current published version: `1.1.16`
 
 ## Current Open Focus
 
-With blockers cleared in the re-baseline, focus shifts to residual-noise cleanup only.
+With blockers cleared in the re-baseline and the residual-noise queue closed through `1.1.16`, the project is in monitor mode (open new cycles only for reproducible regressions or new scope).
 
-## Remaining Issues Plan (from `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` re-baseline)
+## Remaining Issues Plan (from `TODO.md` section `12.1` re-baseline)
 
 ### Priority rule
 - Blockers are closed in current re-baseline.
@@ -112,7 +112,7 @@ With blockers cleared in the re-baseline, focus shifts to residual-noise cleanup
 - No active residual-noise release is scheduled at this time.
 
 ### Post-cycle gate
-- Keep `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` in sync after each residual-noise cycle.
+- Keep `TODO.md` section `12.1` in sync after each residual-noise cycle.
 - Keep blocker set at zero; treat regressions to blocker/degrading as release-stoppers.
 
 ## Release Gate
