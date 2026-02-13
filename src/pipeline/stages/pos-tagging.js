@@ -11,6 +11,7 @@ const POSSESSIVE_TERMINAL_MARKERS = new Set(["'", "’", "ʼ", "＇"]);
 const POSSESSIVE_ALLOWED_PREV = new Set(["NN", "NNS", "NNP", "NNPS"]);
 const POSSESSIVE_ALLOWED_NEXT = new Set(["NN", "NNS", "NNP", "NNPS", "JJ", "JJR", "JJS", "DT"]);
 const FINITE_VERB_CONTEXT_NEXT = new Set(["IN", "TO", "DT", "RB", "RBR", "RBS", "JJ", "JJR", "JJS", "PRP", "PRP$", "CD"]);
+const FINITE_VERB_OBJECTISH_NEXT = new Set(["NN", "NNS", "NNP", "NNPS", "JJ", "JJR", "JJS", "DT", "PRP", "PRP$", "CD"]);
 const CLAUSE_BOUNDARY_SURFACES = new Set([".", ",", ";", ":", "!", "?"]);
 
 function toCoarsePennTag(tag) {
@@ -123,6 +124,32 @@ function hasVerbInClauseToLeft(tokens, resolvedTags, index) {
   return false;
 }
 
+function isDetSubjectVerbObjectFrame(tokens, resolvedTags, index, prevIdx, nextIdx) {
+  if (prevIdx < 0 || nextIdx < 0) {
+    return false;
+  }
+  const prevTag = resolvedTags[prevIdx];
+  const nextTag = resolvedTags[nextIdx];
+  if (!(prevTag === "NN" || prevTag === "NNP")) {
+    return false;
+  }
+  if (!FINITE_VERB_OBJECTISH_NEXT.has(nextTag)) {
+    return false;
+  }
+  const prevPrevIdx = previousNonPunctIndex(tokens, prevIdx);
+  const prevPrevTag = prevPrevIdx >= 0 ? resolvedTags[prevPrevIdx] : null;
+  if (
+    prevPrevTag !== "DT" &&
+    prevPrevTag !== "PRP$" &&
+    prevPrevTag !== "JJ" &&
+    prevPrevTag !== "JJR" &&
+    prevPrevTag !== "JJS"
+  ) {
+    return false;
+  }
+  return !hasVerbInClauseToLeft(tokens, resolvedTags, index);
+}
+
 function applyFiniteVerbDisambiguation(tokens, resolvedTags, index) {
   const currentTag = resolvedTags[index];
   if (currentTag !== "NNS") {
@@ -136,14 +163,15 @@ function applyFiniteVerbDisambiguation(tokens, resolvedTags, index) {
   const nextIdx = nextNonPunctIndex(tokens, index);
   const prevTag = prevIdx >= 0 ? resolvedTags[prevIdx] : null;
   const nextTag = nextIdx >= 0 ? resolvedTags[nextIdx] : null;
-  if (!nextTag || !FINITE_VERB_CONTEXT_NEXT.has(nextTag)) {
-    return currentTag;
+  if (nextTag && FINITE_VERB_CONTEXT_NEXT.has(nextTag)) {
+    if (prevTag === "PRP") {
+      return "VBZ";
+    }
+    if (prevTag === "CC" && hasVerbInClauseToLeft(tokens, resolvedTags, index)) {
+      return "VBZ";
+    }
   }
-
-  if (prevTag === "PRP") {
-    return "VBZ";
-  }
-  if (prevTag === "CC" && hasVerbInClauseToLeft(tokens, resolvedTags, index)) {
+  if (isDetSubjectVerbObjectFrame(tokens, resolvedTags, index, prevIdx, nextIdx)) {
     return "VBZ";
   }
   return currentTag;

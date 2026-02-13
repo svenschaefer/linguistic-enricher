@@ -124,3 +124,31 @@ test("stage04 keeps noun coordination as NNS in nominal list context", async fun
   assert.equal(out.tokens[0].pos.tag, "NNS");
   assert.equal(out.tokens[2].pos.tag, "NNS");
 });
+
+test("stage04 disambiguates grants as finite VBZ in determiner-subject clause frame", async function () {
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 4 }, surface: "Each" },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 5, end: 9 }, surface: "role" },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 10, end: 16 }, surface: "grants" },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 17, end: 28 }, surface: "permissions" },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 28, end: 29 }, surface: "." }
+  ];
+
+  const out = await stage04.runStage(makeSeed(tokens));
+  assert.equal(out.tokens[2].pos.tag, "VBZ");
+  assert.equal(out.tokens[2].pos.coarse, "VERB");
+});
+
+test("stage04 keeps grants as noun in nominal phrase context", async function () {
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "The" },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 10 }, surface: "grants" },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 11, end: 18 }, surface: "program" },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 19, end: 25 }, surface: "exists" },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 25, end: 26 }, surface: "." }
+  ];
+
+  const out = await stage04.runStage(makeSeed(tokens));
+  assert.equal(out.tokens[1].pos.tag, "NNS");
+  assert.equal(out.tokens[1].pos.coarse, "NOUN");
+});
