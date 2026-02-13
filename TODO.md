@@ -334,6 +334,30 @@ Status update (post `v1.1.14` re-baseline):
   - keep blocker set at zero while guarding resolved cases with regression locks.
   - prioritize residual degrading/noise cleanup cycles next.
 
+### Webshop subject-edge diagnostic (2026-02-13)
+
+- Relevance of old report: **partially relevant**.
+  - The missing subject-role symptom in embedded webshop clauses still appears for some predicate shapes.
+  - The old parser-attribution is outdated for this repo: Stage 08 builds dependency observations heuristically (not direct spaCy dependency ingestion).
+- Confirmed lifecycle finding:
+  - In the webshop sentence, Stage 08 emits only one raw subject-like edge (`nsubj(is, WebShop)`), while embedded predicates (`pick`, `want`, `put`) do not carry raw `nsubj` edges.
+  - Stage 11 maps available labels deterministically (`nsubj -> actor`, `nsubjpass -> patient`) and does not drop mapped subject edges; absent subject roles are primarily upstream-availability gaps.
+- Ownership and guardrail:
+  - Primary owner remains Stage 08 structural dependency formation for embedded/coordinated clause subjects.
+  - Stage 11 remains a secondary consumer/normalizer and should not synthesize non-evidenced subject edges.
+- Test gate update:
+  - Add/extend a Stage 08 unit regression for webshop-like embedded-clause subject retention.
+  - Add/extend an end-to-end Stage 11 integration lock at `relations_extracted` for expected subject-role coverage in that sentence family.
+
+### Closed diagnostic note: oversized theme mention projection (2026-02-13)
+
+- Status: **closed for current codebase as originally reported**.
+- Confirmed:
+  - Stage 11 emits token-to-token accepted dependency relations, not verb-extended mention-span theme objects.
+  - The specific failure mode `theme = "produces prime numbers"` (instead of nominal head `numbers`) is not reproducible in current `relations_extracted` output.
+- Keep open separately:
+  - webshop-family structural fidelity issues that remain upstream (primarily Stage 08 dependency/subject attachment quality), because those can still degrade final role outputs without being this specific Step-11 boundary-selection defect.
+
 ### Blockers
 
 - `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve copula/passive core argument structure so copula complements and passive subjects remain explicit and lossless in upstream relations (no collapse of attribute/complement signals, no subject-anchor drift in passive clauses).  
