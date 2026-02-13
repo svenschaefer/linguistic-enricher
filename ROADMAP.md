@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.15` (`v1.1.16` release candidate in progress)
+Current published version: `1.1.16`
 
 ## Delivery Rule
 
@@ -33,7 +33,7 @@ Current published version: `1.1.15` (`v1.1.16` release candidate in progress)
 - Scope:
   - Stage 08 emits explicit copula complement dependency (`attr`/`acomp` equivalent).
   - Stage 11 projects deterministic `attribute(...)` relation from that structure.
-- Status: partially resolved in release scope (`2.1` resolved, `2.2` residual blocker remains).
+- Status: completed and released (`2.1` resolved in `1.1.6`; `2.2` fully resolved in `1.1.13`).
 
 ### `1.1.7` - Blocker 6.1: purpose PP `for + VBG` and coordinated nominal purpose
 - Owners: Stage 08 + Stage 11
@@ -93,7 +93,7 @@ Current published version: `1.1.15` (`v1.1.16` release candidate in progress)
     - `patient(recorded, Actions)`
     - `beneficiary(recorded, auditing)`
   - improve coordinated tail representation for `security analysis` to reduce structural ambiguity/noise while keeping no standalone event center for `auditing`.
-- Status: implemented and test-locked on release branch.
+- Status: completed and released.
 
 ## Current Open Focus
 
