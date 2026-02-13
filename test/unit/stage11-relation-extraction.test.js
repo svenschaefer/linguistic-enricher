@@ -850,3 +850,53 @@ test("stage11 modality tie-break prefers rightward lexical verb at equal distanc
   assert.equal(evidence.pattern, "modality_unified");
   assert.equal(evidence.chosen_predicate_token_id, "t3");
 });
+
+test("stage11 preserves such-as exemplars as membership structure (not root events)", async function () {
+  const text = "Each role grants permissions such as read, write, or administer.";
+  const tokens = [
+    token("t1", 0, "Each", "DT", 0, 4),
+    token("t2", 1, "role", "NN", 5, 9),
+    token("t3", 2, "grants", "VBZ", 10, 16),
+    token("t4", 3, "permissions", "NNS", 17, 28),
+    token("t5", 4, "such", "JJ", 29, 33),
+    token("t6", 5, "as", "IN", 34, 36),
+    token("t7", 6, "read", "NN", 37, 41),
+    token("t8", 7, ",", ",", 41, 42),
+    token("t9", 8, "write", "VB", 43, 48),
+    token("t10", 9, ",", ",", 48, 49),
+    token("t11", 10, "or", "CC", 50, 52),
+    token("t12", 11, "administer", "VB", 53, 63),
+    token("t13", 12, ".", ".", 63, 64)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "Each role", "NP", { start: 0, end: 9 }),
+    chunk("c2", ["t3", "t4"], "grants permissions", "VP", { start: 10, end: 28 }),
+    chunk("c3", ["t5", "t6", "t7"], "such as read", "PP", { start: 29, end: 41 }),
+    chunk("c4", ["t9"], "write", "O", { start: 43, end: 48 }),
+    chunk("c5", ["t12"], "administer", "O", { start: 53, end: 63 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t6"),
+    chunkHead("h4", "c4", "t9"),
+    chunkHead("h5", "c5", "t12"),
+    depObs("d1", "t1", "t2", "det", false),
+    depObs("d2", "t2", "t3", "nsubj", false),
+    depObs("d3", "t3", null, "root", true),
+    depObs("d4", "t4", "t3", "obj", false),
+    depObs("d5", "t6", "t4", "prep", false),
+    depObs("d6", "t7", "t6", "pobj", false),
+    depObs("d7", "t9", "t3", "dep", false),
+    depObs("d8", "t11", "t9", "cc", false),
+    depObs("d9", "t12", "t9", "conj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t3" && r.dep.id === "t2"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t3" && r.dep.id === "t4"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "exemplifies" && r.head.id === "t4" && r.dep.id === "t7"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "exemplifies" && r.head.id === "t4" && r.dep.id === "t9"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "exemplifies" && r.head.id === "t4" && r.dep.id === "t12"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t9" && r.dep.id === "t2"; }), false);
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t12" && r.dep.id === "t2"; }), false);
+});

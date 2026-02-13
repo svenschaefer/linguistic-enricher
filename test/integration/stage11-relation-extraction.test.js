@@ -106,3 +106,55 @@ test("runPipeline relations_extracted emits passive subject relation for may be 
     true
   );
 });
+
+test("runPipeline relations_extracted keeps such-as clause centered on grants and preserves exemplars", async function () {
+  const text = "Each role grants permissions such as read, write, or administer.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const grantsId = tokenBySurface.get("grants");
+  const roleId = tokenBySurface.get("role");
+  const permissionsId = tokenBySurface.get("permissions");
+  const readId = tokenBySurface.get("read");
+  const writeId = tokenBySurface.get("write");
+  const administerId = tokenBySurface.get("administer");
+  assert.ok(grantsId);
+  assert.ok(roleId);
+  assert.ok(permissionsId);
+  assert.ok(readId);
+  assert.ok(writeId);
+  assert.ok(administerId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "actor" && r.head.id === grantsId && r.dep.id === roleId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === grantsId && r.dep.id === permissionsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "exemplifies" && r.head.id === permissionsId && r.dep.id === readId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "exemplifies" && r.head.id === permissionsId && r.dep.id === writeId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "exemplifies" && r.head.id === permissionsId && r.dep.id === administerId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "actor" && r.head.id === writeId && r.dep.id === roleId; }),
+    false
+  );
+});

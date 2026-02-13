@@ -366,6 +366,11 @@ function roleFromPrepSurface(surface) {
   return null;
 }
 
+function isExemplarCandidateToken(token) {
+  const tag = getTag(token);
+  return isLexicalVerbTag(tag) || isNominalLikeTag(tag) || /^JJ/.test(tag);
+}
+
 function buildOrderedChunks(annotations) {
   const chunks = [];
   for (let i = 0; i < annotations.length; i += 1) {
@@ -1050,6 +1055,90 @@ async function runStage(seed) {
           prep_surface: String(prepTok.surface || "").toLowerCase(),
           prep_token_id: dep.dep.id,
           pobj_token_id: pobj.dep.id,
+          sentence_id: prepTok.segment_id
+        }
+      );
+    }
+  }
+
+  for (let i = 0; i < dependencyObs.length; i += 1) {
+    const dep = dependencyObs[i];
+    if (dep.is_root || dep.label !== "prep" || !dep.dep || !dep.dep.id || !dep.head || !dep.head.id) {
+      continue;
+    }
+    const prepTok = tokenById.get(dep.dep.id);
+    const containerTok = tokenById.get(dep.head.id);
+    if (!prepTok || !containerTok) {
+      continue;
+    }
+    if (lowerSurface(prepTok) !== "as") {
+      continue;
+    }
+    const prevByIndex = bySentence.get(prepTok.segment_id) || [];
+    const prevTok = prevByIndex.find(function (t) { return t.i === prepTok.i - 1; }) || null;
+    if (!prevTok || lowerSurface(prevTok) !== "such") {
+      continue;
+    }
+
+    const exemplarMembers = [];
+    const seenMember = new Set();
+    const pobjEdges = (depByHead.get(dep.dep.id) || []).filter(function (d) { return d && d.label === "pobj" && d.dep && d.dep.id; });
+    for (let j = 0; j < pobjEdges.length; j += 1) {
+      const memberTok = tokenById.get(pobjEdges[j].dep.id);
+      if (!memberTok || seenMember.has(memberTok.id)) {
+        continue;
+      }
+      seenMember.add(memberTok.id);
+      exemplarMembers.push(memberTok);
+    }
+    if (exemplarMembers.length === 0) {
+      continue;
+    }
+
+    const sentenceTokens = bySentence.get(prepTok.segment_id) || [];
+    const first = exemplarMembers[0];
+    for (let j = 0; j < sentenceTokens.length; j += 1) {
+      const tok = sentenceTokens[j];
+      if (tok.i <= first.i) {
+        continue;
+      }
+      const tokSurface = String(tok && tok.surface ? tok.surface : "");
+      if (tokSurface === "." || tokSurface === ";" || tokSurface === ":" || tokSurface === "!" || tokSurface === "?") {
+        break;
+      }
+      const lower = lowerSurface(tok);
+      if (lower === "and" || lower === "or" || lower === "as" || lower === "such" || lower === "well") {
+        continue;
+      }
+      if (!isExemplarCandidateToken(tok)) {
+        continue;
+      }
+      if (seenMember.has(tok.id)) {
+        continue;
+      }
+      seenMember.add(tok.id);
+      exemplarMembers.push(tok);
+    }
+
+    exemplarMembers.sort(function (a, b) {
+      if (a.i !== b.i) {
+        return a.i - b.i;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+    const containerId = isVerbLikeTag(getTag(containerTok))
+      ? resolvePredicateForRelation(dep.head.id)
+      : dep.head.id;
+    for (let j = 0; j < exemplarMembers.length; j += 1) {
+      addRelation(
+        containerId,
+        exemplarMembers[j].id,
+        "exemplifies",
+        {
+          pattern: "such_as_enumeration",
+          dependency_label: dep.label,
+          prep_surface: "as",
+          prep_token_id: dep.dep.id,
           sentence_id: prepTok.segment_id
         }
       );

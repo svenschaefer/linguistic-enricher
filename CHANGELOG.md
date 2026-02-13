@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.5] - 2026-02-13
+
+Compared to `v1.1.4`.
+
+### Changed
+- `src/pipeline/stages/pos-tagging.js`
+  - Added bounded finite-verb disambiguation for determiner-subject clause frames to prevent `grants`-class predicate tokens from staying nominal (`NNS`) in sentences like `Each role grants permissions ...`.
+- `src/pipeline/stages/relation-extraction.js`
+  - Added deterministic `such as` exemplar projection from `prep(as)` structures:
+    - emits `exemplifies(<container>, <member>)` relations for enumerated exemplars.
+  - Keeps exemplar lists from being dropped while preserving predicate focus on the governing finite verb.
+
+### Tests
+- `test/unit/stage04-pos-tagging.test.js`
+  - Added regression locking `grants -> VBZ` in determiner-subject predicate context.
+  - Added negative-control regression keeping nominal `grants` as `NNS` in noun phrase context.
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added regression locking `such as` exemplar membership structure in relation extraction.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for:
+    - `actor(grants, role)`
+    - `theme(grants, permissions)`
+    - `exemplifies(permissions, read|write|administer)`
+    - and no spurious `actor(write, role)` event promotion.
+
 ## [1.1.4] - 2026-02-11
 
 Compared to `v1.1.3`.
