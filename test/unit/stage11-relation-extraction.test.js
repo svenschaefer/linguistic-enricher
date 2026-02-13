@@ -373,6 +373,38 @@ test("stage11 emits beneficiary for temporal for+CD+noun prep+pobj chain", async
   assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t4" && r.dep.id === "t8"; }), false);
 });
 
+test("stage11 suppresses fallback actor/theme when passive subject and by-agent are present", async function () {
+  const text = "Reports are reviewed by supervisors.";
+  const tokens = [
+    token("t1", 0, "Reports", "NNS", 0, 7),
+    token("t2", 1, "are", "VBP", 8, 11),
+    token("t3", 2, "reviewed", "VBN", 12, 20),
+    token("t4", 3, "by", "IN", 21, 23),
+    token("t5", 4, "supervisors", "NNS", 24, 35),
+    token("t6", 5, ".", ".", 35, 36)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "Reports", "NP", { start: 0, end: 7 }),
+    chunk("c2", ["t2", "t3"], "are reviewed", "VP", { start: 8, end: 20 }),
+    chunk("c3", ["t4", "t5"], "by supervisors", "PP", { start: 21, end: 35 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t4"),
+    depObs("d1", "t3", null, "root", true),
+    depObs("d2", "t1", "t3", "nsubjpass", false),
+    depObs("d3", "t2", "t3", "aux", false),
+    depObs("d4", "t4", "t3", "prep", false),
+    depObs("d5", "t5", "t4", "pobj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "patient" && r.head.id === "t3" && r.dep.id === "t1"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "agent" && r.head.id === "t3" && r.dep.id === "t5"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t3" && r.dep.id === "t1"; }), false);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t3" && r.dep.id === "t5"; }), false);
+});
+
 test("stage11 baseline fixture: webshop copula sentence is deterministic", async function () {
   const text = "A webshop is an online store.";
   const tokens = [
@@ -457,7 +489,6 @@ test("stage11 baseline fixture: generated primes sentence has stable relation id
     "rel-0b7175799c82",
     "rel-3158448a5294",
     "rel-a14a8d95cc70",
-    "rel-a7a441ad585e",
     "rel-c6e1aa6149b4"
   ]);
   assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "modifier" && r.dep.id === "t1"; }), true);

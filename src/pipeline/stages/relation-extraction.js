@@ -472,14 +472,28 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
       continue;
     }
     const hasCoreSubject = predDeps.some(function (d) { return d && baseDepLabel(d.label) === "nsubj"; });
+    const hasPassiveSubject = predDeps.some(function (d) { return d && baseDepLabel(d.label) === "nsubjpass"; });
     const hasCoreObject = predDeps.some(function (d) {
       const label = d ? baseDepLabel(d.label) : "";
       return label === "obj" || label === "dobj" || label === "iobj";
     });
+    const hasByPrepObject = predDeps.some(function (d) {
+      if (!d || baseDepLabel(d.label) !== "prep" || !d.dep || !d.dep.id || !tokenById.has(d.dep.id)) {
+        return false;
+      }
+      const prepTok = tokenById.get(d.dep.id);
+      if (lowerSurface(prepTok) !== "by") {
+        return false;
+      }
+      const prepChildren = depByHead.get(d.dep.id) || [];
+      return prepChildren.some(function (child) {
+        return child && baseDepLabel(child.label) === "pobj" && child.dep && child.dep.id && tokenById.has(child.dep.id);
+      });
+    });
     const sentenceId = predTok.segment_id;
 
     const prevNP = nearestPrevNP(i);
-    if (prevNP && !hasCoreSubject) {
+    if (prevNP && !hasCoreSubject && !hasPassiveSubject) {
       const arg = chunkHeadByChunkId.get(prevNP.id);
       addRelation(predicateId, arg, "actor", {
         pattern: "chunk_fallback",
@@ -489,7 +503,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     }
 
     const nextNP = nearestNextNP(i);
-    if (nextNP && !hasCoreObject) {
+    if (nextNP && !hasCoreObject && !hasPassiveSubject && !hasByPrepObject) {
       const arg = chunkHeadByChunkId.get(nextNP.id);
       addRelation(predicateId, arg, "theme", {
         pattern: "chunk_fallback",
@@ -504,7 +518,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
       .filter(Boolean)
       .filter(function (t) { return t.id !== predicateId && isNoun(getTag(t)); })
       .sort(function (a, b) { return a.i - b.i; })[0];
-    if (internalThemeToken && !hasCoreObject && !nextNP) {
+    if (internalThemeToken && !hasCoreObject && !nextNP && !hasPassiveSubject && !hasByPrepObject) {
       addRelation(predicateId, internalThemeToken.id, "theme", {
         pattern: "chunk_fallback",
         dependency_label: "obj",

@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.10] - 2026-02-13
+
+Compared to `v1.1.9`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened Stage 11 fallback to suppress contradictory passive-role synthesis when passive structure is already explicit:
+    - no fallback `actor(...)` when `nsubjpass` is present for the predicate.
+    - no fallback `theme(...)` for by-agent NP when a `prep(by) + pobj(...)` chain exists.
+  - Keeps dependency-driven passive roles authoritative and prevents duplicate/conflicting fallback relations.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added regression lock for passive-with-agent fallback suppression:
+    - `Reports are reviewed by supervisors.`
+    - asserts `patient(reviewed, reports)` + `agent(reviewed, supervisors)`
+    - asserts no `actor(reviewed, reports)` and no `theme(reviewed, supervisors)`.
+  - Updated one Stage 11 baseline fixture ID lock to reflect intentional removal of obsolete fallback relation in passive structure.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for passive-with-agent behavior:
+    - accepted `patient` and `agent`
+    - no contradictory fallback `actor/theme` on same predicate.
+
 ## [1.1.9] - 2026-02-13
 
 Compared to `v1.1.8`.
