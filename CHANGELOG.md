@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.13] - 2026-02-13
+
+Compared to `v1.1.12`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Hardened Stage 08 passive-subject anchoring for pre-passive noun phrases in `be + VBN` clauses.
+  - For noun chains before the passive head, the rightmost noun now remains the passive subject anchor (`nsubjpass`) while left nouns attach as `compound` dependents.
+  - This prevents subject-anchor drift in clauses like:
+    - `Prime factorization is commonly used in mathematics.`
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression lock ensuring passive subject anchors to `factorization` (not `Prime`) in the prime-factorization passive clause.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for:
+    - `patient(used, factorization)` present
+    - `patient(used, prime)` absent.
+
 ## [1.1.12] - 2026-02-13
 
 Compared to `v1.1.11`.
