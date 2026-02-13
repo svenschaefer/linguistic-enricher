@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.7] - 2026-02-13
+
+Compared to `v1.1.6`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Added deterministic Stage 08 PP hardening for purpose chains with gerunds:
+    - `for + VBG` now emits `pobj` on the gerund token instead of default `dep` fallback.
+  - Added noun-like attachment handling for `VBG` in `for`-PP object contexts so coordinated nominal tails remain structurally attached (e.g., `auditing and security analysis`).
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened Stage 11 chunk fallback to skip VP fallback actor/theme synthesis when the VP head is already a `pobj` in dependency evidence.
+  - Prevents PP-object gerunds from being promoted to synthetic event centers by fallback.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression lock for:
+    - `Actions are recorded for auditing and security analysis.`
+    - asserts `pobj(for, auditing)`, coordinated nominal tail attachment, and no `dep(auditing, ...)` fallback.
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added regression lock ensuring chunk fallback does not emit synthetic `actor/theme` for VP heads functioning as `pobj`.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for:
+    - `patient(recorded, actions)`
+    - `beneficiary(recorded, auditing)`
+    - coordination structure anchored in PP object chain
+    - and no synthetic `actor/theme` with `auditing` as predicate.
+
 ## [1.1.6] - 2026-02-13
 
 Compared to `v1.1.5`.

@@ -224,3 +224,43 @@ test("runPipeline relations_extracted keeps passive modifier attached to partici
     false
   );
 });
+
+test("runPipeline relations_extracted keeps for+VBG purpose chain structural and avoids VBG fallback predicates", async function () {
+  const text = "Actions are recorded for auditing and security analysis.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const recordedId = tokenBySurface.get("recorded");
+  const actionsId = tokenBySurface.get("actions");
+  const auditingId = tokenBySurface.get("auditing");
+  const securityId = tokenBySurface.get("security");
+  assert.ok(recordedId);
+  assert.ok(actionsId);
+  assert.ok(auditingId);
+  assert.ok(securityId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "patient" && r.head.id === recordedId && r.dep.id === actionsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "beneficiary" && r.head.id === recordedId && r.dep.id === auditingId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "coordination" && r.head.id === auditingId && r.dep.id === securityId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.head.id === auditingId && (r.label === "actor" || r.label === "theme"); }),
+    false
+  );
+});
