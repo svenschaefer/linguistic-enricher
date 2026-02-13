@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.17`
+Current published version: `1.1.18`
 
 ## Versioning Strategy
 
@@ -219,6 +219,7 @@ Execution rule:
 - Scope:
   - reduce complex-sentence clause/PP head drift (`at`/connector-headed relation artifacts) without changing stable simple-case behavior.
 - Owners: Stage 08 (dominant), Stage 11 (secondary).
+- Status: completed and released.
 - Required gates:
   - Stage 08/11 unit regressions on complex variants.
   - end-to-end lock at `relations_extracted` for targeted long-sentence fixtures.
