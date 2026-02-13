@@ -346,3 +346,41 @@ test("runPipeline relations_extracted normalizes as well as into additive coordi
     false
   );
 });
+
+test("runPipeline relations_extracted suppresses contradictory passive fallback roles", async function () {
+  const text = "Reports are reviewed by supervisors.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const reviewedId = tokenBySurface.get("reviewed");
+  const reportsId = tokenBySurface.get("reports");
+  const supervisorsId = tokenBySurface.get("supervisors");
+  assert.ok(reviewedId);
+  assert.ok(reportsId);
+  assert.ok(supervisorsId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "patient" && r.head.id === reviewedId && r.dep.id === reportsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "agent" && r.head.id === reviewedId && r.dep.id === supervisorsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "actor" && r.head.id === reviewedId && r.dep.id === reportsId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === reviewedId && r.dep.id === supervisorsId; }),
+    false
+  );
+});
