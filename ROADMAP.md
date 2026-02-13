@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.18`
+Current published version: `1.1.19`
 
 ## Versioning Strategy
 
@@ -229,6 +229,7 @@ Execution rule:
 - Scope:
   - tighten fallback boundaries to prevent contradictory/noisy role injection in long passive/complement structures.
 - Owners: Stage 11 (dominant), Stage 08 (secondary).
+- Status: completed and released.
 - Required gates:
   - Stage 11 fallback-pattern unit locks (`chunk_fallback` boundaries).
   - end-to-end stability lock for `irs`/`webshop` long-chain fixtures.
