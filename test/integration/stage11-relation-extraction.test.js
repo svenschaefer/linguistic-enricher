@@ -546,6 +546,54 @@ test("runPipeline relations_extracted keeps sequential coordinated verbs structu
   );
 });
 
+test("runPipeline relations_extracted keeps comma-coordinated clause PP attached to starts (no at-headed theme)", async function () {
+  const text = "It starts at a given minimum value, tests each successive integer for primality.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const startsId = tokenBySurface.get("starts");
+  const testsId = tokenBySurface.get("tests");
+  const itId = tokenBySurface.get("it");
+  const valueId = tokenBySurface.get("value");
+  const integerId = tokenBySurface.get("integer");
+  const atId = tokenBySurface.get("at");
+  assert.ok(startsId);
+  assert.ok(testsId);
+  assert.ok(itId);
+  assert.ok(valueId);
+  assert.ok(integerId);
+  assert.ok(atId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "location" && r.head.id === startsId && r.dep.id === valueId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "actor" && r.head.id === testsId && r.dep.id === itId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === testsId && r.dep.id === integerId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === atId && r.dep.id === valueId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "coordination" && r.head.id === atId && r.dep.id === testsId; }),
+    false
+  );
+});
+
 test("runPipeline relations_extracted keeps inline multi-verb list coverage per predicate", async function () {
   const text = "Users can request changes, update reports, and assign supervisors.";
   const out = await api.runPipeline(text, { target: "relations_extracted" });

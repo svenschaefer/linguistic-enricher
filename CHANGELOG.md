@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.18] - 2026-02-13
+
+Compared to `v1.1.17`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Hardened Stage 08 comma-coordination and nominal-attachment behavior for complex clause variants:
+    - comma-separated verb coordination now selects the nearest non-boundary finite/base verb head before falling back,
+      preventing modifier participles from becoming coordination anchors in cases like:
+      - `It starts at a given minimum value, tests each successive integer for primality.`
+    - noun attachment scans now treat modifier-like `VBN` tokens as transparent in nominal spans, allowing stable PP-object
+      attachment (`pobj(value <- at)`) instead of object drift onto participles/verbs.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression lock for comma-coordinated complex variant:
+    - `conj(tests <- starts)` (no `conj(tests <- given)`)
+    - `pobj(value <- at)` (no `obj(value <- given)`).
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for:
+    - `location(starts, value)` present
+    - `actor(tests, it)` and `theme(tests, integer)` present
+    - no `theme(at, value)` and no `coordination(at, tests)`.
+
 ## [1.1.17] - 2026-02-13
 
 Compared to `v1.1.16`.

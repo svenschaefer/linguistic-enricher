@@ -205,6 +205,19 @@ function isNounLikeForAttachment(tokens, index) {
   return String(prev.surface || "").toLowerCase() === "for";
 }
 
+function isModifierLikeVbn(tokens, index) {
+  if (index < 0 || index >= tokens.length) {
+    return false;
+  }
+  const token = tokens[index];
+  if (getTag(token) !== "VBN") {
+    return false;
+  }
+  const prev = index > 0 ? tokens[index - 1] : null;
+  const prevTag = getTag(prev);
+  return isDetLikeTag(prevTag) || isAdjLikeTag(prevTag) || isAdpLikeTag(prevTag);
+}
+
 function isTemporalForPattern(tokens, prepIndex) {
   const next = prepIndex + 1 < tokens.length ? tokens[prepIndex + 1] : null;
   const nextNext = prepIndex + 2 < tokens.length ? tokens[prepIndex + 2] : null;
@@ -221,7 +234,13 @@ function nearestPrepInNominalSpanLeft(tokens, nounIndex) {
   for (let i = nounIndex - 1; i >= 0; i -= 1) {
     const token = tokens[i];
     const tag = getTag(token);
-    if (isClauseBoundaryToken(token) || isVerbLikeTag(tag)) {
+    if (isClauseBoundaryToken(token)) {
+      break;
+    }
+    if (isVerbLikeTag(tag)) {
+      if (isModifierLikeVbn(tokens, i)) {
+        continue;
+      }
       break;
     }
     if (isAdpLikeTag(tag)) {
@@ -242,10 +261,40 @@ function nearestVerbForObjectAttachmentLeft(tokens, nounIndex) {
       return -1;
     }
     if (isVerbLikeTag(tag)) {
+      if (isModifierLikeVbn(tokens, i)) {
+        continue;
+      }
       return i;
     }
   }
   return -1;
+}
+
+function nearestVerbForCommaConjLeft(tokens, fromIndex) {
+  let fallbackVerbIndex = -1;
+  for (let i = fromIndex - 1; i >= 0; i -= 1) {
+    const token = tokens[i];
+    if (isPunct(token)) {
+      if (String(token.surface || "") === ",") {
+        continue;
+      }
+      break;
+    }
+    if (coordinationTypeFromSurface(token.surface)) {
+      break;
+    }
+    const tag = getTag(token);
+    if (!isVerbLikeTag(tag)) {
+      continue;
+    }
+    if (fallbackVerbIndex < 0) {
+      fallbackVerbIndex = i;
+    }
+    if (tag !== "VBN") {
+      return i;
+    }
+  }
+  return fallbackVerbIndex;
 }
 
 function findCoordinatorTokenIdToRight(tokens, fromIndex) {
@@ -537,9 +586,7 @@ function buildSentenceDependencies(sentenceTokens) {
         continue;
       }
       if (prev && isPunct(prev) && String(prev.surface || "") === ",") {
-        const prevVerbIndex = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
-          return isVerbLikeTag(getTag(t));
-        });
+        const prevVerbIndex = nearestVerbForCommaConjLeft(sentenceTokens, i);
         if (prevVerbIndex >= 0 && !isSuchAsExemplarContext(sentenceTokens, i)) {
           const coordinatorTokenId = findCoordinatorTokenIdToRight(sentenceTokens, i);
           const coordinatorToken = coordinatorTokenId
