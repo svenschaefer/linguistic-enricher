@@ -498,3 +498,33 @@ test("runPipeline relations_extracted keeps inline multi-verb list coverage per 
   assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === assignId && r.dep.id === usersId; }), true);
   assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === assignId && r.dep.id === supervisorsId; }), true);
 });
+
+test("runPipeline relations_extracted anchors passive patient to factorization in prime-factorization clause", async function () {
+  const text = "Prime factorization is commonly used in mathematics.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const usedId = tokenBySurface.get("used");
+  const primeId = tokenBySurface.get("prime");
+  const factorizationId = tokenBySurface.get("factorization");
+  assert.ok(usedId);
+  assert.ok(primeId);
+  assert.ok(factorizationId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "patient" && r.head.id === usedId && r.dep.id === factorizationId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "patient" && r.head.id === usedId && r.dep.id === primeId; }),
+    false
+  );
+});

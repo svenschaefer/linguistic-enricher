@@ -374,6 +374,34 @@ test("stage08 emits passive subject for modal be + VBN construction", async func
   assert.equal(passiveSubj.head && passiveSubj.head.id, "t5");
 });
 
+test("stage08 anchors passive subject to rightmost noun in pre-passive noun phrase", async function () {
+  const text = "Prime factorization is commonly used in mathematics.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "Prime", pos: { tag: "NNP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 6, end: 19 }, surface: "factorization", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 20, end: 22 }, surface: "is", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 23, end: 31 }, surface: "commonly", pos: { tag: "RB" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 32, end: 36 }, surface: "used", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 37, end: 39 }, surface: "in", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 40, end: 51 }, surface: "mathematics", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 51, end: 52 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const passiveSubj = deps.find(function (a) {
+    return a.dep && a.dep.id === "t2" && a.label === "nsubjpass";
+  });
+  const primeCompound = deps.find(function (a) {
+    return a.dep && a.dep.id === "t1" && a.label === "compound";
+  });
+  assert.ok(passiveSubj);
+  assert.equal(passiveSubj.head && passiveSubj.head.id, "t5");
+  assert.ok(primeCompound);
+  assert.equal(primeCompound.head && primeCompound.head.id, "t2");
+  assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t1" && a.label === "nsubjpass"; }), false);
+});
+
 test("stage08 emits copula complement dependencies as acomp/attr", async function () {
   const text = "A webshop is an online store.";
   const tokens = [

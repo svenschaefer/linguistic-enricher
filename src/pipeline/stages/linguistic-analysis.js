@@ -266,6 +266,19 @@ function findCoordinatorTokenIdToRight(tokens, fromIndex) {
   return null;
 }
 
+function nearestNounRightBeforeIndex(tokens, fromIndex, stopExclusive) {
+  for (let i = fromIndex + 1; i < tokens.length && i < stopExclusive; i += 1) {
+    const token = tokens[i];
+    if (isClauseBoundaryToken(token)) {
+      break;
+    }
+    if (isNounLikeTag(getTag(token))) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 function isSuchAsExemplarContext(tokens, index) {
   for (let i = index - 1; i >= 1; i -= 1) {
     const token = tokens[i];
@@ -597,7 +610,19 @@ function buildSentenceDependencies(sentenceTokens) {
         });
         continue;
       }
-      if (prev && isNounLikeForAttachment(sentenceTokens, i - 1)) {
+      if (passiveHeadIndex >= 0 && i < passiveHeadIndex) {
+        const nextPassiveNoun = nearestNounRightBeforeIndex(sentenceTokens, i, passiveHeadIndex);
+        if (nextPassiveNoun >= 0) {
+          edges.push({
+            depId: token.id,
+            headId: sentenceTokens[nextPassiveNoun].id,
+            label: "compound",
+            isRoot: false
+          });
+          continue;
+        }
+      }
+      if (prev && isNounLikeForAttachment(sentenceTokens, i - 1) && !(passiveHeadIndex >= 0 && i < passiveHeadIndex)) {
         edges.push({
           depId: token.id,
           headId: prev.id,
