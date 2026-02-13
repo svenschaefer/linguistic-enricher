@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.11] - 2026-02-13
+
+Compared to `v1.1.10`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Hardened Stage 08 noun attachment for sequential coordinated clauses:
+    - noun objects now prefer the nearest left verb in the same local clause window when no preposition boundary intervenes.
+    - noun heads in determiner/adjective spans after a preposition now attach as `pobj` to that preposition (`at a minimum value` -> `pobj(value <- at)`).
+  - This prevents object flattening onto earlier coordinated predicates in patterns like:
+    - `It starts ... and tests each successive integer.`
+- `src/pipeline/stages/relation-extraction.js`
+  - Added deterministic coordination role propagation for verb `conj` edges:
+    - propagates `actor` across coordinated verb predicates when one side has an explicit actor relation.
+  - Keeps clause-level subject coverage stable across coordinated verb sequences without changing passive fallback policy.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression lock:
+    - `It starts at a minimum value and tests each successive integer.`
+    - asserts `pobj(value <- at)` and `obj(integer <- tests)` (and no `obj(integer <- starts)`).
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for sequential coordinated verbs:
+    - `actor(starts, it)`
+    - `actor(tests, it)`
+    - `theme(tests, integer)`
+    - `location(starts, value)`
+    - and no flattened `theme(starts, integer)`.
+
 ## [1.1.10] - 2026-02-13
 
 Compared to `v1.1.9`.

@@ -217,6 +217,37 @@ function isTemporalForPattern(tokens, prepIndex) {
   return isNounLikeTag(getTag(nextNext));
 }
 
+function nearestPrepInNominalSpanLeft(tokens, nounIndex) {
+  for (let i = nounIndex - 1; i >= 0; i -= 1) {
+    const token = tokens[i];
+    const tag = getTag(token);
+    if (isClauseBoundaryToken(token) || isVerbLikeTag(tag)) {
+      break;
+    }
+    if (isAdpLikeTag(tag)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function nearestVerbForObjectAttachmentLeft(tokens, nounIndex) {
+  for (let i = nounIndex - 1; i >= 0; i -= 1) {
+    const token = tokens[i];
+    const tag = getTag(token);
+    if (isClauseBoundaryToken(token)) {
+      break;
+    }
+    if (isAdpLikeTag(tag)) {
+      return -1;
+    }
+    if (isVerbLikeTag(tag)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 function buildAsWellAsHints(tokens) {
   const fixedByIndex = new Map();
   const conjByRightIndex = new Map();
@@ -498,6 +529,16 @@ function buildSentenceDependencies(sentenceTokens) {
         });
         continue;
       }
+      const prepSpanIndex = nearestPrepInNominalSpanLeft(sentenceTokens, i);
+      if (prepSpanIndex >= 0) {
+        edges.push({
+          depId: token.id,
+          headId: sentenceTokens[prepSpanIndex].id,
+          label: "pobj",
+          isRoot: false
+        });
+        continue;
+      }
       if (prev && isNounLikeForAttachment(sentenceTokens, i - 1)) {
         edges.push({
           depId: token.id,
@@ -517,14 +558,21 @@ function buildSentenceDependencies(sentenceTokens) {
         });
         continue;
       }
+      const objectVerbIndex = i > rootIndex
+        ? nearestVerbForObjectAttachmentLeft(sentenceTokens, i)
+        : -1;
       edges.push({
         depId: token.id,
-        headId: passiveHeadIndex >= 0 && i < passiveHeadIndex
+        headId: objectVerbIndex >= 0
+          ? sentenceTokens[objectVerbIndex].id
+          : (passiveHeadIndex >= 0 && i < passiveHeadIndex
           ? sentenceTokens[passiveHeadIndex].id
-          : rootToken.id,
-        label: passiveHeadIndex >= 0 && i < passiveHeadIndex
+          : rootToken.id),
+        label: objectVerbIndex >= 0
+          ? "obj"
+          : (passiveHeadIndex >= 0 && i < passiveHeadIndex
           ? "nsubjpass"
-          : (i < rootIndex ? "nsubj" : "obj"),
+          : (i < rootIndex ? "nsubj" : "obj")),
         isRoot: false
       });
       continue;
