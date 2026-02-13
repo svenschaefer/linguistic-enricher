@@ -374,6 +374,113 @@ Status update (post `v1.1.12` re-baseline):
 Tracking rule:
 - Blockers in this section MUST be resolved before claiming upstream structural-capture success criteria, because the baseline evaluation marks success criteria as not met while blockers remain.
 
+## 12.2) Consolidated Stage TODO Status (Stages 08-11)
+
+This section replaces the former per-stage files:
+- `src/pipeline/stages/linguistic-analysis.TODO.md`
+- `src/pipeline/stages/chunking.TODO.md`
+- `src/pipeline/stages/head-identification.TODO.md`
+- `src/pipeline/stages/relation-extraction.TODO.md`
+
+### Stage 08 - linguistic-analysis
+
+Status:
+- Completed (Cycles 1-8)
+- Runtime behavior stable
+- Unit/integration tests green
+
+Completed cycles:
+- Cycle 1: coordination evidence on `cc/conj` with `coordination_type` and `coordinator_token_id`.
+- Cycle 2: noun coordination linking for `and/or`.
+- Cycle 3: verb coordination coverage for `and/or`.
+- Cycle 4: comparative observations for `than` with `compare_gt|compare_lt|compare` labels and marker evidence.
+- Cycle 5: quantifier/scope observations for `each/every/all/some/no/only` with deterministic attachment.
+- Cycle 6: copula-frame observations (`subject/copula/complement`) with complement typing evidence.
+- Cycle 7: PP attachment observations (`head/marker/object`) with deterministic evidence.
+- Cycle 8: modality/negation scope observations with frozen policy:
+  - negation surfaces: `not`, `n't`, `never`
+  - `no` is quantifier-only (`quantifier_no`), not negation.
+
+Frozen policy summary:
+- Deterministic structural observation layer only.
+- Partial-parse guard rejects pre-existing Stage 08-owned annotation kinds.
+
+Deliverable status:
+- Stage 08 is functionally complete.
+
+### Stage 09 - chunking-pos-fsm (`chunking`)
+
+Status:
+- Completed (Cycles 1-8)
+- Runtime behavior stable
+- Unit/integration tests green
+
+Completed cycles:
+- Cycle 1: coordinator hard boundaries (`and/or`, `CC`) with coordinator emitted as `O`.
+- Cycle 2: VP refinement (aux/MD chain, lexical nucleus, optional NP/infinitival/adjacent PP complements).
+- Cycle 3: bounded VP PP-absorption deny-list (`for/at/in/than` remain separate PP).
+- Cycle 4: `pp_kind` metadata on PP chunks (surface-only mapping, fallback `generic`).
+- Cycle 5: MWE hardening to NP-only allow-list behavior (non-NP MWEs ignored for VP/PP shaping).
+- Cycle 6: NP modifier support extended to `JJ/JJR/JJS/VBN/VBG`.
+
+Frozen policy summary:
+- Deterministic greedy FSM.
+- Stable tie-break precedence: `VP > PP > NP`.
+- Surface-only PP subtype metadata (no semantic inference).
+
+Deliverable status:
+- Stage 09 is functionally complete.
+
+### Stage 10 - head-identification
+
+Status:
+- Completed (Cycles 0-5)
+- Runtime behavior stable
+- Unit/integration tests green
+
+Completed cycles:
+- Cycle 1: exclude `MD` from primary VP head candidates when lexical verb exists.
+- Cycle 2: matrix lexical verb preference with deterministic tie-break:
+  - incident degree (desc), token index (asc), token id (asc).
+- Cycle 3: deterministic VP participle demotion for:
+  - `given` + NP-like context
+  - conservative `DT + VBN + NP-like` context.
+- Cycle 4: `head_decision` audit payload on every `chunk_head`.
+- Cycle 5: finalization/documentation closure.
+
+Frozen policy summary:
+- Deterministic VP hardening against auxiliary/copula/participle drift.
+- Auditable head selection path emitted on all chunk heads.
+
+Deliverable status:
+- Stage 10 is functionally complete.
+
+### Stage 11 - relation-extraction
+
+Status:
+- Completed (Cycles 1-8)
+- Runtime behavior stable
+- Unit/integration tests green
+
+Completed cycles:
+- Cycle 1: baseline harness + hard invariants (`heads_identified` gate, index basis, chunk/chunk_head cardinality).
+- Cycle 2: VP predicate preservation against demoted chunk-head projection.
+- Cycle 3: modifier coverage (`amod`, optional `compound/nummod`).
+- Cycle 4: coordination metadata evidence (`coord_type`, `coord_token_id`, `coord_group_id`).
+- Cycle 5: PP evidence hardening + explicit `compare_*` relation support.
+- Cycle 6: unified modality binding (exactly one modality relation per `MD`, clause-window deterministic rule).
+- Cycle 7: copula-frame relation mapping with complement typing evidence.
+- Cycle 8: finalization/documentation closure.
+
+Supported mapping set (deterministic):
+- `actor`, `theme`, `patient`, `attribute`, `recipient`, `modifier`, `location`, `topic`, `agent`, `instrument`, `beneficiary`, `purpose`, `complement_clause`, `coordination`, `modality`, `negation`, `compare_*`, `copula`.
+
+Evidence coverage (deterministic):
+- coordination, PP (`prep_surface/prep_token_id/pobj_token_id`), modality, comparative, copula.
+
+Deliverable status:
+- Stage 11 is functionally complete.
+
 ## 13) Acceptance Criteria
 
 - Package is installable and runnable as an independent npm package.
