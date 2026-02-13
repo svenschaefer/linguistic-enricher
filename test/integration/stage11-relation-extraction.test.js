@@ -264,3 +264,43 @@ test("runPipeline relations_extracted keeps for+VBG purpose chain structural and
     false
   );
 });
+
+test("runPipeline relations_extracted keeps temporal for+CD+noun as prep object chain", async function () {
+  const text = "The system must retain reports for 10 years.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const retainId = tokenBySurface.get("retain");
+  const reportsId = tokenBySurface.get("reports");
+  const yearsId = tokenBySurface.get("years");
+  const tenId = tokenBySurface.get("10");
+  assert.ok(retainId);
+  assert.ok(reportsId);
+  assert.ok(yearsId);
+  assert.ok(tenId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === retainId && r.dep.id === reportsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "beneficiary" && r.head.id === retainId && r.dep.id === yearsId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "modifier" && r.head.id === yearsId && r.dep.id === tenId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === retainId && r.dep.id === yearsId; }),
+    false
+  );
+});

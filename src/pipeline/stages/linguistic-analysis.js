@@ -48,6 +48,10 @@ function isAdverbLikeTag(tag) {
   return /^RB/.test(tag);
 }
 
+function isCardinalTag(tag) {
+  return tag === "CD";
+}
+
 function isClauseBoundaryToken(token) {
   if (!token) {
     return false;
@@ -201,6 +205,18 @@ function isNounLikeForAttachment(tokens, index) {
   return String(prev.surface || "").toLowerCase() === "for";
 }
 
+function isTemporalForPattern(tokens, prepIndex) {
+  const next = prepIndex + 1 < tokens.length ? tokens[prepIndex + 1] : null;
+  const nextNext = prepIndex + 2 < tokens.length ? tokens[prepIndex + 2] : null;
+  if (!next || !nextNext) {
+    return false;
+  }
+  if (!isCardinalTag(getTag(next))) {
+    return false;
+  }
+  return isNounLikeTag(getTag(nextNext));
+}
+
 function buildSentenceDependencies(sentenceTokens) {
   const rootIndex = detectRootIndex(sentenceTokens);
   const passiveHeadIndex = detectPassiveHeadIndex(sentenceTokens);
@@ -296,14 +312,47 @@ function buildSentenceDependencies(sentenceTokens) {
     }
 
     if (isAdpLikeTag(tag)) {
-      const prevContent = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+      const temporalFor = lower === "for" && isTemporalForPattern(sentenceTokens, i);
+      const prevContent = temporalFor
+        ? nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+            return isVerbLikeTag(getTag(t));
+          })
+        : nearestIndex(sentenceTokens, i - 1, -1, function (t) {
+            const tTag = getTag(t);
+            return isVerbLikeTag(tTag) || isNounLikeTag(tTag);
+          });
+      const fallbackContent = nearestIndex(sentenceTokens, i - 1, -1, function (t) {
         const tTag = getTag(t);
         return isVerbLikeTag(tTag) || isNounLikeTag(tTag);
       });
       edges.push({
         depId: token.id,
-        headId: prevContent >= 0 ? sentenceTokens[prevContent].id : rootToken.id,
+        headId: prevContent >= 0
+          ? sentenceTokens[prevContent].id
+          : (fallbackContent >= 0 ? sentenceTokens[fallbackContent].id : rootToken.id),
         label: "prep",
+        isRoot: false
+      });
+      continue;
+    }
+
+    if (isCardinalTag(tag)) {
+      const nextNoun = nearestIndex(sentenceTokens, i + 1, 1, function (t) {
+        return isNounLikeTag(getTag(t));
+      });
+      if (nextNoun >= 0) {
+        edges.push({
+          depId: token.id,
+          headId: sentenceTokens[nextNoun].id,
+          label: "nummod",
+          isRoot: false
+        });
+        continue;
+      }
+      edges.push({
+        depId: token.id,
+        headId: rootToken.id,
+        label: "dep",
         isRoot: false
       });
       continue;
@@ -371,6 +420,16 @@ function buildSentenceDependencies(sentenceTokens) {
         edges.push({
           depId: token.id,
           headId: prev.id,
+          label: "pobj",
+          isRoot: false
+        });
+        continue;
+      }
+      const prevPrev = i > 1 ? sentenceTokens[i - 2] : null;
+      if (prev && isCardinalTag(getTag(prev)) && prevPrev && isAdpLikeTag(getTag(prevPrev))) {
+        edges.push({
+          depId: token.id,
+          headId: prevPrev.id,
           label: "pobj",
           isRoot: false
         });
