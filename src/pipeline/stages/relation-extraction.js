@@ -347,6 +347,33 @@ function roleFromDepLabel(depLabel, depTokenTag, headTokenTag) {
   return null;
 }
 
+function isSuchAsConnectorAmod(depBase, depTok, headTok, depByDep, tokenById) {
+  if (depBase !== "amod") {
+    return false;
+  }
+  if (!depTok || !headTok) {
+    return false;
+  }
+  if (lowerSurface(depTok) !== "such") {
+    return false;
+  }
+  const incomingToHead = depByDep.get(headTok.id) || [];
+  for (let i = 0; i < incomingToHead.length; i += 1) {
+    const edge = incomingToHead[i];
+    if (!edge || !edge.head || !edge.head.id) {
+      continue;
+    }
+    if (baseDepLabel(edge.label) !== "pobj") {
+      continue;
+    }
+    const maybeAs = tokenById.get(edge.head.id);
+    if (maybeAs && lowerSurface(maybeAs) === "as") {
+      return true;
+    }
+  }
+  return false;
+}
+
 function roleFromPrepSurface(surface) {
   const prep = String(surface || "").toLowerCase();
   if (prep === "in" || prep === "on" || prep === "at" || prep === "into" || prep === "inside") {
@@ -1070,6 +1097,9 @@ async function runStage(seed) {
     const depTok = tokenById.get(dep.dep.id);
     const headTok = tokenById.get(dep.head.id);
     const depBase = baseDepLabel(dep.label);
+    if (isSuchAsConnectorAmod(depBase, depTok, headTok, depByDep, tokenById)) {
+      continue;
+    }
     const mappedRole = roleFromDepLabel(dep.label, getTag(depTok), getTag(headTok));
     if (mappedRole) {
       let normalizedHead = isVerbLikeTag(getTag(headTok))

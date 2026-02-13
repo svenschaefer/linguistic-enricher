@@ -1075,6 +1075,7 @@ test("stage11 preserves such-as exemplars as membership structure (not root even
   assert.equal(rels.some(function (r) { return r.label === "exemplifies" && r.head.id === "t4" && r.dep.id === "t7"; }), true);
   assert.equal(rels.some(function (r) { return r.label === "exemplifies" && r.head.id === "t4" && r.dep.id === "t9"; }), true);
   assert.equal(rels.some(function (r) { return r.label === "exemplifies" && r.head.id === "t4" && r.dep.id === "t12"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "modifier" && r.head.id === "t7" && r.dep.id === "t5"; }), false);
   assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t9" && r.dep.id === "t2"; }), false);
   assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t12" && r.dep.id === "t2"; }), false);
 });

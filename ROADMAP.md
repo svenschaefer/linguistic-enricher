@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.13` (`v1.1.14` release candidate in progress)
+Current published version: `1.1.14` (`v1.1.15` release candidate in progress)
 
 ## Delivery Rule
 
@@ -18,7 +18,7 @@ Current published version: `1.1.13` (`v1.1.14` release candidate in progress)
 4. Run full test suite.
 5. Release only via `NPM_RELEASE.md` after blocker/degrading target for that cycle is green.
 
-## Completed Queue (`1.1.5`-`1.1.14`)
+## Completed Queue (`1.1.5`-`1.1.15`)
 
 ### `1.1.5` - Blocker 4.1: `such as` enumeration collapse
 - Owners: Stage 04 + Stage 08 + Stage 11
@@ -71,6 +71,19 @@ Current published version: `1.1.13` (`v1.1.14` release candidate in progress)
 - Scope:
   - suppress argument-like VP chunk fallback noise (`theme(Generated, primes)`-class artifacts).
   - keep nominal modifier heads from collapsing to PP markers (`modifier(for, educational)` -> nominal-head form).
+- Status: completed and released.
+
+### `1.1.15` - Residual noise cleanup `4.1` (`such as` connector artifacts)
+- Owners: Stage 08 + Stage 11
+- Scope:
+  - keep exemplar structure while suppressing connector-local residue in:
+    - `Each role grants permissions such as read, write, or administer.`
+  - preserve:
+    - `actor(grants, role)`
+    - `theme(grants, permissions)`
+    - `exemplifies(permissions, read|write|administer)`
+  - reduce:
+    - `modifier(read, such)`-class connector artifacts unless explicitly required.
 - Status: implemented and test-locked on release branch.
 
 ## Current Open Focus
@@ -84,21 +97,6 @@ With blockers cleared in the re-baseline, focus shifts to residual-noise cleanup
 - Continue one-noise-family-per-cycle cleanup with deterministic locks.
 - Keep one issue family per release cycle.
 - Preserve deterministic behavior and avoid schema changes in patch line.
-
-### `1.1.15` - Residual noise cleanup `4.1` (`such as` connector artifacts)
-- Scope:
-  - keep exemplar structure while suppressing connector-local residue in:
-    - `Each role grants permissions such as read, write, or administer.`
-  - preserve:
-    - `actor(grants, role)`
-    - `theme(grants, permissions)`
-    - `exemplifies(permissions, read|write|administer)`
-  - reduce:
-    - `modifier(read, such)`-class connector artifacts unless explicitly required.
-- Owners: Stage 08 + Stage 11.
-- Acceptance:
-  - unit lock for stable exemplar projection without connector-noise regressions.
-  - integration lock for expected exemplar set and absence of targeted artifact.
 
 ### `1.1.16` - Residual noise cleanup `6.1` (purpose PP tail shape)
 - Scope:

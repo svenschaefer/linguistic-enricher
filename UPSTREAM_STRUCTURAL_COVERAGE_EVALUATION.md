@@ -23,9 +23,8 @@ This re-baseline reran all evaluation sentences against current release-candidat
 - `3.1` Sequential Verbs: **Pass**
   - Present: `actor(starts, It)`, `location(starts, value)`, `actor(tests, It)`, `theme(tests, integer)`.
   - Coordinated predicate structure preserved.
-- `4.1` such as Enumeration: **Pass with minor connector residue**
+- `4.1` such as Enumeration: **Pass**
   - Present: `actor(grants, role)`, `theme(grants, permissions)`, `exemplifies(permissions, read|write|administer)`.
-  - Residual: connector-local `modifier(read, such)`.
 - `4.2` as well as: **Pass**
   - Present: `actor(includes, report)`, `theme(includes, fields)`, additive coordination retained.
 - `5.1` Inline List: **Pass**
@@ -142,14 +141,13 @@ This re-baseline reran all evaluation sentences against current release-candidat
 - `exemplifies(permissions, read)`
 - `exemplifies(permissions, write)`
 - `exemplifies(permissions, administer)`
-- residual connector edge: `modifier(read, such)`
 
 **Comparison vs expected**
 - Governing predicate/object and exemplar membership are preserved.
-- Connector residue remains minor.
+- No connector-local modifier artifact is emitted in this case.
 
 **Severity**
-- **Noise**
+- **Pass**
 
 ---
 
@@ -230,7 +228,7 @@ This re-baseline reran all evaluation sentences against current release-candidat
 
 - **Blockers:** none
 - **Degrading:** none in the original blocker/degrading classes
-- **Residual noise only:** `1.1`, `4.1`, `6.1`
+- **Residual noise only:** `1.1`, `6.1`
 
 ### Root-cause concentration (residual)
 - Residual artifacts remain predominantly tied to Stage 08 structural granularity and Stage 11 projection normalization decisions.

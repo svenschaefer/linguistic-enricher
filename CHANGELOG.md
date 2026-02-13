@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.15] - 2026-02-13
+
+Compared to `v1.1.14`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened Stage 11 dep-label projection to suppress connector-local `such as` noise:
+    - skips only `amod` edges where dependent surface is `such` and the head token is the `pobj` of `as`.
+  - This removes connector artifact relations such as `modifier(read, such)` while preserving:
+    - governing predicate/object edges (`actor(grants, role)`, `theme(grants, permissions)`),
+    - exemplar membership edges (`exemplifies(permissions, read|write|administer)`).
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Extended `such as` membership regression lock to assert connector artifact absence:
+    - no `modifier(read, such)`.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Extended end-to-end `such as` lock to assert no accepted `modifier(..., such)` relation is emitted.
+
 ## [1.1.14] - 2026-02-13
 
 Compared to `v1.1.13`.

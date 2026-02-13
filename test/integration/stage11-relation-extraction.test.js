@@ -160,12 +160,14 @@ test("runPipeline relations_extracted keeps such-as clause centered on grants an
   const grantsId = tokenBySurface.get("grants");
   const roleId = tokenBySurface.get("role");
   const permissionsId = tokenBySurface.get("permissions");
+  const suchId = tokenBySurface.get("such");
   const readId = tokenBySurface.get("read");
   const writeId = tokenBySurface.get("write");
   const administerId = tokenBySurface.get("administer");
   assert.ok(grantsId);
   assert.ok(roleId);
   assert.ok(permissionsId);
+  assert.ok(suchId);
   assert.ok(readId);
   assert.ok(writeId);
   assert.ok(administerId);
@@ -199,6 +201,10 @@ test("runPipeline relations_extracted keeps such-as clause centered on grants an
   );
   assert.equal(
     rels.some(function (r) { return r.label === "actor" && r.head.id === writeId && r.dep.id === roleId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "modifier" && r.dep.id === suchId; }),
     false
   );
 });
