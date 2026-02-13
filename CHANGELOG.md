@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.8] - 2026-02-13
+
+Compared to `v1.1.7`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Added deterministic temporal PP attachment hardening for `for + CD + noun` duration patterns.
+  - Stage 08 now emits:
+    - `prep` attached to governing verb for temporal `for` spans in this bounded pattern.
+    - `pobj` on the duration noun (`years`, `months`, etc.) even with an intervening cardinal token.
+    - `nummod` from cardinal duration token (`10`) to duration noun head.
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened chunk fallback to skip synthetic VP fallback actor/theme emissions when the VP head token is already a `pobj` in dependency evidence.
+  - Prevents PP-object tokens from being promoted to fallback predicate centers.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression lock for:
+    - `The system must retain reports for 10 years.`
+    - asserts `prep(for <- retain)`, `pobj(years <- for)`, and `nummod(10 -> years)`.
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added regression lock for temporal `prep+pobj` projection:
+    - accepted `beneficiary(retain, years)` and numeric modifier retention.
+  - Added fallback guard lock to avoid synthetic `actor/theme` when candidate VP head is a `pobj` token.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for:
+    - `theme(retain, reports)`
+    - `beneficiary(retain, years)`
+    - numeric modifier retention for `10`
+    - and no `theme(retain, years)` fallback misprojection.
+
 ## [1.1.7] - 2026-02-13
 
 Compared to `v1.1.6`.

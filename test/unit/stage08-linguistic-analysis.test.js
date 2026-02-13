@@ -446,3 +446,30 @@ test("stage08 emits pobj for for+VBG purpose chain and coordinated nominal tail"
   assert.equal(conj.head && conj.head.id, "t5");
   assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t5" && a.label === "dep"; }), false);
 });
+
+test("stage08 emits temporal for+CD+noun attachment as prep+pobj with nummod", async function () {
+  const text = "The system must retain reports for 10 years.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "The", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 10 }, surface: "system", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 11, end: 15 }, surface: "must", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 16, end: 22 }, surface: "retain", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 23, end: 30 }, surface: "reports", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 31, end: 34 }, surface: "for", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 35, end: 37 }, surface: "10", pos: { tag: "CD" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 38, end: 43 }, surface: "years", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t9", i: 8, segment_id: "s1", span: { start: 43, end: 44 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const prep = deps.find(function (a) { return a.dep && a.dep.id === "t6" && a.label === "prep"; });
+  const pobj = deps.find(function (a) { return a.dep && a.dep.id === "t8" && a.label === "pobj"; });
+  const nummod = deps.find(function (a) { return a.dep && a.dep.id === "t7" && a.label === "nummod"; });
+  assert.ok(prep);
+  assert.equal(prep.head && prep.head.id, "t4");
+  assert.ok(pobj);
+  assert.equal(pobj.head && pobj.head.id, "t6");
+  assert.ok(nummod);
+  assert.equal(nummod.head && nummod.head.id, "t8");
+});

@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.4`
+Current published version: `1.1.7`
 
 ## Delivery Rule
 
@@ -47,21 +47,21 @@ Current published version: `1.1.4`
 - Tests:
   - stage-level unit regressions + one `relations_extracted` e2e lock.
 
-## Degrading Queue (After All Blockers Are Green)
+## Degrading Queue (After All Blockers Are Green, ordered low -> high risk/complexity)
 
-### `1.1.8` - Degrading: passive-with-agent contradictory fallback noise
+### `1.1.8` - Degrading: temporal PP `for 10 years` attachment
 - Owners: Stage 08 + Stage 11
 
-### `1.1.9` - Degrading: sequential coordinated verbs (subject propagation + PP role flattening)
+### `1.1.9` - Degrading: `as well as` additive coordination normalization
 - Owners: Stage 08 + Stage 11
 
-### `1.1.10` - Degrading: `as well as` additive coordination normalization
+### `1.1.10` - Degrading: passive-with-agent contradictory fallback noise
 - Owners: Stage 08 + Stage 11
 
-### `1.1.11` - Degrading: inline multi-verb lists (`request/update/assign` over-absorption)
+### `1.1.11` - Degrading: sequential coordinated verbs (subject propagation + PP role flattening)
 - Owners: Stage 08 + Stage 11
 
-### `1.1.12` - Degrading: temporal PP `for 10 years` attachment
+### `1.1.12` - Degrading: inline multi-verb lists (`request/update/assign` over-absorption)
 - Owners: Stage 08 + Stage 11
 
 For each degrading cycle, use the same mandatory cycle template and full release gates.

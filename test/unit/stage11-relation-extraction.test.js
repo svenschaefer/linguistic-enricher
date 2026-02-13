@@ -324,6 +324,42 @@ test("stage11 chunk fallback skips VP heads that are prep objects", async functi
   assert.equal(rels.some(function (r) { return r.head.id === "t5" && (r.label === "actor" || r.label === "theme"); }), false);
 });
 
+test("stage11 emits beneficiary for temporal for+CD+noun prep+pobj chain", async function () {
+  const text = "The system must retain reports for 10 years.";
+  const tokens = [
+    token("t1", 0, "The", "DT", 0, 3),
+    token("t2", 1, "system", "NN", 4, 10),
+    token("t3", 2, "must", "MD", 11, 15),
+    token("t4", 3, "retain", "VB", 16, 22),
+    token("t5", 4, "reports", "NNS", 23, 30),
+    token("t6", 5, "for", "IN", 31, 34),
+    token("t7", 6, "10", "CD", 35, 37),
+    token("t8", 7, "years", "NNS", 38, 43),
+    token("t9", 8, ".", ".", 43, 44)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "The system", "NP", { start: 0, end: 10 }),
+    chunk("c2", ["t3", "t4", "t5"], "must retain reports", "VP", { start: 11, end: 30 }),
+    chunk("c3", ["t6", "t7", "t8"], "for 10 years", "PP", { start: 31, end: 43 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t4"),
+    chunkHead("h3", "c3", "t6"),
+    depObs("d1", "t4", null, "root", true),
+    depObs("d2", "t2", "t4", "nsubj", false),
+    depObs("d3", "t3", "t4", "aux", false),
+    depObs("d4", "t5", "t4", "obj", false),
+    depObs("d5", "t6", "t4", "prep", false),
+    depObs("d6", "t8", "t6", "pobj", false),
+    depObs("d7", "t7", "t8", "nummod", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "beneficiary" && r.head.id === "t4" && r.dep.id === "t8"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "modifier" && r.dep.id === "t7"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t4" && r.dep.id === "t8"; }), false);
+});
+
 test("stage11 baseline fixture: webshop copula sentence is deterministic", async function () {
   const text = "A webshop is an online store.";
   const tokens = [
