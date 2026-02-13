@@ -74,3 +74,4 @@ Thumbs.db
 *-live-output-cold.json
 *-live-output-warm.json
 live-output-summary.json
+.npmrc
