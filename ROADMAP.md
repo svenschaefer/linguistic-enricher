@@ -74,6 +74,62 @@ Current published version: `1.1.12`
   - End-to-end `relations_extracted` lock.
   - Full release gates via `NPM_RELEASE.md`.
 
+## Remaining Issues Plan (from `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` re-baseline)
+
+### Priority rule
+- Resolve blocker `2.2` first, then run cleanup cycles for residual degrading/noise cases.
+- Keep one issue family per release cycle.
+- Preserve deterministic behavior and avoid schema changes in patch line.
+
+### `1.1.13` - Blocker `2.2` passive subject anchor drift
+- Scope:
+  - Ensure passive subject anchoring for `Prime factorization is commonly used in mathematics.` resolves to `factorization` as patient argument of `used`.
+  - Keep `modifier(used, commonly)` and location attachment stable.
+- Owners: Stage 08 (dominant), Stage 11 (secondary).
+- Acceptance:
+  - unit lock for passive NP head anchoring in Stage 08.
+  - integration lock for `patient(used, factorization)` in `relations_extracted`.
+
+### `1.1.14` - Residual noise cleanup `1.1` (simple passive extras)
+- Scope:
+  - Reduce non-core noise in `Generated primes may be used for educational purposes.`:
+    - remove/avoid extra `theme(Generated, primes)` where passive core is already explicit.
+    - keep `patient(used, primes)`, `modality(used, may)`, and PP role relation stable.
+- Owners: Stage 08 (dominant), Stage 11 (secondary fallback/normalization).
+- Acceptance:
+  - unit lock for passive core-only argument structure.
+  - integration lock ensuring required edges stay and noise edge is absent.
+
+### `1.1.15` - Residual noise cleanup `4.1` (`such as` connector artifacts)
+- Scope:
+  - Keep exemplar structure while suppressing connector artifacts in:
+    - `Each role grants permissions such as read, write, or administer.`
+  - Preserve:
+    - `actor(grants, role)`
+    - `theme(grants, permissions)`
+    - `exemplifies(permissions, read|write|administer)`
+  - Reduce:
+    - `modifier(as, such)`-style connector debris unless explicitly required.
+- Owners: Stage 08 + Stage 11.
+- Acceptance:
+  - unit lock for stable exemplar projection without connector-noise regressions.
+  - integration lock for expected exemplar set and absence of targeted artifact.
+
+### `1.1.16` - Residual noise cleanup `6.1` (purpose PP tail shape)
+- Scope:
+  - Keep:
+    - `patient(recorded, Actions)`
+    - `beneficiary(recorded, auditing)`
+  - Improve coordinated tail representation for `security analysis` to reduce structural ambiguity/noise while keeping no standalone event center for `auditing`.
+- Owners: Stage 08 + Stage 11.
+- Acceptance:
+  - unit lock for purpose-PP coordinated nominal tail structure.
+  - integration lock for stable purpose relation and no event-like fallback for PP object tokens.
+
+### Post-cycle gate
+- After `1.1.13`-`1.1.16`, rerun and update `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md`.
+- Mark upstream structural-capture success only if no blocker remains and residual degrading/noise cases are within accepted tolerance.
+
 ## Release Gate
 
 - Use `NPM_RELEASE.md` exactly for every release:
