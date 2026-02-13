@@ -679,6 +679,61 @@ function maybeAddTokenHeuristicRelations(addRelation, tokens) {
 
 }
 
+function maybeAddCoordinationRolePropagation(addRelation, relations, dependencyObs, tokenById, resolvePredicateForRelation) {
+  if (!Array.isArray(dependencyObs) || dependencyObs.length === 0) {
+    return;
+  }
+
+  function propagateRoleAcrossConj(fromPredicateId, toPredicateId, dep, role) {
+    for (let i = 0; i < relations.length; i += 1) {
+      const rel = relations[i];
+      if (!rel || rel.predicateId !== fromPredicateId || rel.role !== role) {
+        continue;
+      }
+      const coordEvidence = depCoordinationEvidence(dep);
+      addRelation(
+        toPredicateId,
+        rel.argumentId,
+        role,
+        {
+          pattern: "coordination_role_propagation",
+          dependency_label: "conj",
+          propagated_role: role,
+          sentence_id: rel.sentenceId,
+          source_predicate_token_id: dep.head.id,
+          target_predicate_token_id: dep.dep.id,
+          coord_type: coordEvidence ? coordEvidence.coordinationType : null,
+          coord_token_id: coordEvidence ? coordEvidence.coordinatorTokenId : null
+        }
+      );
+    }
+  }
+
+  for (let i = 0; i < dependencyObs.length; i += 1) {
+    const dep = dependencyObs[i];
+    if (!dep || dep.is_root || baseDepLabel(dep.label) !== "conj" || !dep.head || !dep.dep) {
+      continue;
+    }
+    const headTok = tokenById.get(dep.head.id);
+    const depTok = tokenById.get(dep.dep.id);
+    if (!headTok || !depTok) {
+      continue;
+    }
+    if (!isVerbLikeTag(getTag(headTok)) || !isVerbLikeTag(getTag(depTok))) {
+      continue;
+    }
+
+    const fromHead = resolvePredicateForRelation(dep.head.id);
+    const fromDep = resolvePredicateForRelation(dep.dep.id);
+    if (!fromHead || !fromDep || fromHead === fromDep) {
+      continue;
+    }
+
+    propagateRoleAcrossConj(fromHead, fromDep, dep, "actor");
+    propagateRoleAcrossConj(fromDep, fromHead, dep, "actor");
+  }
+}
+
 function isExistingStage11Relation(annotation) {
   return Boolean(
     annotation &&
@@ -1010,6 +1065,7 @@ async function runStage(seed) {
     }
   }
 
+  maybeAddCoordinationRolePropagation(addRelation, relations, dependencyObs, tokenById, resolvePredicateForRelation);
   maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead, depByDep);
   maybeAddTokenHeuristicRelations(addRelation, tokens);
 

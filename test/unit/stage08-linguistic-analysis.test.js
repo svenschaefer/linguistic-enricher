@@ -506,3 +506,32 @@ test("stage08 normalizes as well as into noun coordination with connector fixed 
   assert.equal(secondAs.label, "fixed");
   assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t7" && a.label === "advmod"; }), false);
 });
+
+test("stage08 keeps sequential coordinated-verb attachments local to each predicate", async function () {
+  const text = "It starts at a minimum value and tests each successive integer.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 2 }, surface: "It", pos: { tag: "PRP" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 3, end: 9 }, surface: "starts", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 10, end: 12 }, surface: "at", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 13, end: 14 }, surface: "a", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 15, end: 22 }, surface: "minimum", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 23, end: 28 }, surface: "value", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 29, end: 32 }, surface: "and", pos: { tag: "CC" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 33, end: 38 }, surface: "tests", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t9", i: 8, segment_id: "s1", span: { start: 39, end: 43 }, surface: "each", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t10", i: 9, segment_id: "s1", span: { start: 44, end: 54 }, surface: "successive", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t11", i: 10, segment_id: "s1", span: { start: 55, end: 62 }, surface: "integer", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t12", i: 11, segment_id: "s1", span: { start: 62, end: 63 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const valuePobj = deps.find(function (a) { return a.dep && a.dep.id === "t6" && a.label === "pobj"; });
+  const integerObj = deps.find(function (a) { return a.dep && a.dep.id === "t11" && a.label === "obj"; });
+
+  assert.ok(valuePobj);
+  assert.equal(valuePobj.head && valuePobj.head.id, "t3");
+  assert.ok(integerObj);
+  assert.equal(integerObj.head && integerObj.head.id, "t8");
+  assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t11" && a.head && a.head.id === "t2" && a.label === "obj"; }), false);
+});
