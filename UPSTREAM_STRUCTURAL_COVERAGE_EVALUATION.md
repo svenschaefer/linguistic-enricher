@@ -4,6 +4,52 @@ Date: 2026-02-13
 Scope: evaluation-only of upstream structural capture (segmentation, dependency/role extraction, relation construction).  
 Target: `relations_extracted` output with `parsed` dependency trace used for origin analysis.
 
+## Re-Baseline (Post `v1.1.12`) - 2026-02-13
+
+This re-baseline reran all evaluation sentences against current `main` (`v1.1.12` behavior).
+
+### Re-baseline outcome by test
+- `1.1` Simple Passive: **Pass with minor noise**
+  - Present: `patient(used, primes)`, `modality(used, may)`, PP role now emitted as `beneficiary(used, purposes)`.
+  - Residual noise: extra `theme(Generated, primes)`, `modifier(for, educational)`.
+- `1.2` Passive with Agent: **Pass**
+  - Present: `patient(reviewed, Reports)`, `agent(reviewed, supervisors)`.
+  - Prior contradictory fallback (`actor/theme`) no longer emitted.
+- `2.1` Copula with Attribute: **Pass**
+  - Present: `actor(is, factor)`, `attribute(is, prime)` (+ `copula(is, prime)`).
+- `2.2` Copula + Event in Same Sentence: **Open (Blocker)**
+  - Present: `modifier(used, commonly)`, `location(used, mathematics)`.
+  - Missing/incorrect core argument anchor: emitted `patient(used, Prime)` instead of expected subject anchor on `factorization`.
+  - Origin remains upstream structural anchoring in Stage 08 passive subject attachment for this noun phrase shape.
+- `3.1` Sequential Verbs: **Pass**
+  - Present: `actor(starts, It)`, `location(starts, value)`, `actor(tests, It)`, `theme(tests, integer)`.
+  - No flattened `theme(starts, integer)` in accepted output.
+- `4.1` such as Enumeration: **Pass with minor connector noise**
+  - Present: `actor(grants, role)`, `theme(grants, permissions)`, `exemplifies(permissions, read|write|administer)`.
+  - Residual: `modifier(as, such)` and exemplar-internal coordination relation.
+- `4.2` as well as: **Pass (structural)**
+  - Present: `actor(includes, report)`, `theme(includes, fields)`, additive coordination preserved.
+- `5.1` Inline List: **Pass**
+  - Present per predicate:
+    - `actor(request, Users)` + `theme(request, changes)`
+    - `actor(update, Users)` + `theme(update, reports)`
+    - `actor(assign, Users)` + `theme(assign, supervisors)`
+- `6.1` Purpose PP: **Pass with residual NP-tail shape noise**
+  - Present: `patient(recorded, Actions)`, `beneficiary(recorded, auditing)`.
+  - No standalone event projection for `auditing`.
+  - Residual: coordinated nominal tail represented as `coordination(auditing, security)` + `modifier(security, analysis)`.
+- `6.2` Temporal Modifier: **Pass**
+  - Present: `actor(retain, system)`, `theme(retain, reports)`, temporal PP now emitted as `beneficiary(retain, years)` + `modifier(years, 10)`.
+
+### Re-baseline overall assessment
+- **Resolved from baseline:** 1.2, 2.1, 3.1, 4.1, 4.2, 5.1, 6.1, 6.2.
+- **Remaining blocker:** 2.2 (`Prime factorization is commonly used in mathematics.` patient anchor still collapses to `Prime`).
+- **Residual degrading/noise cases:** 1.1, 4.1, 6.1 (extra modifier/theme artifacts or NP-tail head choices).
+
+### Current root-cause concentration
+- **Dominant remaining source:** Stage 08 (`src/pipeline/stages/linguistic-analysis.js`) for passive-subject anchor selection in mixed noun phrase shapes.
+- **Secondary expression:** Stage 11 consumes available structure correctly in most rerun cases; current gap is mostly upstream input fidelity.
+
 ## Test 1.1 - Simple Passive
 **Input**  
 `Generated primes may be used for educational purposes.`

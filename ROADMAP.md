@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.11`
+Current published version: `1.1.12`
 
 ## Delivery Rule
 
@@ -18,7 +18,7 @@ Current published version: `1.1.11`
 4. Run full test suite.
 5. Release only via `NPM_RELEASE.md` after blocker/degrading target for that cycle is green.
 
-## Blocker Queue (Execute First)
+## Completed Queue (`1.1.5`-`1.1.12`)
 
 ### `1.1.5` - Blocker 4.1: `such as` enumeration collapse
 - Owners: Stage 04 + Stage 08 + Stage 11
@@ -26,45 +26,53 @@ Current published version: `1.1.11`
   - Stage 04: narrow disambiguation to avoid `grants -> NNS` in the target clause frame.
   - Stage 08: keep root/dependency skeleton centered on finite predicate once POS is corrected.
   - Stage 11: deterministic normalization for `such as` so exemplars are not promoted to root events and are not dropped.
-- Stop condition:
-  - Evaluation sentence yields stable predicate/object for `grants` and preserves exemplars as membership/coordination structure in `relations_extracted`.
-- Tests:
-  - stage-level unit regressions + one `relations_extracted` e2e lock.
+- Status: completed and released.
 
 ### `1.1.6` - Blocker 2.1/2.2: copula complement + passive subject drift in mixed copula/passive sentences
 - Owners: Stage 08 + Stage 11
 - Scope:
   - Stage 08 emits explicit copula complement dependency (`attr`/`acomp` equivalent).
   - Stage 11 projects deterministic `attribute(...)` relation from that structure.
-- Tests:
-  - stage-level unit regressions + one `relations_extracted` e2e lock.
+- Status: partially resolved in release scope (`2.1` resolved, `2.2` residual blocker remains).
 
 ### `1.1.7` - Blocker 6.1: purpose PP `for + VBG` and coordinated nominal purpose
 - Owners: Stage 08 + Stage 11
 - Scope:
   - stabilize PP object-chain so gerund complements do not become fallback predicate centers.
   - preserve coordination inside the PP purpose phrase.
-- Tests:
-  - stage-level unit regressions + one `relations_extracted` e2e lock.
-
-## Degrading Queue (After All Blockers Are Green, ordered low -> high risk/complexity)
+- Status: completed and released.
 
 ### `1.1.8` - Degrading: temporal PP `for 10 years` attachment
 - Owners: Stage 08 + Stage 11
+- Status: completed and released.
 
 ### `1.1.9` - Degrading: `as well as` additive coordination normalization
 - Owners: Stage 08 + Stage 11
+- Status: completed and released.
 
 ### `1.1.10` - Degrading: passive-with-agent contradictory fallback noise
 - Owners: Stage 08 + Stage 11
+- Status: completed and released.
 
 ### `1.1.11` - Degrading: sequential coordinated verbs (subject propagation + PP role flattening)
 - Owners: Stage 08 + Stage 11
+- Status: completed and released.
 
 ### `1.1.12` - Degrading: inline multi-verb lists (`request/update/assign` over-absorption)
 - Owners: Stage 08 + Stage 11
+- Status: completed and released.
 
-For each degrading cycle, use the same mandatory cycle template and full release gates.
+## Current Open Focus
+
+### `1.1.13` candidate - Residual blocker from re-baseline (`2.2`)
+- Case: `Prime factorization is commonly used in mathematics.`
+- Goal:
+  - preserve passive subject anchor on `factorization` (not adjective modifier token `Prime`) for `patient(used, factorization)` level fidelity.
+- Owners: Stage 08 (dominant), Stage 11 (secondary consumer).
+- Gates:
+  - Stage-level unit regression.
+  - End-to-end `relations_extracted` lock.
+  - Full release gates via `NPM_RELEASE.md`.
 
 ## Release Gate
 

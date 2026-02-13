@@ -325,17 +325,27 @@
 Authoritative reference:
 - `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` (evaluation-only baseline; target output = `relations_extracted`).
 
+Status update (post `v1.1.12` re-baseline):
+- Resolved and released from original baseline set: `1.2`, `2.1`, `3.1`, `4.1`, `4.2`, `5.1`, `6.1`, `6.2`.
+- Remaining blocker: `2.2` (`Prime factorization is commonly used in mathematics.` passive subject anchor still resolves to `Prime` instead of `factorization`).
+- Residual degrading/noise to monitor: `1.1`, `4.1`, `6.1` (extra modifier/theme artifacts or NP-tail head choices).
+- Execution rule:
+  - treat `2.2` as the next mandatory hardening cycle before declaring full upstream structural-capture success.
+
 ### Blockers
 
-- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve copula/passive core argument structure so copula complements and passive subjects remain explicit and lossless in upstream relations (no collapse of attribute/complement signals, no subject-anchor drift in passive clauses).
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve copula/passive core argument structure so copula complements and passive subjects remain explicit and lossless in upstream relations (no collapse of attribute/complement signals, no subject-anchor drift in passive clauses).  
+  Current open item: fix residual `2.2` passive subject anchor drift (`used <- factorization`).
   - Test gate: add/extend a regression unit test at the originating stage.
   - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
 
-- `[Owner: Stage 04 (contributing), Stage 08 (dominant), Stage 11 (secondary)]` Preserve enumeration/list semantics for `such as` constructions so governing predicate/object relations and exemplar membership are emitted without promoting exemplars to unrelated root events.
+- `[Owner: Stage 04 (contributing), Stage 08 (dominant), Stage 11 (secondary)]` Preserve enumeration/list semantics for `such as` constructions so governing predicate/object relations and exemplar membership are emitted without promoting exemplars to unrelated root events.  
+  Re-baseline status: resolved in `1.1.5` (retain regression lock).
   - Test gate: add/extend a regression unit test at the originating stage.
   - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
 
-- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve purpose-PP and coordinated nominal purpose structure (`for ... and ...`) as attached purpose/complement relations, without reclassifying gerund-like complements as standalone event predicates.
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve purpose-PP and coordinated nominal purpose structure (`for ... and ...`) as attached purpose/complement relations, without reclassifying gerund-like complements as standalone event predicates.  
+  Re-baseline status: resolved in `1.1.7` (retain regression lock).
   - Test gate: add/extend a regression unit test at the originating stage.
   - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
 
