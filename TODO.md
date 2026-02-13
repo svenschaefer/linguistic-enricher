@@ -325,10 +325,11 @@
 Authoritative reference:
 - `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` (evaluation-only baseline; target output = `relations_extracted`).
 
-Status update (post `v1.1.12` re-baseline):
+Status update (post `v1.1.14` re-baseline):
 - Resolved and released from original baseline set: `1.2`, `2.1`, `2.2`, `3.1`, `4.1`, `4.2`, `5.1`, `6.1`, `6.2`.
 - `2.2` was resolved in `v1.1.13` (passive subject anchor now lands on `factorization` for the prime-factorization passive case).
-- Residual degrading/noise to monitor: `1.1`, `4.1`, `6.1` (extra modifier/theme artifacts or NP-tail head choices).
+- `1.1` residual fallback noise was reduced in `v1.1.14` (retain regression lock).
+- Residual degrading/noise to monitor: `4.1`, `6.1` (connector/tail-shape artifacts).
 - Execution rule:
   - keep blocker set at zero while guarding resolved cases with regression locks.
   - prioritize residual degrading/noise cleanup cycles next.

@@ -488,11 +488,11 @@ test("stage11 baseline fixture: generated primes sentence has stable relation id
     "rel-08d21b21c09c",
     "rel-0b7175799c82",
     "rel-3158448a5294",
-    "rel-a14a8d95cc70",
-    "rel-c6e1aa6149b4"
+    "rel-c6e1aa6149b4",
+    "rel-d021a9ec55ff"
   ]);
   assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "modifier" && r.dep.id === "t1"; }), true);
-  assert.equal(rels.some(function (r) { return r.head.id === "t6" && r.label === "modifier" && r.dep.id === "t7"; }), true);
+  assert.equal(rels.some(function (r) { return r.head.id === "t8" && r.label === "modifier" && r.dep.id === "t7"; }), true);
   const modality = rels.filter(function (r) { return r.label === "modality"; });
   assert.equal(modality.length, 1);
   assert.equal(modality[0].head.id, "t5");
@@ -502,6 +502,39 @@ test("stage11 baseline fixture: generated primes sentence has stable relation id
   assert.equal(modEvidence.md_token_id, "t3");
   assert.equal(modEvidence.md_surface, "may");
   assert.equal(modEvidence.chosen_predicate_token_id, "t5");
+});
+
+test("stage11 skips VP chunk fallback when VP chunk is argument-like by dependency evidence", async function () {
+  const text = "Generated primes may be used for educational purposes.";
+  const tokens = [
+    token("t1", 0, "Generated", "VBN", 0, 9),
+    token("t2", 1, "primes", "NNS", 10, 16),
+    token("t3", 2, "may", "MD", 17, 20),
+    token("t4", 3, "be", "VB", 21, 23),
+    token("t5", 4, "used", "VBN", 24, 28),
+    token("t6", 5, "for", "IN", 29, 32),
+    token("t7", 6, "educational", "JJ", 33, 44),
+    token("t8", 7, "purposes", "NNS", 45, 53)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "Generated primes", "VP", { start: 0, end: 16 }),
+    chunk("c2", ["t3", "t4", "t5"], "may be used", "VP", { start: 17, end: 28 }),
+    chunk("c3", ["t6", "t7", "t8"], "for educational purposes", "PP", { start: 29, end: 53 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t5"),
+    chunkHead("h3", "c3", "t6"),
+    depObs("d1", "t5", null, "root", true),
+    depObs("d2", "t2", "t5", "nsubjpass", false),
+    depObs("d3", "t3", "t5", "aux", false),
+    depObs("d4", "t6", "t5", "prep", false),
+    depObs("d5", "t8", "t6", "pobj", false),
+    depObs("d6", "t7", "t8", "amod", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "patient" && r.head.id === "t5" && r.dep.id === "t2"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t1" && r.dep.id === "t2"; }), false);
 });
 
 test("stage11 invariant: rejects missing chunk_head for accepted chunk", async function () {

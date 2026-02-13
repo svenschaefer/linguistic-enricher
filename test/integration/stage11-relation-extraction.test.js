@@ -121,8 +121,14 @@ test("runPipeline relations_extracted emits passive subject relation for may be 
   const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
   const usedId = tokenBySurface.get("used");
   const primesId = tokenBySurface.get("primes");
+  const generatedId = tokenBySurface.get("generated");
+  const forId = tokenBySurface.get("for");
+  const educationalId = tokenBySurface.get("educational");
   assert.ok(usedId);
   assert.ok(primesId);
+  assert.ok(generatedId);
+  assert.ok(forId);
+  assert.ok(educationalId);
 
   const rels = out.annotations.filter(function (a) {
     return a.kind === "dependency" &&
@@ -134,6 +140,14 @@ test("runPipeline relations_extracted emits passive subject relation for may be 
   assert.equal(
     rels.some(function (r) { return r.label === "patient" && r.head.id === usedId && r.dep.id === primesId; }),
     true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === generatedId && r.dep.id === primesId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "modifier" && r.head.id === forId && r.dep.id === educationalId; }),
+    false
   );
 });
 

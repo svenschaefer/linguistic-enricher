@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.14] - 2026-02-13
+
+Compared to `v1.1.13`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened Stage 11 chunk fallback to skip VP fallback synthesis for argument-like VP chunks when dependency evidence already marks chunk tokens as external arguments (`nsubj|nsubjpass|obj|dobj|iobj|pobj` to an external head).
+  - This suppresses residual passive-noise artifacts such as `theme(Generated, primes)` in:
+    - `Generated primes may be used for educational purposes.`
+  - Hardened modifier normalization for dep-label modifiers (`amod|compound|nummod`):
+    - when chunk-head normalization would collapse a nominal modifier head onto an adposition (`IN|TO`), Stage 11 now preserves the original nominal head token.
+  - This removes PP-marker-centered modifier artifacts such as `modifier(for, educational)` and keeps nominal attachment (`modifier(purposes, educational)`).
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Updated baseline fixture lock for generated-primes modifier head normalization.
+  - Added regression lock ensuring VP chunk fallback is skipped for argument-like VP chunks (no synthetic `theme(Generated, primes)`).
+- `test/integration/stage11-relation-extraction.test.js`
+  - Extended passive `may be used` end-to-end lock:
+    - required `patient(used, primes)` still present,
+    - `theme(Generated, primes)` absent,
+    - `modifier(for, educational)` absent.
+
 ## [1.1.13] - 2026-02-13
 
 Compared to `v1.1.12`.

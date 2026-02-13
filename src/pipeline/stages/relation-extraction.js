@@ -21,6 +21,10 @@ function isNoun(tag) {
   return tag === "NN" || tag === "NNS" || tag === "NNP" || tag === "NNPS";
 }
 
+function isAdpositionTag(tag) {
+  return tag === "IN" || tag === "TO";
+}
+
 function isVerbLikeTag(tag) {
   return tag === "VB" || tag === "VBD" || tag === "VBG" || tag === "VBN" || tag === "VBP" || tag === "VBZ" || tag === "MD";
 }
@@ -414,6 +418,8 @@ function isCoordToken(chunk) {
 }
 
 function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHeadByChunkId, tokenById, depByHead, depByDep) {
+  const ARGUMENT_LIKE_DEP_LABELS = new Set(["nsubj", "nsubjpass", "obj", "dobj", "iobj", "pobj"]);
+
   function nearestPrevNP(idx) {
     for (let i = idx - 1; i >= 0; i -= 1) {
       const c = chunks[i];
@@ -490,6 +496,22 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
         return child && baseDepLabel(child.label) === "pobj" && child.dep && child.dep.id && tokenById.has(child.dep.id);
       });
     });
+    const chunkTokenSet = new Set(Array.isArray(chunk.tokenIds) ? chunk.tokenIds : []);
+    const isArgumentLikeVpChunk = Array.from(chunkTokenSet).some(function (tokenId) {
+      const incoming = depByDep.get(tokenId) || [];
+      return incoming.some(function (d) {
+        if (!d || !d.head || !d.head.id) {
+          return false;
+        }
+        if (chunkTokenSet.has(d.head.id)) {
+          return false;
+        }
+        return ARGUMENT_LIKE_DEP_LABELS.has(baseDepLabel(d.label));
+      });
+    });
+    if (isArgumentLikeVpChunk) {
+      continue;
+    }
     const sentenceId = predTok.segment_id;
 
     const prevNP = nearestPrevNP(i);
@@ -1047,11 +1069,22 @@ async function runStage(seed) {
     }
     const depTok = tokenById.get(dep.dep.id);
     const headTok = tokenById.get(dep.head.id);
+    const depBase = baseDepLabel(dep.label);
     const mappedRole = roleFromDepLabel(dep.label, getTag(depTok), getTag(headTok));
     if (mappedRole) {
-      const normalizedHead = isVerbLikeTag(getTag(headTok))
+      let normalizedHead = isVerbLikeTag(getTag(headTok))
         ? resolvePredicateForRelation(dep.head.id)
         : resolvePredicate(dep.head.id);
+      if (mappedRole === "modifier" && (depBase === "amod" || depBase === "compound" || depBase === "nummod")) {
+        const normalizedHeadTok = tokenById.get(normalizedHead);
+        if (
+          normalizedHeadTok &&
+          isAdpositionTag(getTag(normalizedHeadTok)) &&
+          isNominalLikeTag(getTag(headTok))
+        ) {
+          normalizedHead = dep.head.id;
+        }
+      }
       addRelation(
         normalizedHead,
         dep.dep.id,

@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.12`
+Current published version: `1.1.13` (`v1.1.14` release candidate in progress)
 
 ## Delivery Rule
 
@@ -18,7 +18,7 @@ Current published version: `1.1.12`
 4. Run full test suite.
 5. Release only via `NPM_RELEASE.md` after blocker/degrading target for that cycle is green.
 
-## Completed Queue (`1.1.5`-`1.1.12`)
+## Completed Queue (`1.1.5`-`1.1.14`)
 
 ### `1.1.5` - Blocker 4.1: `such as` enumeration collapse
 - Owners: Stage 04 + Stage 08 + Stage 11
@@ -62,54 +62,39 @@ Current published version: `1.1.12`
 - Owners: Stage 08 + Stage 11
 - Status: completed and released.
 
+### `1.1.13` - Blocker `2.2` passive subject anchor drift
+- Owners: Stage 08 + Stage 11
+- Status: completed and released.
+
+### `1.1.14` - Residual noise cleanup `1.1` (simple passive extras)
+- Owners: Stage 08 + Stage 11
+- Scope:
+  - suppress argument-like VP chunk fallback noise (`theme(Generated, primes)`-class artifacts).
+  - keep nominal modifier heads from collapsing to PP markers (`modifier(for, educational)` -> nominal-head form).
+- Status: implemented and test-locked on release branch.
+
 ## Current Open Focus
 
-### `1.1.13` candidate - Residual blocker from re-baseline (`2.2`)
-- Case: `Prime factorization is commonly used in mathematics.`
-- Goal:
-  - preserve passive subject anchor on `factorization` (not adjective modifier token `Prime`) for `patient(used, factorization)` level fidelity.
-- Owners: Stage 08 (dominant), Stage 11 (secondary consumer).
-- Gates:
-  - Stage-level unit regression.
-  - End-to-end `relations_extracted` lock.
-  - Full release gates via `NPM_RELEASE.md`.
+With blockers cleared in the re-baseline, focus shifts to residual-noise cleanup only.
 
 ## Remaining Issues Plan (from `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` re-baseline)
 
 ### Priority rule
-- Resolve blocker `2.2` first, then run cleanup cycles for residual degrading/noise cases.
+- Blockers are closed in current re-baseline.
+- Continue one-noise-family-per-cycle cleanup with deterministic locks.
 - Keep one issue family per release cycle.
 - Preserve deterministic behavior and avoid schema changes in patch line.
 
-### `1.1.13` - Blocker `2.2` passive subject anchor drift
-- Scope:
-  - Ensure passive subject anchoring for `Prime factorization is commonly used in mathematics.` resolves to `factorization` as patient argument of `used`.
-  - Keep `modifier(used, commonly)` and location attachment stable.
-- Owners: Stage 08 (dominant), Stage 11 (secondary).
-- Acceptance:
-  - unit lock for passive NP head anchoring in Stage 08.
-  - integration lock for `patient(used, factorization)` in `relations_extracted`.
-
-### `1.1.14` - Residual noise cleanup `1.1` (simple passive extras)
-- Scope:
-  - Reduce non-core noise in `Generated primes may be used for educational purposes.`:
-    - remove/avoid extra `theme(Generated, primes)` where passive core is already explicit.
-    - keep `patient(used, primes)`, `modality(used, may)`, and PP role relation stable.
-- Owners: Stage 08 (dominant), Stage 11 (secondary fallback/normalization).
-- Acceptance:
-  - unit lock for passive core-only argument structure.
-  - integration lock ensuring required edges stay and noise edge is absent.
-
 ### `1.1.15` - Residual noise cleanup `4.1` (`such as` connector artifacts)
 - Scope:
-  - Keep exemplar structure while suppressing connector artifacts in:
+  - keep exemplar structure while suppressing connector-local residue in:
     - `Each role grants permissions such as read, write, or administer.`
-  - Preserve:
+  - preserve:
     - `actor(grants, role)`
     - `theme(grants, permissions)`
     - `exemplifies(permissions, read|write|administer)`
-  - Reduce:
-    - `modifier(as, such)`-style connector debris unless explicitly required.
+  - reduce:
+    - `modifier(read, such)`-class connector artifacts unless explicitly required.
 - Owners: Stage 08 + Stage 11.
 - Acceptance:
   - unit lock for stable exemplar projection without connector-noise regressions.
@@ -117,18 +102,18 @@ Current published version: `1.1.12`
 
 ### `1.1.16` - Residual noise cleanup `6.1` (purpose PP tail shape)
 - Scope:
-  - Keep:
+  - keep:
     - `patient(recorded, Actions)`
     - `beneficiary(recorded, auditing)`
-  - Improve coordinated tail representation for `security analysis` to reduce structural ambiguity/noise while keeping no standalone event center for `auditing`.
+  - improve coordinated tail representation for `security analysis` to reduce structural ambiguity/noise while keeping no standalone event center for `auditing`.
 - Owners: Stage 08 + Stage 11.
 - Acceptance:
   - unit lock for purpose-PP coordinated nominal tail structure.
   - integration lock for stable purpose relation and no event-like fallback for PP object tokens.
 
 ### Post-cycle gate
-- After `1.1.13`-`1.1.16`, rerun and update `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md`.
-- Mark upstream structural-capture success only if no blocker remains and residual degrading/noise cases are within accepted tolerance.
+- Keep `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` in sync after each residual-noise cycle.
+- Keep blocker set at zero; treat regressions to blocker/degrading as release-stoppers.
 
 ## Release Gate
 
