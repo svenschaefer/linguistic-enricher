@@ -32,10 +32,10 @@ This re-baseline reran all evaluation sentences against current release-candidat
     - `actor(request, Users)` + `theme(request, changes)`
     - `actor(update, Users)` + `theme(update, reports)`
     - `actor(assign, Users)` + `theme(assign, supervisors)`
-- `6.1` Purpose PP: **Pass with residual NP-tail shape noise**
+- `6.1` Purpose PP: **Pass**
   - Present: `patient(recorded, Actions)`, `beneficiary(recorded, auditing)`.
   - No standalone event projection for `auditing`.
-  - Residual tail shape: `coordination(auditing, security)` + `modifier(security, analysis)`.
+  - Tail shape normalized: `coordination(auditing, analysis)` + `modifier(analysis, security)`.
 - `6.2` Temporal Modifier: **Pass**
   - Present: `actor(retain, system)`, `theme(retain, reports)`, `beneficiary(retain, years)`, `modifier(years, 10)`.
 
@@ -198,10 +198,10 @@ This re-baseline reran all evaluation sentences against current release-candidat
 
 **Comparison vs expected**
 - Core purpose PP attachment preserved.
-- Tail NP shape remains slightly noisy but non-blocking.
+- Coordinated tail now resolves to nominal head shape expected for `security analysis`.
 
 **Severity**
-- **Noise**
+- **Pass**
 
 ---
 
@@ -228,7 +228,7 @@ This re-baseline reran all evaluation sentences against current release-candidat
 
 - **Blockers:** none
 - **Degrading:** none in the original blocker/degrading classes
-- **Residual noise only:** `1.1`, `6.1`
+- **Residual noise only:** `1.1`
 
 ### Root-cause concentration (residual)
 - Residual artifacts remain predominantly tied to Stage 08 structural granularity and Stage 11 projection normalization decisions.

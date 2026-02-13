@@ -330,7 +330,8 @@ Status update (post `v1.1.14` re-baseline):
 - `2.2` was resolved in `v1.1.13` (passive subject anchor now lands on `factorization` for the prime-factorization passive case).
 - `1.1` residual fallback noise was reduced in `v1.1.14` (retain regression lock).
 - `4.1` connector-local `such as` noise was reduced in `v1.1.15` (retain regression lock).
-- Residual degrading/noise to monitor: `6.1` (purpose PP tail-shape artifacts).
+- `6.1` purpose-PP tail-shape noise was reduced in `v1.1.16` (retain regression lock).
+- Residual degrading/noise to monitor: `1.1` minor descriptor-modifier shape (`modifier(purposes, educational)`), non-blocking.
 - Execution rule:
   - keep blocker set at zero while guarding resolved cases with regression locks.
   - prioritize residual degrading/noise cleanup cycles next.

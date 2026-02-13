@@ -285,10 +285,12 @@ test("runPipeline relations_extracted keeps for+VBG purpose chain structural and
   const actionsId = tokenBySurface.get("actions");
   const auditingId = tokenBySurface.get("auditing");
   const securityId = tokenBySurface.get("security");
+  const analysisId = tokenBySurface.get("analysis");
   assert.ok(recordedId);
   assert.ok(actionsId);
   assert.ok(auditingId);
   assert.ok(securityId);
+  assert.ok(analysisId);
 
   const rels = out.annotations.filter(function (a) {
     return a.kind === "dependency" &&
@@ -306,7 +308,15 @@ test("runPipeline relations_extracted keeps for+VBG purpose chain structural and
     true
   );
   assert.equal(
+    rels.some(function (r) { return r.label === "coordination" && r.head.id === auditingId && r.dep.id === analysisId; }),
+    true
+  );
+  assert.equal(
     rels.some(function (r) { return r.label === "coordination" && r.head.id === auditingId && r.dep.id === securityId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "modifier" && r.head.id === analysisId && r.dep.id === securityId; }),
     true
   );
   assert.equal(

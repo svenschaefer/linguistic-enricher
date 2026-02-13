@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.16] - 2026-02-13
+
+Compared to `v1.1.15`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened Stage 11 coordinated nominal-tail normalization for purpose PP shapes:
+    - in noun-like coordination chains where a conjunct has a compound nominal tail (e.g. `security analysis`),
+      Stage 11 now resolves the conjunct to its nominal tail head for coordination emission.
+    - compound projection in this bounded coordinated-tail context is normalized to head-oriented modifier form.
+  - For:
+    - `Actions are recorded for auditing and security analysis.`
+  - this yields:
+    - `coordination(auditing, analysis)`
+    - `modifier(analysis, security)`
+  - while preserving:
+    - `patient(recorded, Actions)`
+    - `beneficiary(recorded, auditing)`
+    - and no fallback event-center synthesis on PP objects.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Extended purpose-chain unit lock to assert:
+    - `coordination(auditing, analysis)` present
+    - `modifier(analysis, security)` present
+    - legacy noisy orientation (`coordination(auditing, security)`, `modifier(security, analysis)`) absent.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Extended end-to-end purpose-chain lock with the same tail-shape assertions.
+
 ## [1.1.15] - 2026-02-13
 
 Compared to `v1.1.14`.

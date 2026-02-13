@@ -402,6 +402,79 @@ function isExemplarCandidateToken(token) {
   return isLexicalVerbTag(tag) || isNominalLikeTag(tag) || /^JJ/.test(tag);
 }
 
+function resolveNominalTailId(tokenId, depByHead, tokenById) {
+  if (!tokenId || !tokenById.has(tokenId)) {
+    return tokenId;
+  }
+  let currentId = tokenId;
+  const visited = new Set();
+  while (!visited.has(currentId)) {
+    visited.add(currentId);
+    const candidates = (depByHead.get(currentId) || [])
+      .filter(function (d) {
+        return d &&
+          d.dep &&
+          d.dep.id &&
+          tokenById.has(d.dep.id) &&
+          baseDepLabel(d.label) === "compound" &&
+          isNominalLikeTag(getTag(tokenById.get(d.dep.id)));
+      })
+      .map(function (d) { return tokenById.get(d.dep.id); })
+      .sort(function (a, b) {
+        if (a.i !== b.i) {
+          return b.i - a.i;
+        }
+        return String(a.id).localeCompare(String(b.id));
+      });
+    if (candidates.length === 0) {
+      break;
+    }
+    const next = candidates[0];
+    if (next.id === currentId) {
+      break;
+    }
+    currentId = next.id;
+  }
+  return currentId;
+}
+
+function isPobjGerundToken(tokenId, depByDep, tokenById) {
+  if (!tokenId || !tokenById.has(tokenId)) {
+    return false;
+  }
+  const token = tokenById.get(tokenId);
+  if (getTag(token) !== "VBG") {
+    return false;
+  }
+  const incoming = depByDep.get(tokenId) || [];
+  return incoming.some(function (d) {
+    if (!d || !d.head || !d.head.id || baseDepLabel(d.label) !== "pobj" || !tokenById.has(d.head.id)) {
+      return false;
+    }
+    return isAdpositionTag(getTag(tokenById.get(d.head.id)));
+  });
+}
+
+function isNominalishToken(tokenId, depByDep, tokenById) {
+  if (!tokenId || !tokenById.has(tokenId)) {
+    return false;
+  }
+  return isNominalLikeTag(getTag(tokenById.get(tokenId))) || isPobjGerundToken(tokenId, depByDep, tokenById);
+}
+
+function isConjDependentToken(tokenId, depByDep, tokenById) {
+  if (!tokenId || !tokenById.has(tokenId)) {
+    return false;
+  }
+  const incoming = depByDep.get(tokenId) || [];
+  return incoming.some(function (d) {
+    if (!d || !d.head || !d.head.id || baseDepLabel(d.label) !== "conj" || !tokenById.has(d.head.id)) {
+      return false;
+    }
+    return isNominalishToken(d.head.id, depByDep, tokenById) && isNominalishToken(tokenId, depByDep, tokenById);
+  });
+}
+
 function buildOrderedChunks(annotations) {
   const chunks = [];
   for (let i = 0; i < annotations.length; i += 1) {
@@ -1105,6 +1178,16 @@ async function runStage(seed) {
       let normalizedHead = isVerbLikeTag(getTag(headTok))
         ? resolvePredicateForRelation(dep.head.id)
         : resolvePredicate(dep.head.id);
+      let argumentId = dep.dep.id;
+      if (
+        depBase === "compound" &&
+        isConjDependentToken(dep.head.id, depByDep, tokenById) &&
+        isNominalishToken(dep.head.id, depByDep, tokenById) &&
+        isNominalishToken(dep.dep.id, depByDep, tokenById)
+      ) {
+        normalizedHead = dep.dep.id;
+        argumentId = dep.head.id;
+      }
       if (mappedRole === "modifier" && (depBase === "amod" || depBase === "compound" || depBase === "nummod")) {
         const normalizedHeadTok = tokenById.get(normalizedHead);
         if (
@@ -1117,7 +1200,7 @@ async function runStage(seed) {
       }
       addRelation(
         normalizedHead,
-        dep.dep.id,
+        argumentId,
         mappedRole,
         {
           pattern: "dep_label",
@@ -1353,14 +1436,20 @@ async function runStage(seed) {
         depCoord &&
         headTok &&
         depTok &&
-        isNominalLikeTag(getTag(headTok)) &&
-        isNominalLikeTag(getTag(depTok))
+        isNominalishToken(dep.head.id, depByDep, tokenById) &&
+        isNominalishToken(dep.dep.id, depByDep, tokenById)
       );
+      const nominalHeadId = preserveNominalConjRawIds
+        ? resolveNominalTailId(dep.head.id, depByHead, tokenById)
+        : null;
+      const nominalDepId = preserveNominalConjRawIds
+        ? resolveNominalTailId(dep.dep.id, depByHead, tokenById)
+        : null;
       const pred = preserveNominalConjRawIds
-        ? dep.head.id
+        ? nominalHeadId
         : (isVerbLikeTag(getTag(headTok)) ? resolvePredicateForRelation(dep.head.id) : resolvePredicate(dep.head.id));
       const argPred = preserveNominalConjRawIds
-        ? dep.dep.id
+        ? nominalDepId
         : resolvePredicate(dep.dep.id);
       const predTok = tokenById.get(pred);
       const argTok = tokenById.get(argPred);

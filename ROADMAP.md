@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.14` (`v1.1.15` release candidate in progress)
+Current published version: `1.1.15` (`v1.1.16` release candidate in progress)
 
 ## Delivery Rule
 
@@ -18,7 +18,7 @@ Current published version: `1.1.14` (`v1.1.15` release candidate in progress)
 4. Run full test suite.
 5. Release only via `NPM_RELEASE.md` after blocker/degrading target for that cycle is green.
 
-## Completed Queue (`1.1.5`-`1.1.15`)
+## Completed Queue (`1.1.5`-`1.1.16`)
 
 ### `1.1.5` - Blocker 4.1: `such as` enumeration collapse
 - Owners: Stage 04 + Stage 08 + Stage 11
@@ -84,6 +84,15 @@ Current published version: `1.1.14` (`v1.1.15` release candidate in progress)
     - `exemplifies(permissions, read|write|administer)`
   - reduce:
     - `modifier(read, such)`-class connector artifacts unless explicitly required.
+- Status: completed and released.
+
+### `1.1.16` - Residual noise cleanup `6.1` (purpose PP tail shape)
+- Owners: Stage 08 + Stage 11
+- Scope:
+  - keep:
+    - `patient(recorded, Actions)`
+    - `beneficiary(recorded, auditing)`
+  - improve coordinated tail representation for `security analysis` to reduce structural ambiguity/noise while keeping no standalone event center for `auditing`.
 - Status: implemented and test-locked on release branch.
 
 ## Current Open Focus
@@ -98,16 +107,8 @@ With blockers cleared in the re-baseline, focus shifts to residual-noise cleanup
 - Keep one issue family per release cycle.
 - Preserve deterministic behavior and avoid schema changes in patch line.
 
-### `1.1.16` - Residual noise cleanup `6.1` (purpose PP tail shape)
-- Scope:
-  - keep:
-    - `patient(recorded, Actions)`
-    - `beneficiary(recorded, auditing)`
-  - improve coordinated tail representation for `security analysis` to reduce structural ambiguity/noise while keeping no standalone event center for `auditing`.
-- Owners: Stage 08 + Stage 11.
-- Acceptance:
-  - unit lock for purpose-PP coordinated nominal tail structure.
-  - integration lock for stable purpose relation and no event-like fallback for PP object tokens.
+### Next queue
+- Re-run and tighten residual-noise baseline for `1.1` if needed (`modifier(purposes, educational)` class), otherwise hold patch line.
 
 ### Post-cycle gate
 - Keep `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` in sync after each residual-noise cycle.

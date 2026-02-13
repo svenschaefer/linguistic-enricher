@@ -334,6 +334,10 @@ test("stage11 chunk fallback skips VP heads that are prep objects", async functi
   const out = await stage11.runStage(seed(text, tokens, annotations));
   const rels = stage11Rels(out);
   assert.equal(rels.some(function (r) { return r.label === "beneficiary" && r.head.id === "t3" && r.dep.id === "t5"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "coordination" && r.head.id === "t5" && r.dep.id === "t8"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "coordination" && r.head.id === "t5" && r.dep.id === "t7"; }), false);
+  assert.equal(rels.some(function (r) { return r.label === "modifier" && r.head.id === "t8" && r.dep.id === "t7"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "modifier" && r.head.id === "t7" && r.dep.id === "t8"; }), false);
   assert.equal(rels.some(function (r) { return r.head.id === "t5" && (r.label === "actor" || r.label === "theme"); }), false);
 });
 
