@@ -9,9 +9,9 @@ Target: `relations_extracted` output with `parsed` dependency trace used for ori
 This re-baseline reran all evaluation sentences against current release-candidate behavior (`v1.1.14` branch).
 
 ### Re-baseline outcome by test
-- `1.1` Simple Passive: **Pass with minor residual modifier noise**
+- `1.1` Simple Passive: **Pass**
   - Present: `patient(used, primes)`, `modality(used, may)`, `beneficiary(used, purposes)`.
-  - Residual: `modifier(purposes, educational)` (non-blocking descriptor edge).
+  - Descriptor-level nominal modifier (`modifier(purposes, educational)`) retained as acceptable detail.
 - `1.2` Passive with Agent: **Pass**
   - Present: `patient(reviewed, Reports)`, `agent(reviewed, supervisors)`.
   - No contradictory passive fallback relations observed.
@@ -54,7 +54,7 @@ This re-baseline reran all evaluation sentences against current release-candidat
 - Additional modifier edge remains but does not collapse predicate/argument structure.
 
 **Severity**
-- **Noise**
+- **Pass**
 
 ---
 
@@ -228,7 +228,7 @@ This re-baseline reran all evaluation sentences against current release-candidat
 
 - **Blockers:** none
 - **Degrading:** none in the original blocker/degrading classes
-- **Residual noise only:** `1.1`
+- **Residual noise only:** none in current baseline set.
 
 ### Root-cause concentration (residual)
 - Residual artifacts remain predominantly tied to Stage 08 structural granularity and Stage 11 projection normalization decisions.
@@ -236,7 +236,7 @@ This re-baseline reran all evaluation sentences against current release-candidat
 
 ### Success criteria status
 - **Met for upstream structural capture baseline.**
-- Remaining work is quality/noise tightening, not blocker recovery.
+- No open blocker/degrading/noise items remain in the tracked baseline set.
 
 ---
 

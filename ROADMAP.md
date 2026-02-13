@@ -108,7 +108,8 @@ With blockers cleared in the re-baseline, focus shifts to residual-noise cleanup
 - Preserve deterministic behavior and avoid schema changes in patch line.
 
 ### Next queue
-- Re-run and tighten residual-noise baseline for `1.1` if needed (`modifier(purposes, educational)` class), otherwise hold patch line.
+- `1.1` residual descriptor-modifier shape was re-baselined and accepted as non-actionable nominal detail.
+- No active residual-noise release is scheduled at this time.
 
 ### Post-cycle gate
 - Keep `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` in sync after each residual-noise cycle.

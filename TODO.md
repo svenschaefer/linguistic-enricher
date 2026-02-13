@@ -331,7 +331,8 @@ Status update (post `v1.1.14` re-baseline):
 - `1.1` residual fallback noise was reduced in `v1.1.14` (retain regression lock).
 - `4.1` connector-local `such as` noise was reduced in `v1.1.15` (retain regression lock).
 - `6.1` purpose-PP tail-shape noise was reduced in `v1.1.16` (retain regression lock).
-- Residual degrading/noise to monitor: `1.1` minor descriptor-modifier shape (`modifier(purposes, educational)`), non-blocking.
+- `1.1` residual descriptor-modifier shape (`modifier(purposes, educational)`) was re-baselined as acceptable nominal detail and is now closed as non-actionable noise.
+- Residual degrading/noise to monitor: none in the current baseline set.
 - Execution rule:
   - keep blocker set at zero while guarding resolved cases with regression locks.
   - prioritize residual degrading/noise cleanup cycles next.
