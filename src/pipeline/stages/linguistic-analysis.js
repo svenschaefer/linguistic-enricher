@@ -48,6 +48,16 @@ function isAdverbLikeTag(tag) {
   return /^RB/.test(tag);
 }
 
+function isClauseBoundaryToken(token) {
+  if (!token) {
+    return false;
+  }
+  if (isPunct(token)) {
+    return true;
+  }
+  return coordinationTypeFromSurface(token.surface) !== null;
+}
+
 function coordinationTypeFromSurface(surface) {
   const lower = String(surface || "").toLowerCase();
   if (lower === "and" || lower === "or") {
@@ -136,6 +146,42 @@ function nearestIndex(tokens, from, step, predicate) {
   return -1;
 }
 
+function nearestCopulaIndexLeft(tokens, index) {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const token = tokens[i];
+    if (isClauseBoundaryToken(token)) {
+      break;
+    }
+    const tag = getTag(token);
+    if (!isVerbLikeTag(tag)) {
+      continue;
+    }
+    const lower = String(token.surface || "").toLowerCase();
+    if (BE_SURFACES.has(lower)) {
+      return i;
+    }
+    break;
+  }
+  return -1;
+}
+
+function nearestPassiveParticipleRight(tokens, index) {
+  for (let i = index + 1; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (isClauseBoundaryToken(token)) {
+      break;
+    }
+    const tag = getTag(token);
+    if (tag === "VBN") {
+      return i;
+    }
+    if (isVerbLikeTag(tag) && tag !== "VBN") {
+      break;
+    }
+  }
+  return -1;
+}
+
 function buildSentenceDependencies(sentenceTokens) {
   const rootIndex = detectRootIndex(sentenceTokens);
   const passiveHeadIndex = detectPassiveHeadIndex(sentenceTokens);
@@ -187,6 +233,16 @@ function buildSentenceDependencies(sentenceTokens) {
     }
 
     if (isAdjLikeTag(tag)) {
+      const copulaHeadIndex = nearestCopulaIndexLeft(sentenceTokens, i);
+      if (copulaHeadIndex >= 0) {
+        edges.push({
+          depId: token.id,
+          headId: sentenceTokens[copulaHeadIndex].id,
+          label: "acomp",
+          isRoot: false
+        });
+        continue;
+      }
       const nextNoun = nearestIndex(sentenceTokens, i + 1, 1, function (t) { return isNounLikeTag(getTag(t)); });
       const prevNoun = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isNounLikeTag(getTag(t)); });
       const headIndex = nextNoun >= 0 ? nextNoun : prevNoun;
@@ -201,9 +257,19 @@ function buildSentenceDependencies(sentenceTokens) {
 
     if (isAdverbLikeTag(tag)) {
       const prevVerb = nearestIndex(sentenceTokens, i - 1, -1, function (t) { return isVerbLikeTag(getTag(t)); });
+      let headId = prevVerb >= 0 ? sentenceTokens[prevVerb].id : rootToken.id;
+      if (prevVerb >= 0) {
+        const prevVerbLower = String(sentenceTokens[prevVerb].surface || "").toLowerCase();
+        if (BE_SURFACES.has(prevVerbLower)) {
+          const participleIndex = nearestPassiveParticipleRight(sentenceTokens, i);
+          if (participleIndex >= 0) {
+            headId = sentenceTokens[participleIndex].id;
+          }
+        }
+      }
       edges.push({
         depId: token.id,
-        headId: prevVerb >= 0 ? sentenceTokens[prevVerb].id : rootToken.id,
+        headId: headId,
         label: "advmod",
         isRoot: false
       });
@@ -285,6 +351,16 @@ function buildSentenceDependencies(sentenceTokens) {
           depId: token.id,
           headId: prev.id,
           label: "compound",
+          isRoot: false
+        });
+        continue;
+      }
+      const copulaHeadIndex = nearestCopulaIndexLeft(sentenceTokens, i);
+      if (copulaHeadIndex >= 0) {
+        edges.push({
+          depId: token.id,
+          headId: sentenceTokens[copulaHeadIndex].id,
+          label: "attr",
           isRoot: false
         });
         continue;

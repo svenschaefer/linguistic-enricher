@@ -158,3 +158,69 @@ test("runPipeline relations_extracted keeps such-as clause centered on grants an
     false
   );
 });
+
+test("runPipeline relations_extracted emits copula attribute for simple copula clause", async function () {
+  const text = "Each factor is prime.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const isId = tokenBySurface.get("is");
+  const factorId = tokenBySurface.get("factor");
+  const primeId = tokenBySurface.get("prime");
+  assert.ok(isId);
+  assert.ok(factorId);
+  assert.ok(primeId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "actor" && r.head.id === isId && r.dep.id === factorId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "attribute" && r.head.id === isId && r.dep.id === primeId; }),
+    true
+  );
+});
+
+test("runPipeline relations_extracted keeps passive modifier attached to participle head", async function () {
+  const text = "Factorization is commonly used in mathematics.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const usedId = tokenBySurface.get("used");
+  const isId = tokenBySurface.get("is");
+  const factorizationId = tokenBySurface.get("factorization");
+  const commonlyId = tokenBySurface.get("commonly");
+  assert.ok(usedId);
+  assert.ok(isId);
+  assert.ok(factorizationId);
+  assert.ok(commonlyId);
+
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) { return r.label === "patient" && r.head.id === usedId && r.dep.id === factorizationId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "modifier" && r.head.id === usedId && r.dep.id === commonlyId; }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "modifier" && r.head.id === isId && r.dep.id === commonlyId; }),
+    false
+  );
+});

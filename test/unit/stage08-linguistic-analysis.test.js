@@ -373,3 +373,51 @@ test("stage08 emits passive subject for modal be + VBN construction", async func
   assert.ok(passiveSubj);
   assert.equal(passiveSubj.head && passiveSubj.head.id, "t5");
 });
+
+test("stage08 emits copula complement dependencies as acomp/attr", async function () {
+  const text = "A webshop is an online store.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 1 }, surface: "A", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 2, end: 9 }, surface: "webshop", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 10, end: 12 }, surface: "is", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 13, end: 15 }, surface: "an", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 16, end: 22 }, surface: "online", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 23, end: 28 }, surface: "store", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 28, end: 29 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const attr = deps.find(function (a) { return a.dep && a.dep.id === "t6" && a.label === "attr"; });
+  const acomp = deps.find(function (a) { return a.dep && a.dep.id === "t5" && a.label === "acomp"; });
+  assert.ok(attr);
+  assert.ok(acomp);
+  assert.equal(attr.head && attr.head.id, "t3");
+  assert.equal(acomp.head && acomp.head.id, "t3");
+});
+
+test("stage08 attaches adverb in be+VBN passive chain to participle head", async function () {
+  const text = "Prime factorization is commonly used in mathematics.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 5 }, surface: "Prime", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 6, end: 19 }, surface: "factorization", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 20, end: 22 }, surface: "is", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 23, end: 31 }, surface: "commonly", pos: { tag: "RB" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 32, end: 36 }, surface: "used", pos: { tag: "VBN" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 37, end: 39 }, surface: "in", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 40, end: 51 }, surface: "mathematics", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 51, end: 52 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const root = deps.find(function (a) { return a.is_root === true; });
+  const passiveSubj = deps.find(function (a) { return a.dep && a.dep.id === "t2" && a.label === "nsubjpass"; });
+  const advmod = deps.find(function (a) { return a.dep && a.dep.id === "t4" && a.label === "advmod"; });
+  assert.ok(root);
+  assert.equal(root.dep && root.dep.id, "t5");
+  assert.ok(passiveSubj);
+  assert.equal(passiveSubj.head && passiveSubj.head.id, "t5");
+  assert.ok(advmod);
+  assert.equal(advmod.head && advmod.head.id, "t5");
+});

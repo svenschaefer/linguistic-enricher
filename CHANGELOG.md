@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.6] - 2026-02-13
+
+Compared to `v1.1.5`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Added deterministic copula-complement dependency emission in Stage 08:
+    - adjective complements after copula verbs are emitted as `acomp`
+    - nominal complements after copula verbs are emitted as `attr`
+  - Added deterministic passive adverb attachment hardening:
+    - in `be + ... + VBN` chains, mid-position adverbs now attach to the passive participle head (e.g. `used`) instead of the auxiliary copula.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added regression lock for copula complements as `acomp/attr` in:
+    - `A webshop is an online store.`
+  - Added regression lock for passive adverb attachment in:
+    - `Prime factorization is commonly used in mathematics.`
+    - asserts root/passive-subject/adverb all target `used`.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added end-to-end lock for copula attribute projection:
+    - `Each factor is prime.` -> accepted `attribute(is, prime)`.
+  - Added end-to-end lock for passive adverb projection:
+    - `Factorization is commonly used in mathematics.` -> accepted `modifier(used, commonly)` and no `modifier(is, commonly)`.
+
 ## [1.1.5] - 2026-02-13
 
 Compared to `v1.1.4`.
