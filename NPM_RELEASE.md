@@ -9,6 +9,12 @@ This document captures the release flow used in recent `linguistic-enricher` rel
 
 ## 1) Prepare Changes
 
+Start every new version on a dedicated branch:
+
+```powershell
+git checkout -b release/<x.y.z>-<scope>
+```
+
 1. Implement only the scoped fix/feature.
 2. Add or update regression tests for the changed behavior.
 3. Update `CHANGELOG.md` with a new version section.
@@ -63,17 +69,28 @@ Optional service-mode checks:
 
 ## 4) Commit + Tag + Push
 
-Commit release contents:
+Commit release contents on the release branch:
 
 ```powershell
 git add CHANGELOG.md package.json package-lock.json src test
 git commit -m "release: v<x.y.z>"
 ```
 
-Push branch and tag (annotated tag only):
+Push the release branch:
 
 ```powershell
+git push origin release/<x.y.z>-<scope>
+```
+
+Merge release branch back to `main` (PR merge or fast-forward merge), then push `main`.
+Tag only after `main` contains the release commit.
+
+```powershell
+# if using fast-forward from local
+git checkout main
+git merge --ff-only release/<x.y.z>-<scope>
 git push origin main
+
 git tag -a v<x.y.z> -m "v<x.y.z> - <short release note>"
 git push origin v<x.y.z>
 ```
@@ -90,6 +107,11 @@ Login/auth:
 npm login
 npm whoami
 ```
+
+Automation policy:
+- If npm auth is active (`npm whoami` succeeds), release automation MAY execute `npm publish --access public` directly without additional user interaction.
+- If npm auth is missing/expired (`npm whoami` fails or publish returns auth/token errors), pause and ask the user to run `npm login`.
+- After user confirms successful login, continue the automated release flow from publish through post-publish verification.
 
 Publish:
 

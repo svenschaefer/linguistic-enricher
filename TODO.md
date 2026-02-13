@@ -320,6 +320,50 @@
 14. Run full deterministic regression suite.
 15. Final release hardening and versioning.
 
+## 12.1) Upstream Structural Coverage Evaluation (00-11) - Baseline Findings (2026-02-13)
+
+Authoritative reference:
+- `UPSTREAM_STRUCTURAL_COVERAGE_EVALUATION.md` (evaluation-only baseline; target output = `relations_extracted`).
+
+### Blockers
+
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve copula/passive core argument structure so copula complements and passive subjects remain explicit and lossless in upstream relations (no collapse of attribute/complement signals, no subject-anchor drift in passive clauses).
+  - Test gate: add/extend a regression unit test at the originating stage.
+  - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
+
+- `[Owner: Stage 04 (contributing), Stage 08 (dominant), Stage 11 (secondary)]` Preserve enumeration/list semantics for `such as` constructions so governing predicate/object relations and exemplar membership are emitted without promoting exemplars to unrelated root events.
+  - Test gate: add/extend a regression unit test at the originating stage.
+  - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
+
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve purpose-PP and coordinated nominal purpose structure (`for ... and ...`) as attached purpose/complement relations, without reclassifying gerund-like complements as standalone event predicates.
+  - Test gate: add/extend a regression unit test at the originating stage.
+  - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
+
+### Degrading
+
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Stabilize passive-with-agent output so required passive roles remain explicit while removing contradictory fallback role noise on the same participants.
+  - Test gate: add/extend a regression unit test at the originating stage.
+  - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
+
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve sequential coordinated-verb clause structure so each verb keeps its own subject/object/attachment frame and PP roles are not flattened into generic theme relations.
+  - Test gate: add/extend a regression unit test at the originating stage.
+  - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
+
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve `as well as` additive coordination semantics so secondary members are represented as coordinated arguments, not modifier artifacts.
+  - Test gate: add/extend a regression unit test at the originating stage.
+  - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
+
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve inline multi-verb list structure (`request/update/assign`) so each coordinated predicate retains explicit subject/object coverage without object over-absorption into the first predicate.
+  - Test gate: add/extend a regression unit test at the originating stage.
+  - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
+
+- `[Owner: Stage 08 (dominant), Stage 11 (secondary)]` Preserve temporal PP attachment as explicit temporal/prepositional structure rather than object/theme flattening.
+  - Test gate: add/extend a regression unit test at the originating stage.
+  - Test gate: add/extend an end-to-end integration test that locks `relations_extracted` behavior.
+
+Tracking rule:
+- Blockers in this section MUST be resolved before claiming upstream structural-capture success criteria, because the baseline evaluation marks success criteria as not met while blockers remain.
+
 ## 13) Acceptance Criteria
 
 - Package is installable and runnable as an independent npm package.
