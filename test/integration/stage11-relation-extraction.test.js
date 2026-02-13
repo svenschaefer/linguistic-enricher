@@ -35,6 +35,36 @@ test("runPipeline relations_extracted emits deterministic accepted relation anno
   }
 });
 
+test("runPipeline relations_extracted keeps canonical semantic-output kind as accepted dependency labels", async function () {
+  const text = "Generated primes may be used for educational purposes or basic numerical experiments.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const usedId = tokenBySurface.get("used");
+  const primesId = tokenBySurface.get("primes");
+  const mayId = tokenBySurface.get("may");
+  assert.ok(usedId);
+  assert.ok(primesId);
+  assert.ok(mayId);
+
+  const acceptedDeps = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    acceptedDeps.some(function (r) { return r.label === "patient" && r.head.id === usedId && r.dep.id === primesId; }),
+    true
+  );
+  assert.equal(
+    acceptedDeps.some(function (r) { return r.label === "modality" && r.head.id === usedId && r.dep.id === mayId; }),
+    true
+  );
+});
+
 test("runPipeline relations_extracted emits actor relation for pronoun subject", async function () {
   const text = "They want to buy.";
   const out = await api.runPipeline(text, { target: "relations_extracted" });
