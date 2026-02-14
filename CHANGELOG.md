@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.23] - 2026-02-14
+
+Compared to `v1.1.22`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Narrowed the `v1.1.22` weak-carrier suppression scope to avoid Step-12 coverage regressions:
+    - carrier-edge suppression now excludes `is/are` heads, restoring dependency-backed copula attribute/modifier coverage in webshop/IRS long-chain clause shapes.
+    - weak-carrier suppression remains active for other demoted carriers under the existing structural preconditions.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Kept weak-carrier suppression lock for a non-`is/are` demoted carrier (`was`) to preserve guard intent.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Restored webshop lock:
+    - `modifier(are, actually)` and `attribute(are, available)` present.
+  - Added IRS lock:
+    - `attribute(is, valid)` and `attribute(are, present)` present.
+  - Kept prime_gen monitor lock unchanged:
+    - `given` is not emitted as a relation head.
+
 ## [1.1.22] - 2026-02-14
 
 Compared to `v1.1.21`.

@@ -738,7 +738,7 @@ test("runPipeline relations_extracted suppresses to-nextVP noise but keeps actor
   );
 });
 
-test("runPipeline relations_extracted suppresses weak are-carrier edges in webshop long chain", async function () {
+test("runPipeline relations_extracted keeps webshop are-carrier modifier/attribute edges for coverage stability", async function () {
   const text = "The shop needs to make sure that items are actually available and the system can take payment and keep a record of the order.";
   const out = await api.runPipeline(text, { target: "relations_extracted" });
   assert.equal(out.stage, "relations_extracted");
@@ -755,13 +755,44 @@ test("runPipeline relations_extracted suppresses weak are-carrier edges in websh
     rels.some(function (r) {
       return String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "are" && r.label === "attribute";
     }),
-    false
+    true
   );
   assert.equal(
     rels.some(function (r) {
       return String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "are" && r.label === "modifier";
     }),
-    false
+    true
+  );
+});
+
+test("runPipeline relations_extracted keeps IRS copula attributes for is-valid and are-present clauses", async function () {
+  const text = "Before a report is accepted, the system must verify that the selected category is valid and mandatory fields are present.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenById = new Map(out.tokens.map(function (t) { return [t.id, t]; }));
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) {
+      return String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "is" &&
+        String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "valid" &&
+        r.label === "attribute";
+    }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) {
+      return String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "are" &&
+        String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "present" &&
+        r.label === "attribute";
+    }),
+    true
   );
 });
 

@@ -385,7 +385,13 @@ Status update (post `v1.1.16` re-baseline):
 Status snapshot after `v1.1.22`:
 - Fixed in-scope: low-quality carrier precursor guard (`are`) and historical `given` monitor lock.
 - Still open from `LINGUISTIC-ENRICHER-REGRESSION-REPORT.md`: connector contract/interface mismatch, cross-seed quality drift guarding, and IRS-family nominal payload noise.
-- Scheduled follow-up patch line: `1.1.23`-`1.1.25` (see `ROADMAP.md`).
+- Scheduled follow-up patch line: `1.1.24`-`1.1.26` (see `ROADMAP.md`).
+
+Status snapshot after `v1.1.23`:
+- Hotfix applied for integration safety:
+  - restored dependency-backed copula carrier coverage in webshop/IRS clause shapes (`are/is` attribute/modifier paths).
+  - retained weak-carrier suppression for non-`is/are` demoted carriers.
+- `given` monitor lock remains unchanged and green.
 
 - Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.

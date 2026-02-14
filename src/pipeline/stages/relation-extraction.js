@@ -1204,6 +1204,7 @@ async function runStage(seed) {
     }
     const mappedRole = roleFromDepLabel(dep.label, getTag(depTok), getTag(headTok));
     if (mappedRole) {
+      const headSurfaceLower = lowerSurface(headTok);
       const hasSubjectLikeOutgoing = (depByHead.get(dep.head.id) || []).some(function (d) {
         return d && isSubjectLikeDepLabel(d.label) && d.dep && d.dep.id && tokenById.has(d.dep.id);
       });
@@ -1218,6 +1219,8 @@ async function runStage(seed) {
       if (
         isCarrierRoleMappedFromDep(mappedRole, depBase) &&
         isDemotedVerbish(headTok) &&
+        headSurfaceLower !== "is" &&
+        headSurfaceLower !== "are" &&
         !hasSubjectLikeOutgoing &&
         hasIncomingVerbLink
       ) {

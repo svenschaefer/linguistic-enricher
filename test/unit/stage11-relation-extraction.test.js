@@ -464,19 +464,19 @@ test("stage11 allows fallback actor when incoming verb-link is generic dep", asy
   assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t5" && r.dep.id === "t3"; }), true);
 });
 
-test("stage11 suppresses weak demoted-copula carrier edges without subject evidence", async function () {
-  const text = "needs that items are actually available";
+test("stage11 suppresses weak demoted-copula carrier edges without subject evidence for non-is/are carriers", async function () {
+  const text = "needs that items was actually available";
   const tokens = [
     token("t1", 0, "needs", "VBZ", 0, 5),
     token("t2", 1, "that", "IN", 6, 10),
     token("t3", 2, "items", "NNS", 11, 16),
-    token("t4", 3, "are", "VBP", 17, 20),
+    token("t4", 3, "was", "VBD", 17, 20),
     token("t5", 4, "actually", "RB", 21, 29),
     token("t6", 5, "available", "JJ", 30, 39)
   ];
   const annotations = [
     chunk("c1", ["t1"], "needs", "VP", { start: 0, end: 5 }),
-    chunk("c2", ["t2", "t3", "t4", "t5", "t6"], "that items are actually available", "VP", { start: 6, end: 39 }),
+    chunk("c2", ["t2", "t3", "t4", "t5", "t6"], "that items was actually available", "VP", { start: 6, end: 39 }),
     chunkHead("h1", "c1", "t1"),
     chunkHead("h2", "c2", "t4"),
     depObs("d1", "t1", null, "root", true),
