@@ -373,7 +373,7 @@ Execution rule:
   - reduce root-centric clause/PP flattening in complex long-chain shapes without changing stable simple-case outputs.
   - target sentences where Stage 08 currently emits host-centric `dep/obj` structures that collapse local clause roles.
 - Owners: Stage 08 (dominant), Stage 11 (secondary).
-- Status: planned.
+- Status: completed and released.
 - Required gates:
   - Stage 08 unit locks for long-chain clause/PP attachment stability.
   - end-to-end integration lock on webshop-family complex variants (`relations_extracted`).
@@ -412,7 +412,6 @@ Execution rule:
 
 ### Next queue
 - `1.1.x` follow-up queue is re-opened for remaining patch-scope gaps:
-  - `1.1.32` complex clause/PP drift reduction
   - `1.1.33` generalized fallback-noise hardening
   - `1.1.34` low-quality `are (low)` carrier persistence hardening
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).

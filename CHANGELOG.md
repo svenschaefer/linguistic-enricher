@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.32] - 2026-02-14
+
+Compared to `v1.1.31`.
+
+### Changed
+- `src/pipeline/stages/linguistic-analysis.js`
+  - Reduced long-chain clause drift for modal subclauses by attaching noun heads before `MD+VB` as local subjects:
+    - emits `nsubj(take, system)` for `... the system can take ...` instead of root-level object drift.
+  - Preserved passive behavior for `MD + be + VBN`:
+    - emits `nsubjpass` anchored on the participle head (no regression for `may be used` patterns).
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened VP chunk fallback theme injection:
+    - skips `theme` fallback when next NP already serves as explicit subject of another verb,
+    - prevents `theme(needs, system)` drift in the tracked long-chain webshop variant.
+
+### Tests
+- `test/unit/stage08-linguistic-analysis.test.js`
+  - Added lock: noun before `MD+VB` attaches as local subject and is not emitted as root object drift.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Extended webshop long-chain lock:
+    - keeps `actor(take, system)`,
+    - blocks `theme(needs, system)` fallback drift.
+
+### Documentation
+- `TODO.md`
+  - Marked the tracked long-chain clause/PP drift reduction as completed in `1.1.32`.
+- `ROADMAP.md`
+  - Marked `1.1.32` completed and advanced the open `1.1.x` queue.
+
 ## [1.1.31] - 2026-02-14
 
 Compared to `v1.1.30`.

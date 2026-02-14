@@ -764,6 +764,10 @@ test("runPipeline relations_extracted suppresses to-nextVP noise but keeps actor
     rels.some(function (r) { return r.label === "actor" && r.head.id === takeId && r.dep.id === systemId; }),
     true
   );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === needsId && r.dep.id === systemId; }),
+    false
+  );
 });
 
 test("runPipeline relations_extracted normalizes weak webshop are-carrier payload away from standalone are head", async function () {

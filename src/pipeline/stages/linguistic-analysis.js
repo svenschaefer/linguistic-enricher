@@ -270,6 +270,35 @@ function nearestVerbForObjectAttachmentLeft(tokens, nounIndex) {
   return -1;
 }
 
+function subjectModalVerbAttachmentRight(tokens, nounIndex) {
+  const modalIndex = nounIndex + 1;
+  if (modalIndex >= tokens.length) {
+    return null;
+  }
+  const modalTok = tokens[modalIndex];
+  if (isClauseBoundaryToken(modalTok) || getTag(modalTok) !== "MD") {
+    return null;
+  }
+  const verbIndex = nearestIndex(tokens, modalIndex + 1, 1, function (t) {
+    if (isClauseBoundaryToken(t)) {
+      return false;
+    }
+    return isVerbLikeTag(getTag(t));
+  });
+  if (verbIndex < 0) {
+    return null;
+  }
+  const verbTok = tokens[verbIndex];
+  const verbLower = String(verbTok.surface || "").toLowerCase();
+  if (BE_SURFACES.has(verbLower)) {
+    const passiveParticipleIndex = nearestPassiveParticipleRight(tokens, verbIndex);
+    if (passiveParticipleIndex >= 0) {
+      return { headIndex: passiveParticipleIndex, label: "nsubjpass" };
+    }
+  }
+  return { headIndex: verbIndex, label: "nsubj" };
+}
+
 function nearestVerbForCommaConjLeft(tokens, fromIndex) {
   let fallbackVerbIndex = -1;
   for (let i = fromIndex - 1; i >= 0; i -= 1) {
@@ -643,6 +672,16 @@ function buildSentenceDependencies(sentenceTokens) {
           depId: token.id,
           headId: prevPrev.id,
           label: "pobj",
+          isRoot: false
+        });
+        continue;
+      }
+      const modalVerbAttachment = subjectModalVerbAttachmentRight(sentenceTokens, i);
+      if (modalVerbAttachment && modalVerbAttachment.headIndex >= 0) {
+        edges.push({
+          depId: token.id,
+          headId: sentenceTokens[modalVerbAttachment.headIndex].id,
+          label: modalVerbAttachment.label,
           isRoot: false
         });
         continue;

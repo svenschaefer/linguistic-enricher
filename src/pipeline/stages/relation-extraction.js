@@ -734,7 +734,22 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     }
 
     const nextNP = nearestNextNP(i);
-    if (nextNP && !hasCoreObject && !hasPassiveSubject && !hasByPrepObject) {
+    let nextNpLooksLikeExternalSubject = false;
+    if (nextNP) {
+      const nextArg = chunkHeadByChunkId.get(nextNP.id);
+      const incomingToNextArg = nextArg ? (depByDep.get(nextArg) || []) : [];
+      nextNpLooksLikeExternalSubject = incomingToNextArg.some(function (d) {
+        if (!d || !d.head || !d.head.id || d.head.id === predicateId || !tokenById.has(d.head.id)) {
+          return false;
+        }
+        const base = baseDepLabel(d.label);
+        if (base !== "nsubj" && base !== "nsubjpass") {
+          return false;
+        }
+        return isVerbLikeTag(getTag(tokenById.get(d.head.id)));
+      });
+    }
+    if (nextNP && !hasCoreObject && !hasPassiveSubject && !hasByPrepObject && !nextNpLooksLikeExternalSubject) {
       const arg = chunkHeadByChunkId.get(nextNP.id);
       addRelation(predicateId, arg, "theme", {
         pattern: "chunk_fallback",

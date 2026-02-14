@@ -637,3 +637,45 @@ test("stage08 treats comma-separated inline verb lists as coordinated verbs", as
   assert.equal(assignObj.head && assignObj.head.id, "t10");
   assert.equal(deps.some(function (a) { return a.dep && a.dep.id === "t6" && a.label === "dep"; }), false);
 });
+
+test("stage08 attaches noun before MD+verb as local subject (no root obj drift)", async function () {
+  const text = "The shop needs to make sure that items are actually available and the system can take payment and keep a record of the order.";
+  const tokens = [
+    { id: "t1", i: 0, segment_id: "s1", span: { start: 0, end: 3 }, surface: "The", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t2", i: 1, segment_id: "s1", span: { start: 4, end: 8 }, surface: "shop", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t3", i: 2, segment_id: "s1", span: { start: 9, end: 14 }, surface: "needs", pos: { tag: "VBZ" }, flags: { is_punct: false } },
+    { id: "t4", i: 3, segment_id: "s1", span: { start: 15, end: 17 }, surface: "to", pos: { tag: "TO" }, flags: { is_punct: false } },
+    { id: "t5", i: 4, segment_id: "s1", span: { start: 18, end: 22 }, surface: "make", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t6", i: 5, segment_id: "s1", span: { start: 23, end: 27 }, surface: "sure", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t7", i: 6, segment_id: "s1", span: { start: 28, end: 32 }, surface: "that", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t8", i: 7, segment_id: "s1", span: { start: 33, end: 38 }, surface: "items", pos: { tag: "NNS" }, flags: { is_punct: false } },
+    { id: "t9", i: 8, segment_id: "s1", span: { start: 39, end: 42 }, surface: "are", pos: { tag: "VBP" }, flags: { is_punct: false } },
+    { id: "t10", i: 9, segment_id: "s1", span: { start: 43, end: 51 }, surface: "actually", pos: { tag: "RB" }, flags: { is_punct: false } },
+    { id: "t11", i: 10, segment_id: "s1", span: { start: 52, end: 61 }, surface: "available", pos: { tag: "JJ" }, flags: { is_punct: false } },
+    { id: "t12", i: 11, segment_id: "s1", span: { start: 62, end: 65 }, surface: "and", pos: { tag: "CC" }, flags: { is_punct: false } },
+    { id: "t13", i: 12, segment_id: "s1", span: { start: 66, end: 69 }, surface: "the", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t14", i: 13, segment_id: "s1", span: { start: 70, end: 76 }, surface: "system", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t15", i: 14, segment_id: "s1", span: { start: 77, end: 80 }, surface: "can", pos: { tag: "MD" }, flags: { is_punct: false } },
+    { id: "t16", i: 15, segment_id: "s1", span: { start: 81, end: 85 }, surface: "take", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t17", i: 16, segment_id: "s1", span: { start: 86, end: 93 }, surface: "payment", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t18", i: 17, segment_id: "s1", span: { start: 94, end: 97 }, surface: "and", pos: { tag: "CC" }, flags: { is_punct: false } },
+    { id: "t19", i: 18, segment_id: "s1", span: { start: 98, end: 102 }, surface: "keep", pos: { tag: "VB" }, flags: { is_punct: false } },
+    { id: "t20", i: 19, segment_id: "s1", span: { start: 103, end: 104 }, surface: "a", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t21", i: 20, segment_id: "s1", span: { start: 105, end: 111 }, surface: "record", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t22", i: 21, segment_id: "s1", span: { start: 112, end: 114 }, surface: "of", pos: { tag: "IN" }, flags: { is_punct: false } },
+    { id: "t23", i: 22, segment_id: "s1", span: { start: 115, end: 118 }, surface: "the", pos: { tag: "DT" }, flags: { is_punct: false } },
+    { id: "t24", i: 23, segment_id: "s1", span: { start: 119, end: 124 }, surface: "order", pos: { tag: "NN" }, flags: { is_punct: false } },
+    { id: "t25", i: 24, segment_id: "s1", span: { start: 124, end: 125 }, surface: ".", pos: { tag: "." }, flags: { is_punct: true } }
+  ];
+
+  const out = await stage08.runStage(seed(text, tokens));
+  const deps = out.annotations.filter(function (a) { return a.kind === "dependency"; });
+  const systemSubj = deps.find(function (a) { return a.dep && a.dep.id === "t14" && a.label === "nsubj"; });
+  const systemObjNeeds = deps.find(function (a) {
+    return a.dep && a.dep.id === "t14" && a.label === "obj" && a.head && a.head.id === "t3";
+  });
+
+  assert.ok(systemSubj);
+  assert.equal(systemSubj.head && systemSubj.head.id, "t16");
+  assert.equal(Boolean(systemObjNeeds), false);
+});
