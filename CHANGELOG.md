@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.27] - 2026-02-14
+
+Compared to `v1.1.26`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Tightened weak-`are` carrier remap host selection:
+    - remap candidates are now restricted to non-gerund lexical verb hosts (`VBG`/`VBN` excluded),
+    - preventing payload remap onto weak framing hosts like `doing` in webshop `s2` while preserving bounded remap behavior where viable.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added lock: weak `are` carrier payload is not remapped to gerund host (`doing`) in the bounded synthetic shape.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added webshop `s2` lock for exact `while doing ... are actually available` clause family:
+    - no `attribute|modifier` headed by `doing`,
+    - payload (`available`/`actually`) remains present.
+  - Kept IRS copula lock unchanged (`attribute(is, valid)`, `attribute(are, present)`).
+
 ## [1.1.26] - 2026-02-14
 
 Compared to `v1.1.25`.

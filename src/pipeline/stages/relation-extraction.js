@@ -467,7 +467,15 @@ function remapWeakAreCarrierHead(headId, depByDep, tokenById) {
         return false;
       }
       const incomingHeadTok = tokenById.get(d.head.id);
-      return isVerbLikeTag(getTag(incomingHeadTok));
+      const headTag = getTag(incomingHeadTok);
+      if (!isLexicalVerbTag(headTag)) {
+        return false;
+      }
+      // Keep remap bounded to non-gerund lexical hosts.
+      if (headTag === "VBG" || headTag === "VBN") {
+        return false;
+      }
+      return true;
     })
     .map(function (d) { return tokenById.get(d.head.id); })
     .sort(function (a, b) {

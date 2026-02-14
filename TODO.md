@@ -416,6 +416,13 @@ Status snapshot after `v1.1.26`:
 - integration safety retained:
   - IRS copula attribute locks stay green (`attribute(is, valid)`, `attribute(are, present)`).
 
+Status snapshot after `v1.1.27`:
+- webshop `while doing` remap overshoot fixed:
+  - weak `are` carrier payload is not remapped onto `doing` host in the long-chain webshop `s2` variant.
+  - payload remains present (`available`/`actually`) without `doing`-headed `attribute|modifier` artifacts.
+- IRS lock unchanged and green:
+  - `attribute(is, valid)` and `attribute(are, present)` remain present.
+
 - Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
   - Downstream unresolved-token expectations may still flag connector tokens.

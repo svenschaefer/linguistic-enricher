@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.26`
+Current published version: `1.1.27`
 
 ## Versioning Strategy
 
@@ -314,7 +314,19 @@ Execution rule:
   - end-to-end lock for webshop `s2` role stability with no coverage drop.
   - full test suite + pre/post-publish smoke.
 
-### `1.1.27` - Connector contract/interface alignment follow-up
+### `1.1.27` - Hotfix: webshop `while doing` carrier-remap overshoot
+- Scope:
+  - prevent weak-carrier payload remap onto non-propositional gerund host (`doing`) in webshop `s2` clause shape.
+  - preserve payload presence (`available`/`actually`) and keep IRS copula locks unchanged.
+- Owners: Stage 11 (dominant), integration tests.
+- Status: completed and released.
+- Required gates:
+  - Stage 11 unit lock: no remap to gerund host for weak `are` carrier payload.
+  - end-to-end lock for webshop `while doing ... are actually available` shape.
+  - IRS lock unchanged: `attribute(is, valid)` and `attribute(are, present)`.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.28` - Connector contract/interface alignment follow-up
 - Scope:
   - keep Stage 11 connector-local suppression by design while tightening downstream integration expectations for unresolved connector tokens (`such`, `as`, `well`).
   - refresh regression locks so connector behavior is explicitly treated as contract-level compatibility, not semantic-edge loss.
@@ -324,7 +336,7 @@ Execution rule:
   - integration lock refresh on `such as` and `as well as` fixtures with explicit connector-contract assertions.
   - full test suite + pre/post-publish smoke.
 
-### `1.1.28` - Cross-seed drift guardrails (quality delta lock)
+### `1.1.29` - Cross-seed drift guardrails (quality delta lock)
 - Scope:
   - add deterministic cross-seed delta guards to prevent mixed quality regressions after relation-shape/fallback hardening.
   - target seed family: `access_control`, `irs`, `webshop`, with stable accepted-label/role-presence checks.
@@ -335,7 +347,7 @@ Execution rule:
   - no regression of currently locked Stage 11 canonical semantic-edge contract.
   - full test suite + pre/post-publish smoke.
 
-### `1.1.29` - IRS nominal payload noise reduction (apposition/passive-complement)
+### `1.1.30` - IRS nominal payload noise reduction (apposition/passive-complement)
 - Scope:
   - reduce partially reproducible nominal payload noise in IRS-family apposition/passive-complement structures without losing core patient/agent/theme coverage.
 - Owners: Stage 11 (dominant), Stage 08 (secondary).
@@ -353,7 +365,7 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- Active queue begins with remaining open regression-report follow-ups: `1.1.27` -> `1.1.29`.
+- Active queue begins with remaining open regression-report follow-ups: `1.1.28` -> `1.1.30`.
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
 

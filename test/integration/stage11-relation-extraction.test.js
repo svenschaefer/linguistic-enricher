@@ -779,6 +779,42 @@ test("runPipeline relations_extracted normalizes weak webshop are-carrier payloa
   );
 });
 
+test("runPipeline relations_extracted does not remap webshop while-doing carrier payload onto doing host", async function () {
+  const text = "While doing that, the shop needs to make sure the items are actually available, take the customer's payment, and keep a record of the order.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenById = new Map(out.tokens.map(function (t) { return [t.id, t]; }));
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) {
+      return (r.label === "attribute" || r.label === "modifier") &&
+        String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "doing";
+    }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) {
+      return r.label === "attribute" &&
+        String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "available";
+    }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) {
+      return r.label === "modifier" &&
+        String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "actually";
+    }),
+    true
+  );
+});
+
 test("runPipeline relations_extracted avoids copula-theme drift on webshop purchase clause", async function () {
   const text = "A WebShop is an online store where people can pick products they want to buy, put them into a shopping cart, and then complete the purchase by placing an order.";
   const out = await api.runPipeline(text, { target: "relations_extracted" });

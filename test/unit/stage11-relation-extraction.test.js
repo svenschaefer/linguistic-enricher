@@ -546,6 +546,39 @@ test("stage11 remaps weak are-carrier attribute/modifier edges to governing verb
   assert.equal(rels.some(function (r) { return r.head.id === "t1" && r.label === "attribute" && r.dep.id === "t6"; }), true);
 });
 
+test("stage11 does not remap weak are-carrier payload to gerund host", async function () {
+  const text = "while doing that items are actually available";
+  const tokens = [
+    token("t1", 0, "while", "IN", 0, 5),
+    token("t2", 1, "doing", "VBG", 6, 11),
+    token("t3", 2, "that", "DT", 12, 16),
+    token("t4", 3, "items", "NNS", 17, 22),
+    token("t5", 4, "are", "VBP", 23, 26),
+    token("t6", 5, "actually", "RB", 27, 35),
+    token("t7", 6, "available", "JJ", 36, 45)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2", "t3"], "while doing that", "VP", { start: 0, end: 16 }),
+    chunk("c2", ["t4"], "items", "NP", { start: 17, end: 22 }),
+    chunk("c3", ["t5", "t6", "t7"], "are actually available", "VP", { start: 23, end: 45 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t4"),
+    chunkHead("h3", "c3", "t5"),
+    depObs("d1", "t2", null, "root", true),
+    depObs("d2", "t4", "t2", "obj", false),
+    depObs("d3", "t5", "t2", "dep", false),
+    depObs("d4", "t6", "t5", "advmod", false),
+    depObs("d5", "t7", "t5", "acomp", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "modifier" && r.dep.id === "t6"; }), false);
+  assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "attribute" && r.dep.id === "t7"; }), false);
+  assert.equal(rels.some(function (r) { return r.head.id === "t5" && r.label === "modifier" && r.dep.id === "t6"; }), true);
+  assert.equal(rels.some(function (r) { return r.head.id === "t5" && r.label === "attribute" && r.dep.id === "t7"; }), true);
+});
+
 test("stage11 skips to-nextVP chunk fallback when explicit xcomp exists", async function () {
   const text = "needs to make and can take";
   const tokens = [
