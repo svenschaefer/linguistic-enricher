@@ -269,6 +269,37 @@ Execution rule:
   - variant-sensitive check for `given` treated as monitor-only unless reproducible.
   - full test suite + pre/post-publish smoke.
 
+### `1.1.23` - Connector contract/interface alignment follow-up
+- Scope:
+  - keep Stage 11 connector-local suppression by design while tightening downstream integration expectations for unresolved connector tokens (`such`, `as`, `well`).
+  - refresh regression locks so connector behavior is explicitly treated as contract-level compatibility, not semantic-edge loss.
+- Owners: Stage 11 + integration tests/docs.
+- Status: planned.
+- Required gates:
+  - integration lock refresh on `such as` and `as well as` fixtures with explicit connector-contract assertions.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.24` - Cross-seed drift guardrails (quality delta lock)
+- Scope:
+  - add deterministic cross-seed delta guards to prevent mixed quality regressions after relation-shape/fallback hardening.
+  - target seed family: `access_control`, `irs`, `webshop`, with stable accepted-label/role-presence checks.
+- Owners: Stage 11 (dominant), Stage 08 (secondary), integration tests.
+- Status: planned.
+- Required gates:
+  - integration delta locks across the tracked seed set.
+  - no regression of currently locked Stage 11 canonical semantic-edge contract.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.25` - IRS nominal payload noise reduction (apposition/passive-complement)
+- Scope:
+  - reduce partially reproducible nominal payload noise in IRS-family apposition/passive-complement structures without losing core patient/agent/theme coverage.
+- Owners: Stage 11 (dominant), Stage 08 (secondary).
+- Status: planned.
+- Required gates:
+  - Stage 11 unit lock for bounded nominal-noise suppression.
+  - end-to-end integration lock for IRS sentence family (`relations_extracted`).
+  - full test suite + pre/post-publish smoke.
+
 ## Remaining Issues Plan (from `TODO.md` section `12.1` re-baseline)
 
 ### Priority rule
@@ -277,7 +308,8 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- Active queue is the `1.2.x` plan above (new scope only).
+- Active queue begins with open `1.1.x` regression-report follow-ups: `1.1.23` -> `1.1.25`.
+- After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
 
 ### Post-cycle gate

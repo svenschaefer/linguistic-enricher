@@ -382,10 +382,16 @@ Status update (post `v1.1.16` re-baseline):
 
 ### Step-12 Integration Watchlist (Validated, 2026-02-13)
 
+Status snapshot after `v1.1.22`:
+- Fixed in-scope: low-quality carrier precursor guard (`are`) and historical `given` monitor lock.
+- Still open from `LINGUISTIC-ENRICHER-REGRESSION-REPORT.md`: connector contract/interface mismatch, cross-seed quality drift guarding, and IRS-family nominal payload noise.
+- Scheduled follow-up patch line: `1.1.23`-`1.1.25` (see `ROADMAP.md`).
+
 - Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
   - Downstream unresolved-token expectations may still flag connector tokens.
   - Confidence: reproducible now as an integration-contract issue, not a standalone upstream defect.
+  - Open follow-up: `1.1.23` contract-alignment lock refresh.
 
 - Clause/PP attachment drift in complex sentence variants remains open:
   - Reproducible on longer coordinated/complement shapes (non-universal).
@@ -396,6 +402,7 @@ Status update (post `v1.1.16` re-baseline):
   - Stage 11 chunk-fallback paths can amplify weak upstream structure in specific long-sentence cases.
   - Owner focus: Stage 11 fallback boundaries, with Stage 08 structural input quality.
   - Confidence: reproducible now.
+  - Open follow-up: `1.1.24` cross-seed drift/delta guard cycle.
 
 - Low-quality carrier precursor note (`are`):
   - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).
@@ -406,6 +413,10 @@ Status update (post `v1.1.16` re-baseline):
   - Keep as historical/variant-dependent artifact-track signal.
   - Not consistently reproducible in current upstream-only checks.
   - `v1.1.22` adds a monitor lock to keep `given` non-predicate in the tracked `prime_gen` variant.
+
+- Nominal payload noise in apposition/passive-complement contexts (`irs`-family) remains partially reproducible:
+  - Treat as a bounded Stage 11 normalization/fallback-noise follow-up.
+  - Open follow-up: `1.1.25` IRS nominal payload noise reduction lock.
 
 - Attribution rule for release history:
   - Version-by-version causality is intentionally unproven unless historical tags are replayed.
