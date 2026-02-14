@@ -9,8 +9,8 @@ Current published version: `1.1.34`
 - Keep patch releases for regressions or narrowly bounded non-breaking fixes only; use `1.2.x` for planned structural capability increments.
 - Preserve the canonical output contract during `1.2.x` (`relations_extracted` accepted semantic edges as `kind="dependency"`), unless an explicit migration decision is approved.
 
-Exception (active):
-- The currently tracked `LINGUISTIC-ENRICHER-REGRESSION-REPORT.md` integration topics are scheduled on a dedicated `1.1.x` patch line per request, with narrow scope and strict regression gates.
+Exception (resolved):
+- The previously tracked Step-12 integration regression topics were handled on a dedicated `1.1.x` patch line and are now closed through `v1.1.34`.
 
 ## Delivery Rule
 
@@ -198,7 +198,6 @@ Execution order rule:
 ## `1.1.x` Regression-Report Schedule (Patch Line)
 
 Source:
-- `LINGUISTIC-ENRICHER-REGRESSION-REPORT.md`
 - `TODO.md` section `Step-12 Integration Watchlist (Validated, 2026-02-13)`
 
 Execution rule:
