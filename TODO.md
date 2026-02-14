@@ -385,6 +385,11 @@ Status update (post `v1.1.16` re-baseline):
 Status snapshot after `v1.1.22`:
 - Fixed in-scope: low-quality carrier precursor guard (`are`) and historical `given` monitor lock.
 - Follow-up patch line completed through `1.1.30` (connector contract lock, cross-seed guardrails, IRS nominal payload suppression).
+- Remaining open patch-scope gaps are scheduled as:
+  - `1.1.31`: connector interface contract closure (downstream alignment).
+  - `1.1.32`: complex clause/PP drift reduction (long-chain variants).
+  - `1.1.33`: generalized fallback-noise hardening (post-IRS bounded fix).
+  - `1.1.34`: low-quality `are (low)` carrier persistence hardening (bounded, webshop-priority variants).
 
 Status snapshot after `v1.1.23`:
 - Hotfix applied for integration safety:
@@ -437,22 +442,31 @@ Status snapshot after `v1.1.30`:
   - Downstream unresolved-token expectations may still flag connector tokens.
   - Confidence: reproducible now as an integration-contract issue, not a standalone upstream defect.
   - Contract-alignment lock refresh completed in `1.1.28` (`such as` + `as well as` integration locks).
+  - Remaining open gap:
+    - downstream interface alignment still required where unresolved-token logic expects connector participation in semantic rows.
 
 - Clause/PP attachment drift in complex sentence variants remains open:
   - Reproducible on longer coordinated/complement shapes (non-universal).
   - Owner focus: Stage 08 structural attachment quality, with Stage 11 normalization sensitivity.
   - Confidence: reproducible now in complex variants.
+  - Current detail (v1.1.30):
+    - long-chain webshop variants still show root-centric Stage 08 attachments (`dep(needs, are)`, `dep(needs, take)`, `obj(needs, system)`) that can flatten clause-local structure into host-centered semantic rows.
+    - this is primarily upstream structure quality debt (Stage 08), not a connector regression.
 
 - Fallback-induced role noise in long passive/complement chains remains open:
   - Stage 11 chunk-fallback paths can amplify weak upstream structure in specific long-sentence cases.
   - Owner focus: Stage 11 fallback boundaries, with Stage 08 structural input quality.
   - Confidence: reproducible now.
-  - Status: addressed by `1.1.30` bounded IRS nominal payload suppression (keep regression locks).
+  - Status: partially addressed by `1.1.30` bounded IRS nominal payload suppression (keep regression locks).
+  - Remaining open gap:
+    - generalized fallback exposure in non-IRS long chains still exists (useful in some cases, but still a drift/noise risk class).
 
 - Low-quality carrier precursor note (`are`):
   - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).
   - Keep gated separately from passive/coordination hardening.
   - `v1.1.22` adds a Stage 11 guard that suppresses weak demoted-copula carrier relations when no subject-like evidence exists and the carrier is only incoming-linked from a verb/clausal chain.
+  - Remaining open gap:
+    - bounded webshop-priority `are (low)` persistence is still tracked and scheduled as `1.1.34`.
 
 - Low-quality carrier note (`given`):
   - Keep as historical/variant-dependent artifact-track signal.
@@ -463,11 +477,9 @@ Status snapshot after `v1.1.30`:
   - Treated as bounded Stage 11 normalization/fallback-noise follow-up.
   - Status: addressed in `1.1.30`; keep regression locks.
 
-- Webshop clause-composition drift remains open and must be fixed in upstream relation shaping:
-  - prevent copula-theme reassignment in `s1` (`is` should not absorb unrelated `purchase` as `theme`).
-  - prevent pronoun-as-predicate projection in `s1` (`them` should not become relation head for location/topic structure).
-  - keep `s2` carrier payload stable while avoiding downstream-fragile standalone carrier overemphasis.
-  - Open follow-up sequence: `1.1.24` (copula-theme), `1.1.25` (pronoun-head), `1.1.26` (carrier-shape normalization).
+- Webshop clause-composition drift (historical):
+  - copula-theme reassignment (`theme(is, purchase)`), pronoun-head projection (`head=them` for location/topic), and weak-carrier overemphasis were addressed in `1.1.24`-`1.1.27`.
+  - Status: resolved in current `1.1.x` line; keep regression locks.
 
 - Attribution rule for release history:
   - Version-by-version causality is intentionally unproven unless historical tags are replayed.

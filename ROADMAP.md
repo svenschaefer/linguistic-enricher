@@ -357,6 +357,52 @@ Execution rule:
   - end-to-end integration lock for IRS sentence family (`relations_extracted`).
   - full test suite + pre/post-publish smoke.
 
+### `1.1.31` - Connector interface contract closure (downstream alignment)
+- Scope:
+  - close the remaining connector contract mismatch by locking explicit compatibility expectations for connector-token unresolved handling (`such`, `as`, `well`) at integration/release-gate level.
+  - keep Stage 11 semantic suppression behavior unchanged unless a minimal non-breaking compatibility adjustment is required.
+- Owners: integration/docs/release-gates (Stage 11 secondary).
+- Status: planned.
+- Required gates:
+  - integration lock proving connector behavior is interpreted consistently with downstream unresolved-policy contract.
+  - release-smoke lock for canonical connector expectations on `such as` / `as well as`.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.32` - Complex clause/PP drift reduction (long-chain variants)
+- Scope:
+  - reduce root-centric clause/PP flattening in complex long-chain shapes without changing stable simple-case outputs.
+  - target sentences where Stage 08 currently emits host-centric `dep/obj` structures that collapse local clause roles.
+- Owners: Stage 08 (dominant), Stage 11 (secondary).
+- Status: planned.
+- Required gates:
+  - Stage 08 unit locks for long-chain clause/PP attachment stability.
+  - end-to-end integration lock on webshop-family complex variants (`relations_extracted`).
+  - no regression of existing `1.1.24`-`1.1.30` locks.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.33` - Generalized fallback-noise hardening (post-IRS)
+- Scope:
+  - extend fallback-boundary hardening beyond the bounded IRS case fixed in `1.1.30`.
+  - keep useful fallback recovery while reducing remaining noisy fallback emissions in long passive/complement chains.
+- Owners: Stage 11 (dominant), Stage 08 (secondary).
+- Status: planned.
+- Required gates:
+  - Stage 11 unit locks distinguishing allowed fallback recovery vs noisy fallback synthesis.
+  - cross-seed integration lock update (`access_control`, `irs`, `webshop`) to prevent drift.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.34` - Low-quality `are (low)` carrier persistence hardening (bounded)
+- Scope:
+  - reduce remaining bounded `are (low)` carrier persistence in webshop-priority long-chain variants without reintroducing `1.1.26`/`1.1.27` overshoot patterns.
+  - preserve payload coverage and existing IRS copula locks.
+- Owners: Stage 11 (dominant), Stage 08 (secondary).
+- Status: planned.
+- Required gates:
+  - Stage 11 unit lock for bounded weak-carrier persistence suppression.
+  - end-to-end lock for webshop `s2` carrier shape stability with unchanged coverage contract.
+  - no regression of `1.1.23` and `1.1.27` integration locks.
+  - full test suite + pre/post-publish smoke.
+
 ## Remaining Issues Plan (from `TODO.md` section `12.1` re-baseline)
 
 ### Priority rule
@@ -365,7 +411,11 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- `1.1.x` regression-follow-up queue is closed.
+- `1.1.x` follow-up queue is re-opened for remaining patch-scope gaps:
+  - `1.1.31` connector interface contract closure
+  - `1.1.32` complex clause/PP drift reduction
+  - `1.1.33` generalized fallback-noise hardening
+  - `1.1.34` low-quality `are (low)` carrier persistence hardening
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
 
