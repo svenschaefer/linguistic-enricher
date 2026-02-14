@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.21] - 2026-02-14
+
+Compared to `v1.1.20`.
+
+### Fixed
+- `package.json`
+  - Removed accidental self-dependency:
+    - `"linguistic-enricher": "file:linguistic-enricher-1.1.20.tgz"`
+  - Restores installability from public npm registry for downstream consumers.
+
+### Validation
+- Full test suite (`npm test`) passes.
+- Pre-publish local tarball smoke verifies install and CLI/pipeline sanity.
+- Post-publish public npm smoke verifies clean install from registry.
+
 ## [1.1.20] - 2026-02-14
 
 Compared to `v1.1.19`.
