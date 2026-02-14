@@ -448,6 +448,42 @@ function remapPrepContainerIfPronoun(containerId, depByDep, tokenById) {
   return candidates.length > 0 ? candidates[0].id : containerId;
 }
 
+function remapWeakAreCarrierHead(headId, depByDep, tokenById) {
+  const incoming = depByDep.get(headId) || [];
+  const candidates = incoming
+    .filter(function (d) {
+      if (!d || !d.head || !d.head.id || !tokenById.has(d.head.id)) {
+        return false;
+      }
+      const base = baseDepLabel(d.label);
+      if (
+        base !== "dep" &&
+        base !== "conj" &&
+        base !== "xcomp" &&
+        base !== "ccomp" &&
+        base !== "advcl" &&
+        base !== "relcl"
+      ) {
+        return false;
+      }
+      const incomingHeadTok = tokenById.get(d.head.id);
+      return isVerbLikeTag(getTag(incomingHeadTok));
+    })
+    .map(function (d) { return tokenById.get(d.head.id); })
+    .sort(function (a, b) {
+      const aDemoted = isDemotedVerbish(a) ? 1 : 0;
+      const bDemoted = isDemotedVerbish(b) ? 1 : 0;
+      if (aDemoted !== bDemoted) {
+        return aDemoted - bDemoted;
+      }
+      if (a.i !== b.i) {
+        return a.i - b.i;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+  return candidates.length > 0 ? candidates[0].id : null;
+}
+
 function isExemplarCandidateToken(token) {
   const tag = getTag(token);
   return isLexicalVerbTag(tag) || isNominalLikeTag(tag) || /^JJ/.test(tag);
@@ -1249,6 +1285,13 @@ async function runStage(seed) {
         const base = baseDepLabel(d.label);
         return base === "attr" || base === "acomp";
       });
+      const hasCarrierModifierShape = outgoingFromHead.some(function (d) {
+        if (!d || !d.dep || !d.dep.id || !tokenById.has(d.dep.id)) {
+          return false;
+        }
+        const base = baseDepLabel(d.label);
+        return base === "advmod" || base === "npadvmod";
+      });
       const hasSubjectLikeOutgoing = (depByHead.get(dep.head.id) || []).some(function (d) {
         return d && isSubjectLikeDepLabel(d.label) && d.dep && d.dep.id && tokenById.has(d.dep.id);
       });
@@ -1282,6 +1325,22 @@ async function runStage(seed) {
       let normalizedHead = isVerbLikeTag(getTag(headTok))
         ? resolvePredicateForRelation(dep.head.id)
         : resolvePredicate(dep.head.id);
+      if (
+        headSurfaceLower === "are" &&
+        isCarrierRoleMappedFromDep(mappedRole, depBase) &&
+        !hasSubjectLikeOutgoing &&
+        hasIncomingVerbLink &&
+        hasCopulaComplementShape &&
+        hasCarrierModifierShape
+      ) {
+        const remappedCarrierHeadId = remapWeakAreCarrierHead(dep.head.id, depByDep, tokenById);
+        if (remappedCarrierHeadId && tokenById.has(remappedCarrierHeadId)) {
+          const remappedCarrierHeadTok = tokenById.get(remappedCarrierHeadId);
+          normalizedHead = isVerbLikeTag(getTag(remappedCarrierHeadTok))
+            ? resolvePredicateForRelation(remappedCarrierHeadId)
+            : resolvePredicate(remappedCarrierHeadId);
+        }
+      }
       let argumentId = dep.dep.id;
       if (
         depBase === "compound" &&

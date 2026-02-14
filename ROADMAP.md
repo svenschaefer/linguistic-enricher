@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.25`
+Current published version: `1.1.26`
 
 ## Versioning Strategy
 
@@ -308,7 +308,7 @@ Execution rule:
   - reduce downstream-fragile standalone carrier overemphasis in webshop `s2` while preserving coverage-required payload (`actually/available`).
   - keep integration-safe behavior from `1.1.23` (no loss of `is/are` payload coverage).
 - Owners: Stage 11 (dominant), Stage 08 (secondary).
-- Status: planned.
+- Status: completed and released.
 - Required gates:
   - Stage 11 unit lock for bounded carrier-shape normalization.
   - end-to-end lock for webshop `s2` role stability with no coverage drop.
@@ -353,8 +353,7 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- Active queue begins with webshop-priority `1.1.x` follow-ups: `1.1.26`.
-- Then continue remaining open regression-report follow-ups: `1.1.27` -> `1.1.29`.
+- Active queue begins with remaining open regression-report follow-ups: `1.1.27` -> `1.1.29`.
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
 

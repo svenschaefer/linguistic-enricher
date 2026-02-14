@@ -409,6 +409,13 @@ Status snapshot after `v1.1.25`:
 - Remaining webshop-priority open item:
   - carrier-shape normalization in webshop `s2` (`are` standalone overemphasis) scheduled as `1.1.26`.
 
+Status snapshot after `v1.1.26`:
+- webshop carrier-shape normalization fixed:
+  - weak webshop `s2` carrier payload is no longer emitted as standalone `are`-headed `attribute/modifier`.
+  - payload coverage remains preserved via normalized host attachment (`available`/`actually` still emitted).
+- integration safety retained:
+  - IRS copula attribute locks stay green (`attribute(is, valid)`, `attribute(are, present)`).
+
 - Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
   - Downstream unresolved-token expectations may still flag connector tokens.

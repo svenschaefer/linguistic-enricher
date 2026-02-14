@@ -738,7 +738,7 @@ test("runPipeline relations_extracted suppresses to-nextVP noise but keeps actor
   );
 });
 
-test("runPipeline relations_extracted keeps webshop are-carrier modifier/attribute edges for coverage stability", async function () {
+test("runPipeline relations_extracted normalizes weak webshop are-carrier payload away from standalone are head", async function () {
   const text = "The shop needs to make sure that items are actually available and the system can take payment and keep a record of the order.";
   const out = await api.runPipeline(text, { target: "relations_extracted" });
   assert.equal(out.stage, "relations_extracted");
@@ -755,11 +755,25 @@ test("runPipeline relations_extracted keeps webshop are-carrier modifier/attribu
     rels.some(function (r) {
       return String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "are" && r.label === "attribute";
     }),
-    true
+    false
   );
   assert.equal(
     rels.some(function (r) {
       return String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "are" && r.label === "modifier";
+    }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) {
+      return r.label === "attribute" &&
+        String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "available";
+    }),
+    true
+  );
+  assert.equal(
+    rels.some(function (r) {
+      return r.label === "modifier" &&
+        String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "actually";
     }),
     true
   );

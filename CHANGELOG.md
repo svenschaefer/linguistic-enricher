@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.26] - 2026-02-14
+
+Compared to `v1.1.25`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Added bounded weak-`are` carrier normalization for Stage 11:
+    - when `are` is a weak carrier (`attribute/modifier` payload, no subject-like outgoing edge, incoming verb-link), carrier payload is remapped to the governing verb head.
+    - keeps standalone weak `are` overemphasis out of webshop `s2` while preserving payload signal (`actually`/`available`).
+  - Guard is constrained to weak `are` shapes that have both carrier complement and carrier modifier payload, preserving IRS `are-present` attribute coverage behavior.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added lock that weak `are` carrier edges are remapped to governing verb head (no `are`-headed `attribute/modifier` in that bounded shape).
+- `test/integration/stage11-relation-extraction.test.js`
+  - Updated webshop `s2` lock:
+    - no accepted `attribute|modifier` relation headed by `are`,
+    - payload remains present (`attribute(*, available)`, `modifier(*, actually)`).
+  - Kept IRS copula attribute lock green (`attribute(is, valid)`, `attribute(are, present)`).
+
 ## [1.1.25] - 2026-02-14
 
 Compared to `v1.1.24`.

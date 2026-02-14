@@ -517,6 +517,35 @@ test("stage11 suppresses weak demoted-copula carrier edges without subject evide
   assert.equal(rels.some(function (r) { return r.head.id === "t4" && r.label === "attribute" && r.dep.id === "t6"; }), false);
 });
 
+test("stage11 remaps weak are-carrier attribute/modifier edges to governing verb", async function () {
+  const text = "needs that items are actually available";
+  const tokens = [
+    token("t1", 0, "needs", "VBZ", 0, 5),
+    token("t2", 1, "that", "IN", 6, 10),
+    token("t3", 2, "items", "NNS", 11, 16),
+    token("t4", 3, "are", "VBP", 17, 20),
+    token("t5", 4, "actually", "RB", 21, 29),
+    token("t6", 5, "available", "JJ", 30, 39)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "needs", "VP", { start: 0, end: 5 }),
+    chunk("c2", ["t2", "t3", "t4", "t5", "t6"], "that items are actually available", "VP", { start: 6, end: 39 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t4"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t4", "t1", "dep", false),
+    depObs("d3", "t5", "t4", "advmod", false),
+    depObs("d4", "t6", "t4", "acomp", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.head.id === "t4" && r.label === "modifier" && r.dep.id === "t5"; }), false);
+  assert.equal(rels.some(function (r) { return r.head.id === "t4" && r.label === "attribute" && r.dep.id === "t6"; }), false);
+  assert.equal(rels.some(function (r) { return r.head.id === "t1" && r.label === "modifier" && r.dep.id === "t5"; }), true);
+  assert.equal(rels.some(function (r) { return r.head.id === "t1" && r.label === "attribute" && r.dep.id === "t6"; }), true);
+});
+
 test("stage11 skips to-nextVP chunk fallback when explicit xcomp exists", async function () {
   const text = "needs to make and can take";
   const tokens = [
