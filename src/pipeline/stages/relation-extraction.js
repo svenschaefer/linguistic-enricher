@@ -347,6 +347,21 @@ function roleFromDepLabel(depLabel, depTokenTag, headTokenTag) {
   return null;
 }
 
+function isSubjectLikeDepLabel(label) {
+  const base = baseDepLabel(label);
+  return base === "nsubj" || base === "nsubjpass" || base === "csubj" || base === "csubjpass" || base === "expl";
+}
+
+function isCarrierRoleMappedFromDep(mappedRole, depLabelBase) {
+  if (mappedRole === "attribute" && (depLabelBase === "attr" || depLabelBase === "acomp")) {
+    return true;
+  }
+  if (mappedRole === "modifier" && (depLabelBase === "advmod" || depLabelBase === "npadvmod")) {
+    return true;
+  }
+  return false;
+}
+
 function isSuchAsConnectorAmod(depBase, depTok, headTok, depByDep, tokenById) {
   if (depBase !== "amod") {
     return false;
@@ -1189,6 +1204,26 @@ async function runStage(seed) {
     }
     const mappedRole = roleFromDepLabel(dep.label, getTag(depTok), getTag(headTok));
     if (mappedRole) {
+      const hasSubjectLikeOutgoing = (depByHead.get(dep.head.id) || []).some(function (d) {
+        return d && isSubjectLikeDepLabel(d.label) && d.dep && d.dep.id && tokenById.has(d.dep.id);
+      });
+      const hasIncomingVerbLink = (depByDep.get(dep.head.id) || []).some(function (d) {
+        if (!d || !d.head || !d.head.id || !tokenById.has(d.head.id)) {
+          return false;
+        }
+        const base = baseDepLabel(d.label);
+        return (base === "dep" || base === "conj" || base === "xcomp" || base === "ccomp" || base === "advcl" || base === "relcl") &&
+          isVerbLikeTag(getTag(tokenById.get(d.head.id)));
+      });
+      if (
+        isCarrierRoleMappedFromDep(mappedRole, depBase) &&
+        isDemotedVerbish(headTok) &&
+        !hasSubjectLikeOutgoing &&
+        hasIncomingVerbLink
+      ) {
+        continue;
+      }
+
       let normalizedHead = isVerbLikeTag(getTag(headTok))
         ? resolvePredicateForRelation(dep.head.id)
         : resolvePredicate(dep.head.id);

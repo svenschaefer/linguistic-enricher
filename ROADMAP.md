@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.19`
+Current published version: `1.1.22`
 
 ## Versioning Strategy
 
@@ -240,7 +240,7 @@ Execution rule:
   - keep the intended `1.1.19` noise reduction (`irs` passive/complement fallback amplification),
   - restore legitimate downstream role-bearing signal in webshop long-chain clauses where `1.1.19` suppression proved too broad.
 - Owners: Stage 11 (dominant), Stage 08 (secondary).
-- Status: planned (priority hotfix before continuing schedule).
+- Status: completed and released.
 - Required gates:
   - unit lock for precise fallback-boundary narrowing (no blanket suppression on verb-linked predicates).
   - end-to-end lock set for:
@@ -248,11 +248,22 @@ Execution rule:
     - webshop chains: legitimate actor/complement role-bearing signal not over-suppressed.
   - full test suite + pre/post-publish smoke.
 
-### `1.1.21` - Carrier precursor guard (`are (low)`) + `given` historical lock
+### `1.1.21` - Emergency packaging hotfix (self-dependency removal)
+- Scope:
+  - remove accidental package self-dependency from npm metadata and restore clean public installability.
+- Owners: packaging/release process.
+- Status: completed and released.
+- Required gates:
+  - full test suite.
+  - local tarball smoke.
+  - public npm propagation + install smoke.
+
+### `1.1.22` - Carrier precursor guard (`are (low)`) + `given` historical lock
 - Scope:
   - guard against reproducible `are` low-carrier precursor shapes.
   - maintain `given` as historical/variant-dependent check (non-blocking unless reproducible under current gates).
 - Owners: Stage 08 + Stage 10 + Stage 11.
+- Status: completed and released.
 - Required gates:
   - targeted unit/integration assertions for carrier precursor suppression.
   - variant-sensitive check for `given` treated as monitor-only unless reproducible.

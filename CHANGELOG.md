@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.22] - 2026-02-14
+
+Compared to `v1.1.21`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Added a deterministic Stage 11 carrier-precursor guard for weak demoted-copula heads:
+    - suppresses `attribute`/`modifier` edges emitted from demoted carrier heads (`is/are/...`) when:
+      - no subject-like outgoing dependency is present, and
+      - the carrier head is only incoming-linked from another verb/clausal chain.
+  - Keeps normal copula behavior intact when subject evidence exists.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added lock for suppression of weak `are` carrier edges without subject evidence.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added webshop long-chain lock ensuring no accepted `attribute|modifier` relation is headed by weak `are` carrier.
+  - Added historical-monitor lock ensuring `given` is not emitted as relation head in the tracked `prime_gen` variant.
+
 ## [1.1.21] - 2026-02-14
 
 Compared to `v1.1.20`.

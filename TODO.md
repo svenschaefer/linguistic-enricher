@@ -400,10 +400,12 @@ Status update (post `v1.1.16` re-baseline):
 - Low-quality carrier precursor note (`are`):
   - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).
   - Keep gated separately from passive/coordination hardening.
+  - `v1.1.22` adds a Stage 11 guard that suppresses weak demoted-copula carrier relations when no subject-like evidence exists and the carrier is only incoming-linked from a verb/clausal chain.
 
 - Low-quality carrier note (`given`):
   - Keep as historical/variant-dependent artifact-track signal.
   - Not consistently reproducible in current upstream-only checks.
+  - `v1.1.22` adds a monitor lock to keep `given` non-predicate in the tracked `prime_gen` variant.
 
 - Attribution rule for release history:
   - Version-by-version causality is intentionally unproven unless historical tags are replayed.
