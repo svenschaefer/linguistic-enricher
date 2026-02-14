@@ -384,8 +384,7 @@ Status update (post `v1.1.16` re-baseline):
 
 Status snapshot after `v1.1.22`:
 - Fixed in-scope: low-quality carrier precursor guard (`are`) and historical `given` monitor lock.
-- Still open from `LINGUISTIC-ENRICHER-REGRESSION-REPORT.md`: connector contract/interface mismatch, cross-seed quality drift guarding, and IRS-family nominal payload noise.
-- Scheduled follow-up patch line: `1.1.24`-`1.1.26` (see `ROADMAP.md`).
+- Follow-up patch line completed through `1.1.30` (connector contract lock, cross-seed guardrails, IRS nominal payload suppression).
 
 Status snapshot after `v1.1.23`:
 - Hotfix applied for integration safety:
@@ -428,6 +427,11 @@ Status snapshot after `v1.1.29`:
   - integration lock now enforces stable core role presence across `access_control`, `irs`, and `webshop`.
   - known webshop no-go artifacts remain blocked (`theme(is, purchase)` and pronoun-headed `location|topic`).
 
+Status snapshot after `v1.1.30`:
+- IRS nominal payload noise reduction completed:
+  - in IRS passive-complement chains, nominal payload noise (`theme(used, policy|incidents)`) is suppressed.
+  - core structural semantics remain preserved (`complement_clause(used, submit)`, `theme(submit, reports)`, `patient/agent` coverage).
+
 - Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
   - Downstream unresolved-token expectations may still flag connector tokens.
@@ -443,7 +447,7 @@ Status snapshot after `v1.1.29`:
   - Stage 11 chunk-fallback paths can amplify weak upstream structure in specific long-sentence cases.
   - Owner focus: Stage 11 fallback boundaries, with Stage 08 structural input quality.
   - Confidence: reproducible now.
-  - Open follow-up: `1.1.30` IRS nominal payload noise reduction.
+  - Status: addressed by `1.1.30` bounded IRS nominal payload suppression (keep regression locks).
 
 - Low-quality carrier precursor note (`are`):
   - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).
@@ -456,8 +460,8 @@ Status snapshot after `v1.1.29`:
   - `v1.1.22` adds a monitor lock to keep `given` non-predicate in the tracked `prime_gen` variant.
 
 - Nominal payload noise in apposition/passive-complement contexts (`irs`-family) remains partially reproducible:
-  - Treat as a bounded Stage 11 normalization/fallback-noise follow-up.
-  - Open follow-up: `1.1.29` IRS nominal payload noise reduction lock.
+  - Treated as bounded Stage 11 normalization/fallback-noise follow-up.
+  - Status: addressed in `1.1.30`; keep regression locks.
 
 - Webshop clause-composition drift remains open and must be fixed in upstream relation shaping:
   - prevent copula-theme reassignment in `s1` (`is` should not absorb unrelated `purchase` as `theme`).

@@ -460,6 +460,46 @@ test("stage11 suppresses fallback actor when predicate is verb-linked clausal co
   assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t3"; }), false);
 });
 
+test("stage11 suppresses passive-head nominal payload themes when xcomp verb already carries object", async function () {
+  const text = "used by employees to submit reports policy incidents";
+  const tokens = [
+    token("t1", 0, "used", "VBN", 0, 4),
+    token("t2", 1, "by", "IN", 5, 7),
+    token("t3", 2, "employees", "NNS", 8, 17),
+    token("t4", 3, "to", "TO", 18, 20),
+    token("t5", 4, "submit", "VB", 21, 27),
+    token("t6", 5, "reports", "NNS", 28, 35),
+    token("t7", 6, "policy", "NN", 36, 42),
+    token("t8", 7, "or", "CC", 43, 45),
+    token("t9", 8, "incidents", "NNS", 46, 55),
+    token("t10", 9, "system", "NN", 56, 62)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2", "t3", "t4", "t5", "t6"], "used by employees to submit reports", "VP", { start: 0, end: 35 }),
+    chunk("c2", ["t7"], "policy", "NP", { start: 36, end: 42 }),
+    chunk("c3", ["t8"], "or", "O", { start: 43, end: 45 }),
+    chunk("c4", ["t9"], "incidents", "NP", { start: 46, end: 55 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t7"),
+    chunkHead("h3", "c3", "t8"),
+    chunkHead("h4", "c4", "t9"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d1a", "t10", "t1", "nsubjpass", false),
+    depObs("d2", "t2", "t1", "prep", false),
+    depObs("d3", "t3", "t2", "pobj", false),
+    depObs("d4", "t5", "t1", "xcomp", false),
+    depObs("d5", "t6", "t5", "obj", false),
+    depObs("d6", "t7", "t1", "obj", false),
+    depObs("d7", "t9", "t1", "obj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.dep.id === "t6"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t1" && r.dep.id === "t7"; }), false);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t1" && r.dep.id === "t9"; }), false);
+});
+
 test("stage11 allows fallback actor when incoming verb-link is generic dep", async function () {
   const text = "needs the system can take payment";
   const tokens = [

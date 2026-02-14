@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.29`
+Current published version: `1.1.30`
 
 ## Versioning Strategy
 
@@ -351,7 +351,7 @@ Execution rule:
 - Scope:
   - reduce partially reproducible nominal payload noise in IRS-family apposition/passive-complement structures without losing core patient/agent/theme coverage.
 - Owners: Stage 11 (dominant), Stage 08 (secondary).
-- Status: planned.
+- Status: completed and released.
 - Required gates:
   - Stage 11 unit lock for bounded nominal-noise suppression.
   - end-to-end integration lock for IRS sentence family (`relations_extracted`).
@@ -365,7 +365,7 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- Active queue begins with remaining open regression-report follow-up: `1.1.30`.
+- `1.1.x` regression-follow-up queue is closed.
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
 

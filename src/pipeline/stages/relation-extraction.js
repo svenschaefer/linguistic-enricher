@@ -1293,6 +1293,42 @@ async function runStage(seed) {
         const base = baseDepLabel(d.label);
         return base === "attr" || base === "acomp";
       });
+      const hasPassiveSubject = outgoingFromHead.some(function (d) {
+        return d && baseDepLabel(d.label) === "nsubjpass" && d.dep && d.dep.id && tokenById.has(d.dep.id);
+      });
+      const byPrepEdges = outgoingFromHead.filter(function (d) {
+        if (!d || !d.dep || !d.dep.id || !tokenById.has(d.dep.id)) {
+          return false;
+        }
+        if (baseDepLabel(d.label) !== "prep") {
+          return false;
+        }
+        return lowerSurface(tokenById.get(d.dep.id)) === "by";
+      });
+      const hasByAgentPobj = byPrepEdges.some(function (prepEdge) {
+        return (depByHead.get(prepEdge.dep.id) || []).some(function (child) {
+          return child &&
+            baseDepLabel(child.label) === "pobj" &&
+            child.dep &&
+            child.dep.id &&
+            tokenById.has(child.dep.id);
+        });
+      });
+      const xcompVerbEdges = outgoingFromHead.filter(function (d) {
+        if (!d || !d.dep || !d.dep.id || !tokenById.has(d.dep.id)) {
+          return false;
+        }
+        return baseDepLabel(d.label) === "xcomp" && isVerbLikeTag(getTag(tokenById.get(d.dep.id)));
+      });
+      const hasXcompWithObject = xcompVerbEdges.some(function (x) {
+        return (depByHead.get(x.dep.id) || []).some(function (child) {
+          const base = baseDepLabel(child.label);
+          return (base === "obj" || base === "dobj") &&
+            child.dep &&
+            child.dep.id &&
+            tokenById.has(child.dep.id);
+        });
+      });
       const hasCarrierModifierShape = outgoingFromHead.some(function (d) {
         if (!d || !d.dep || !d.dep.id || !tokenById.has(d.dep.id)) {
           return false;
@@ -1326,6 +1362,16 @@ async function runStage(seed) {
         (depBase === "obj" || depBase === "dobj") &&
         isDemotedVerbish(headTok) &&
         hasCopulaComplementShape
+      ) {
+        continue;
+      }
+      if (
+        mappedRole === "theme" &&
+        (depBase === "obj" || depBase === "dobj") &&
+        getTag(headTok) === "VBN" &&
+        hasPassiveSubject &&
+        hasByAgentPobj &&
+        hasXcompWithObject
       ) {
         continue;
       }

@@ -681,10 +681,14 @@ test("runPipeline relations_extracted suppresses fallback actor injection on cla
   const submitId = tokenBySurface.get("submit");
   const irsId = tokenBySurface.get("irs");
   const reportsId = tokenBySurface.get("reports");
+  const policyId = tokenBySurface.get("policy");
+  const incidentsId = tokenBySurface.get("incidents");
   assert.ok(usedId);
   assert.ok(submitId);
   assert.ok(irsId);
   assert.ok(reportsId);
+  assert.ok(policyId);
+  assert.ok(incidentsId);
 
   const rels = out.annotations.filter(function (a) {
     return a.kind === "dependency" &&
@@ -703,6 +707,14 @@ test("runPipeline relations_extracted suppresses fallback actor injection on cla
   );
   assert.equal(
     rels.some(function (r) { return r.label === "actor" && r.head.id === submitId && r.dep.id === irsId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === usedId && r.dep.id === policyId; }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) { return r.label === "theme" && r.head.id === usedId && r.dep.id === incidentsId; }),
     false
   );
 });

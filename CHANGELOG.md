@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.30] - 2026-02-14
+
+Compared to `v1.1.29`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Added bounded IRS-family nominal payload suppression for passive-complement chains:
+    - suppresses `theme` projection from passive VBN heads when the same head has:
+      - passive subject evidence (`nsubjpass`),
+      - explicit `by`-agent (`prep(by)+pobj`),
+      - and an `xcomp` verb that already carries its own object.
+    - keeps core chain semantics intact (`patient/agent/complement_clause/theme(submit,reports)`).
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added lock: passive-head nominal payload themes are suppressed when xcomp verb already carries object.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Extended IRS chain lock:
+    - keeps `complement_clause(used, submit)` and `theme(submit, reports)`,
+    - keeps fallback actor suppression (`no actor(submit, IRS)`),
+    - blocks nominal payload noise (`no theme(used, policy|incidents)`).
+
+### Documentation
+- `TODO.md`
+  - Marked IRS nominal payload noise follow-up as completed in `1.1.30`.
+- `ROADMAP.md`
+  - Marked `1.1.30` as completed and closed the remaining `1.1.x` follow-up queue.
+
 ## [1.1.29] - 2026-02-14
 
 Compared to `v1.1.28`.
