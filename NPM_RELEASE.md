@@ -63,6 +63,12 @@ Run at least one pipeline sanity run:
 node -e "const api=require('linguistic-enricher'); api.runPipeline('Generated primes may be used for educational purposes or basic numerical experiments.',{target:'relations_extracted'}).then(o=>{const rels=(o.annotations||[]).filter(a=>a.kind==='dependency'&&a.status==='accepted'&&Array.isArray(a.sources)&&a.sources.some(s=>s&&s.name==='relation-extraction')); const tok=new Map((o.tokens||[]).map(t=>[String(t.surface||'').toLowerCase(),t.id])); const used=tok.get('used'); const primes=tok.get('primes'); const may=tok.get('may'); const hasPatient=rels.some(r=>r.label==='patient'&&r.head.id===used&&r.dep.id===primes); const hasModality=rels.some(r=>r.label==='modality'&&r.head.id===used&&r.dep.id===may); if(o.stage!=='relations_extracted'||!hasPatient||!hasModality){process.exit(1);} console.log(JSON.stringify({stage:o.stage,accepted_dependency_edges:rels.length,hasPatient,hasModality},null,2));}).catch(e=>{console.error(e); process.exit(1);});"
 ```
 
+Connector contract smoke assertion (`such as` / `as well as`, canonical output kind):
+
+```powershell
+node -e "const api=require('linguistic-enricher'); const cases=['Each role grants permissions such as read, write, or administer.','The report includes structured fields as well as free descriptions.']; Promise.all(cases.map(t=>api.runPipeline(t,{target:'relations_extracted'}))).then(outs=>{for(const o of outs){const rels=(o.annotations||[]).filter(a=>a.kind==='dependency'&&a.status==='accepted'&&Array.isArray(a.sources)&&a.sources.some(s=>s&&s.name==='relation-extraction')); const bad=(rels||[]).some(r=>['such','as','well'].includes(String(((o.tokens||[]).find(t=>t.id===r.head.id)||{}).surface||'').toLowerCase())||['such','as','well'].includes(String(((o.tokens||[]).find(t=>t.id===r.dep.id)||{}).surface||'').toLowerCase())); const acceptedRelations=(o.annotations||[]).filter(a=>a.kind==='relation'&&a.status==='accepted'&&Array.isArray(a.sources)&&a.sources.some(s=>s&&s.name==='relation-extraction')); if(o.stage!=='relations_extracted'||rels.length===0||bad||acceptedRelations.length!==0){process.exit(1);}} console.log('connector_contract_smoke=ok');}).catch(e=>{console.error(e); process.exit(1);});"
+```
+
 Optional service-mode checks:
 - Without `WIKI_INDEX_ENDPOINT`
 - With `WIKI_INDEX_ENDPOINT=http://127.0.0.1:32123`
@@ -161,6 +167,12 @@ Run at least one pipeline sanity run:
 
 ```powershell
 node -e "const api=require('linguistic-enricher'); api.runPipeline('Generated primes may be used for educational purposes or basic numerical experiments.',{target:'relations_extracted'}).then(o=>{const rels=(o.annotations||[]).filter(a=>a.kind==='dependency'&&a.status==='accepted'&&Array.isArray(a.sources)&&a.sources.some(s=>s&&s.name==='relation-extraction')); const tok=new Map((o.tokens||[]).map(t=>[String(t.surface||'').toLowerCase(),t.id])); const used=tok.get('used'); const primes=tok.get('primes'); const may=tok.get('may'); const hasPatient=rels.some(r=>r.label==='patient'&&r.head.id===used&&r.dep.id===primes); const hasModality=rels.some(r=>r.label==='modality'&&r.head.id===used&&r.dep.id===may); if(o.stage!=='relations_extracted'||!hasPatient||!hasModality){process.exit(1);} console.log(JSON.stringify({stage:o.stage,accepted_dependency_edges:rels.length,hasPatient,hasModality},null,2));}).catch(e=>{console.error(e); process.exit(1);});"
+```
+
+Connector contract smoke assertion (`such as` / `as well as`, canonical output kind):
+
+```powershell
+node -e "const api=require('linguistic-enricher'); const cases=['Each role grants permissions such as read, write, or administer.','The report includes structured fields as well as free descriptions.']; Promise.all(cases.map(t=>api.runPipeline(t,{target:'relations_extracted'}))).then(outs=>{for(const o of outs){const rels=(o.annotations||[]).filter(a=>a.kind==='dependency'&&a.status==='accepted'&&Array.isArray(a.sources)&&a.sources.some(s=>s&&s.name==='relation-extraction')); const bad=(rels||[]).some(r=>['such','as','well'].includes(String(((o.tokens||[]).find(t=>t.id===r.head.id)||{}).surface||'').toLowerCase())||['such','as','well'].includes(String(((o.tokens||[]).find(t=>t.id===r.dep.id)||{}).surface||'').toLowerCase())); const acceptedRelations=(o.annotations||[]).filter(a=>a.kind==='relation'&&a.status==='accepted'&&Array.isArray(a.sources)&&a.sources.some(s=>s&&s.name==='relation-extraction')); if(o.stage!=='relations_extracted'||rels.length===0||bad||acceptedRelations.length!==0){process.exit(1);}} console.log('connector_contract_smoke=ok');}).catch(e=>{console.error(e); process.exit(1);});"
 ```
 
 Optional service-mode checks:

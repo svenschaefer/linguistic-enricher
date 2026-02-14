@@ -448,7 +448,14 @@ test("runPipeline relations_extracted enforces connector contract (suppressed co
         Array.isArray(a.sources) &&
         a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
     });
+    const acceptedRelations = out.annotations.filter(function (a) {
+      return a.kind === "relation" &&
+        a.status === "accepted" &&
+        Array.isArray(a.sources) &&
+        a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+    });
     assert.equal(rels.length > 0, true);
+    assert.equal(acceptedRelations.length, 0);
 
     const connectorUsed = rels.some(function (r) {
       const h = String(tokenById.get(r.head.id) || "").toLowerCase();

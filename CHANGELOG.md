@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.31] - 2026-02-14
+
+Compared to `v1.1.30`.
+
+### Tests
+- `test/integration/stage11-relation-extraction.test.js`
+  - Hardened connector-contract lock (`such as`, `as well as`) to assert canonical semantic output remains in accepted `kind="dependency"` and that no accepted Stage-11 semantic edges are emitted as `kind="relation"` for connector cases.
+
+### Documentation
+- `NPM_RELEASE.md`
+  - Added mandatory connector-contract smoke assertions (pre-publish local tarball and post-publish public npm smoke) for:
+    - suppressed connector endpoints (`such`, `as`, `well`) in accepted semantic edges,
+    - canonical accepted semantic output kind (`dependency`, not `relation`).
+
 ## [1.1.30] - 2026-02-14
 
 Compared to `v1.1.29`.

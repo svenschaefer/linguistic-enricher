@@ -362,7 +362,7 @@ Execution rule:
   - close the remaining connector contract mismatch by locking explicit compatibility expectations for connector-token unresolved handling (`such`, `as`, `well`) at integration/release-gate level.
   - keep Stage 11 semantic suppression behavior unchanged unless a minimal non-breaking compatibility adjustment is required.
 - Owners: integration/docs/release-gates (Stage 11 secondary).
-- Status: planned.
+- Status: completed and released.
 - Required gates:
   - integration lock proving connector behavior is interpreted consistently with downstream unresolved-policy contract.
   - release-smoke lock for canonical connector expectations on `such as` / `as well as`.
@@ -412,7 +412,6 @@ Execution rule:
 
 ### Next queue
 - `1.1.x` follow-up queue is re-opened for remaining patch-scope gaps:
-  - `1.1.31` connector interface contract closure
   - `1.1.32` complex clause/PP drift reduction
   - `1.1.33` generalized fallback-noise hardening
   - `1.1.34` low-quality `are (low)` carrier persistence hardening

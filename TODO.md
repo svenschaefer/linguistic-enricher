@@ -386,7 +386,6 @@ Status snapshot after `v1.1.22`:
 - Fixed in-scope: low-quality carrier precursor guard (`are`) and historical `given` monitor lock.
 - Follow-up patch line completed through `1.1.30` (connector contract lock, cross-seed guardrails, IRS nominal payload suppression).
 - Remaining open patch-scope gaps are scheduled as:
-  - `1.1.31`: connector interface contract closure (downstream alignment).
   - `1.1.32`: complex clause/PP drift reduction (long-chain variants).
   - `1.1.33`: generalized fallback-noise hardening (post-IRS bounded fix).
   - `1.1.34`: low-quality `are (low)` carrier persistence hardening (bounded, webshop-priority variants).
@@ -442,8 +441,8 @@ Status snapshot after `v1.1.30`:
   - Downstream unresolved-token expectations may still flag connector tokens.
   - Confidence: reproducible now as an integration-contract issue, not a standalone upstream defect.
   - Contract-alignment lock refresh completed in `1.1.28` (`such as` + `as well as` integration locks).
-  - Remaining open gap:
-    - downstream interface alignment still required where unresolved-token logic expects connector participation in semantic rows.
+  - Contract closure completed in `1.1.31`:
+    - integration + release-smoke locks now enforce connector expectations against canonical accepted `kind="dependency"` semantic output.
 
 - Clause/PP attachment drift in complex sentence variants remains open:
   - Reproducible on longer coordinated/complement shapes (non-universal).
