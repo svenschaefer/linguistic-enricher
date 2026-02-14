@@ -656,6 +656,45 @@ test("stage11 does not remap weak are-carrier payload to gerund host", async fun
   assert.equal(rels.some(function (r) { return r.head.id === "t5" && r.label === "attribute" && r.dep.id === "t7"; }), true);
 });
 
+test("stage11 remaps weak are-carrier via one-hop gerund bridge to finite lexical host", async function () {
+  const text = "while doing that needs items are actually available";
+  const tokens = [
+    token("t1", 0, "while", "IN", 0, 5),
+    token("t2", 1, "doing", "VBG", 6, 11),
+    token("t3", 2, "that", "DT", 12, 16),
+    token("t4", 3, "needs", "VBZ", 17, 22),
+    token("t5", 4, "items", "NNS", 23, 28),
+    token("t6", 5, "are", "VBP", 29, 32),
+    token("t7", 6, "actually", "RB", 33, 41),
+    token("t8", 7, "available", "JJ", 42, 51)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2", "t3"], "while doing that", "VP", { start: 0, end: 16 }),
+    chunk("c2", ["t4"], "needs", "VP", { start: 17, end: 22 }),
+    chunk("c3", ["t5"], "items", "NP", { start: 23, end: 28 }),
+    chunk("c4", ["t6", "t7", "t8"], "are actually available", "VP", { start: 29, end: 51 }),
+    chunkHead("h1", "c1", "t2"),
+    chunkHead("h2", "c2", "t4"),
+    chunkHead("h3", "c3", "t5"),
+    chunkHead("h4", "c4", "t6"),
+    depObs("d1", "t2", null, "root", true),
+    depObs("d2", "t4", "t2", "dep", false),
+    depObs("d3", "t5", "t2", "obj", false),
+    depObs("d4", "t6", "t2", "dep", false),
+    depObs("d5", "t7", "t6", "advmod", false),
+    depObs("d6", "t8", "t6", "acomp", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "modifier" && r.dep.id === "t7"; }), false);
+  assert.equal(rels.some(function (r) { return r.head.id === "t2" && r.label === "attribute" && r.dep.id === "t8"; }), false);
+  assert.equal(rels.some(function (r) { return r.head.id === "t6" && r.label === "modifier" && r.dep.id === "t7"; }), false);
+  assert.equal(rels.some(function (r) { return r.head.id === "t6" && r.label === "attribute" && r.dep.id === "t8"; }), false);
+  assert.equal(rels.some(function (r) { return r.head.id === "t4" && r.label === "modifier" && r.dep.id === "t7"; }), true);
+  assert.equal(rels.some(function (r) { return r.head.id === "t4" && r.label === "attribute" && r.dep.id === "t8"; }), true);
+});
+
 test("stage11 skips to-nextVP chunk fallback when explicit xcomp exists", async function () {
   const text = "needs to make and can take";
   const tokens = [

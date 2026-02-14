@@ -448,7 +448,23 @@ function remapPrepContainerIfPronoun(containerId, depByDep, tokenById) {
   return candidates.length > 0 ? candidates[0].id : containerId;
 }
 
-function remapWeakAreCarrierHead(headId, depByDep, tokenById) {
+function remapWeakAreCarrierHead(headId, depByDep, depByHead, tokenById) {
+  function lexicalNonGerundVerbFromEdgeHead(edge) {
+    if (!edge || !edge.head || !edge.head.id || !tokenById.has(edge.head.id)) {
+      return null;
+    }
+    const incomingHeadTok = tokenById.get(edge.head.id);
+    const headTag = getTag(incomingHeadTok);
+    if (!isLexicalVerbTag(headTag)) {
+      return null;
+    }
+    // Keep remap bounded to non-gerund lexical hosts.
+    if (headTag === "VBG" || headTag === "VBN") {
+      return null;
+    }
+    return incomingHeadTok;
+  }
+
   const incoming = depByDep.get(headId) || [];
   const candidates = incoming
     .filter(function (d) {
@@ -466,18 +482,9 @@ function remapWeakAreCarrierHead(headId, depByDep, tokenById) {
       ) {
         return false;
       }
-      const incomingHeadTok = tokenById.get(d.head.id);
-      const headTag = getTag(incomingHeadTok);
-      if (!isLexicalVerbTag(headTag)) {
-        return false;
-      }
-      // Keep remap bounded to non-gerund lexical hosts.
-      if (headTag === "VBG" || headTag === "VBN") {
-        return false;
-      }
-      return true;
+      return lexicalNonGerundVerbFromEdgeHead(d) !== null;
     })
-    .map(function (d) { return tokenById.get(d.head.id); })
+    .map(function (d) { return lexicalNonGerundVerbFromEdgeHead(d); })
     .sort(function (a, b) {
       const aDemoted = isDemotedVerbish(a) ? 1 : 0;
       const bDemoted = isDemotedVerbish(b) ? 1 : 0;
@@ -489,7 +496,61 @@ function remapWeakAreCarrierHead(headId, depByDep, tokenById) {
       }
       return String(a.id).localeCompare(String(b.id));
     });
-  return candidates.length > 0 ? candidates[0].id : null;
+  if (candidates.length > 0) {
+    return candidates[0].id;
+  }
+
+  // One-hop bridge: if weak "are" is incoming-linked from a gerund/participle
+  // carrier (e.g., "while doing ... are ..."), look for a stable lexical verb
+  // child of that bridge head before giving up remap.
+  const bridgedCandidates = [];
+  for (let i = 0; i < incoming.length; i += 1) {
+    const incomingEdge = incoming[i];
+    if (!incomingEdge || !incomingEdge.head || !incomingEdge.head.id || !tokenById.has(incomingEdge.head.id)) {
+      continue;
+    }
+    const bridgeHeadTok = tokenById.get(incomingEdge.head.id);
+    const bridgeTag = getTag(bridgeHeadTok);
+    if (bridgeTag !== "VBG" && bridgeTag !== "VBN") {
+      continue;
+    }
+    const bridgeOutgoing = depByHead.get(bridgeHeadTok.id) || [];
+    for (let j = 0; j < bridgeOutgoing.length; j += 1) {
+      const childEdge = bridgeOutgoing[j];
+      if (!childEdge || !childEdge.dep || !childEdge.dep.id || childEdge.dep.id === headId || !tokenById.has(childEdge.dep.id)) {
+        continue;
+      }
+      const childBase = baseDepLabel(childEdge.label);
+      if (
+        childBase !== "dep" &&
+        childBase !== "conj" &&
+        childBase !== "xcomp" &&
+        childBase !== "ccomp" &&
+        childBase !== "advcl" &&
+        childBase !== "relcl"
+      ) {
+        continue;
+      }
+      const childTok = tokenById.get(childEdge.dep.id);
+      const childTag = getTag(childTok);
+      if (!isLexicalVerbTag(childTag) || childTag === "VBG" || childTag === "VBN") {
+        continue;
+      }
+      bridgedCandidates.push(childTok);
+    }
+  }
+  bridgedCandidates.sort(function (a, b) {
+    const aDemoted = isDemotedVerbish(a) ? 1 : 0;
+    const bDemoted = isDemotedVerbish(b) ? 1 : 0;
+    if (aDemoted !== bDemoted) {
+      return aDemoted - bDemoted;
+    }
+    if (a.i !== b.i) {
+      return a.i - b.i;
+    }
+    return String(a.id).localeCompare(String(b.id));
+  });
+  return bridgedCandidates.length > 0 ? bridgedCandidates[0].id : null;
 }
 
 function isExemplarCandidateToken(token) {
@@ -1434,7 +1495,7 @@ async function runStage(seed) {
         hasCopulaComplementShape &&
         hasCarrierModifierShape
       ) {
-        const remappedCarrierHeadId = remapWeakAreCarrierHead(dep.head.id, depByDep, tokenById);
+        const remappedCarrierHeadId = remapWeakAreCarrierHead(dep.head.id, depByDep, depByHead, tokenById);
         if (remappedCarrierHeadId && tokenById.has(remappedCarrierHeadId)) {
           const remappedCarrierHeadTok = tokenById.get(remappedCarrierHeadId);
           normalizedHead = isVerbLikeTag(getTag(remappedCarrierHeadTok))

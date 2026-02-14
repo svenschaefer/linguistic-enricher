@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.34] - 2026-02-14
+
+Compared to `v1.1.33`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened weak `are` carrier remap in bounded long-chain webshop shapes:
+    - kept the existing direct non-gerund host remap path,
+    - added a bounded one-hop bridge path when `are` is incoming-linked only from a gerund/participle carrier head (for example `while doing ... are ...`),
+    - remap now prefers a finite lexical verb child of that bridge head, while still blocking remap onto gerund hosts.
+  - This removes residual standalone weak `are` carrier persistence in the tracked webshop-priority long-chain variant without reintroducing `doing` host overshoot.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added lock: weak `are` carrier can remap via one-hop gerund bridge to a finite lexical host.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Extended webshop `while doing` lock:
+    - still blocks `doing` as attribute/modifier host,
+    - now also blocks `are` as attribute/modifier host in that bounded shape,
+    - preserves payload presence for `available` and `actually`.
+
+### Documentation
+- `TODO.md`
+  - Marked bounded weak `are` carrier persistence follow-up as completed in `1.1.34`.
+- `ROADMAP.md`
+  - Marked `1.1.34` completed and closed the scheduled `1.1.x` follow-up queue.
+
 ## [1.1.33] - 2026-02-14
 
 Compared to `v1.1.32`.

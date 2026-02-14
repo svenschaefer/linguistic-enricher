@@ -385,8 +385,8 @@ Status update (post `v1.1.16` re-baseline):
 Status snapshot after `v1.1.22`:
 - Fixed in-scope: low-quality carrier precursor guard (`are`) and historical `given` monitor lock.
 - Follow-up patch line completed through `1.1.30` (connector contract lock, cross-seed guardrails, IRS nominal payload suppression).
-- Remaining open patch-scope gaps are scheduled as:
-  - `1.1.34`: low-quality `are (low)` carrier persistence hardening (bounded, webshop-priority variants).
+- Follow-up patch line completed through `1.1.34`:
+  - bounded weak `are` carrier persistence in webshop-priority long-chain variants is now hardened without reintroducing `doing` remap overshoot.
 
 Status snapshot after `v1.1.23`:
 - Hotfix applied for integration safety:
@@ -460,15 +460,16 @@ Status snapshot after `v1.1.30`:
   - Status update (`1.1.33`):
     - generalized fallback-theme hardening added for long-chain cases where next NP is separated by intervening verb chain.
     - IRS copula-chain fallback noise (`theme(verify, fields)`-class) is now suppressed under regression lock.
-  - Remaining open gap:
-    - low-quality weak-carrier persistence in bounded webshop-priority variants remains scheduled in `1.1.34`.
+  - Status update (`1.1.34`):
+    - bounded weak `are` carrier persistence is hardened for the webshop `while doing` long-chain variant via finite-host remap bridge.
+    - no `doing`-headed and no `are`-headed weak carrier payload in the locked shape; payload coverage remains present.
 
 - Low-quality carrier precursor note (`are`):
   - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).
   - Keep gated separately from passive/coordination hardening.
   - `v1.1.22` adds a Stage 11 guard that suppresses weak demoted-copula carrier relations when no subject-like evidence exists and the carrier is only incoming-linked from a verb/clausal chain.
-  - Remaining open gap:
-    - bounded webshop-priority `are (low)` persistence is still tracked and scheduled as `1.1.34`.
+  - `v1.1.34` closes the bounded webshop-priority persistence gap:
+    - weak `are` carrier payload in the locked `while doing` shape remaps to a finite lexical host without gerund-host overshoot.
 
 - Low-quality carrier note (`given`):
   - Keep as historical/variant-dependent artifact-track signal.

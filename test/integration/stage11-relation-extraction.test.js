@@ -833,6 +833,13 @@ test("runPipeline relations_extracted does not remap webshop while-doing carrier
   );
   assert.equal(
     rels.some(function (r) {
+      return (r.label === "attribute" || r.label === "modifier") &&
+        String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "are";
+    }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) {
       return r.label === "attribute" &&
         String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "available";
     }),
