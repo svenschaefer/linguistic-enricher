@@ -914,6 +914,9 @@ test("runPipeline relations_extracted keeps IRS copula attributes for is-valid a
   assert.equal(out.stage, "relations_extracted");
 
   const tokenById = new Map(out.tokens.map(function (t) { return [t.id, t]; }));
+  const tokenBySurface = new Map(out.tokens.map(function (t) { return [String(t.surface || "").toLowerCase(), t.id]; }));
+  const verifyId = tokenBySurface.get("verify");
+  const fieldsId = tokenBySurface.get("fields");
   const rels = out.annotations.filter(function (a) {
     return a.kind === "dependency" &&
       a.status === "accepted" &&
@@ -936,6 +939,12 @@ test("runPipeline relations_extracted keeps IRS copula attributes for is-valid a
         r.label === "attribute";
     }),
     true
+  );
+  assert.equal(
+    rels.some(function (r) {
+      return verifyId && fieldsId && r.label === "theme" && r.head.id === verifyId && r.dep.id === fieldsId;
+    }),
+    false
   );
 });
 

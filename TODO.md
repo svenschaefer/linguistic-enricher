@@ -386,7 +386,6 @@ Status snapshot after `v1.1.22`:
 - Fixed in-scope: low-quality carrier precursor guard (`are`) and historical `given` monitor lock.
 - Follow-up patch line completed through `1.1.30` (connector contract lock, cross-seed guardrails, IRS nominal payload suppression).
 - Remaining open patch-scope gaps are scheduled as:
-  - `1.1.33`: generalized fallback-noise hardening (post-IRS bounded fix).
   - `1.1.34`: low-quality `are (low)` carrier persistence hardening (bounded, webshop-priority variants).
 
 Status snapshot after `v1.1.23`:
@@ -458,9 +457,11 @@ Status snapshot after `v1.1.30`:
   - Stage 11 chunk-fallback paths can amplify weak upstream structure in specific long-sentence cases.
   - Owner focus: Stage 11 fallback boundaries, with Stage 08 structural input quality.
   - Confidence: reproducible now.
-  - Status: partially addressed by `1.1.30` bounded IRS nominal payload suppression (keep regression locks).
+  - Status update (`1.1.33`):
+    - generalized fallback-theme hardening added for long-chain cases where next NP is separated by intervening verb chain.
+    - IRS copula-chain fallback noise (`theme(verify, fields)`-class) is now suppressed under regression lock.
   - Remaining open gap:
-    - generalized fallback exposure in non-IRS long chains still exists (useful in some cases, but still a drift/noise risk class).
+    - low-quality weak-carrier persistence in bounded webshop-priority variants remains scheduled in `1.1.34`.
 
 - Low-quality carrier precursor note (`are`):
   - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).

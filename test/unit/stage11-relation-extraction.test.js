@@ -530,6 +530,43 @@ test("stage11 allows fallback actor when incoming verb-link is generic dep", asy
   assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t5" && r.dep.id === "t3"; }), true);
 });
 
+test("stage11 skips fallback theme when next NP is separated by intervening verb chain", async function () {
+  const text = "system must verify that category is valid and mandatory fields are present";
+  const tokens = [
+    token("t1", 0, "system", "NN", 0, 6),
+    token("t2", 1, "must", "MD", 7, 11),
+    token("t3", 2, "verify", "VB", 12, 18),
+    token("t4", 3, "that", "IN", 19, 23),
+    token("t5", 4, "category", "NN", 24, 32),
+    token("t6", 5, "is", "VBZ", 33, 35),
+    token("t7", 6, "valid", "JJ", 36, 41),
+    token("t8", 7, "and", "CC", 42, 45),
+    token("t9", 8, "mandatory", "JJ", 46, 55),
+    token("t10", 9, "fields", "NNS", 56, 62),
+    token("t11", 10, "are", "VBP", 63, 66),
+    token("t12", 11, "present", "JJ", 67, 74)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "system", "NP", { start: 0, end: 6 }),
+    chunk("c2", ["t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t11", "t12"], "must verify that category is valid and mandatory are present", "VP", { start: 7, end: 74 }),
+    chunk("c3", ["t10"], "fields", "NP", { start: 56, end: 62 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t10"),
+    depObs("d1", "t3", null, "root", true),
+    depObs("d2", "t1", "t3", "nsubj", false),
+    depObs("d3", "t2", "t3", "aux", false),
+    depObs("d4", "t6", "t3", "dep", false),
+    depObs("d5", "t11", "t3", "dep", false),
+    depObs("d6", "t12", "t11", "acomp", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t3" && r.dep.id === "t1"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t3" && r.dep.id === "t10"; }), false);
+});
+
 test("stage11 suppresses weak demoted-copula carrier edges without subject evidence for non-is/are carriers", async function () {
   const text = "needs that items was actually available";
   const tokens = [

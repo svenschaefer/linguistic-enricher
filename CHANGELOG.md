@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.33] - 2026-02-14
+
+Compared to `v1.1.32`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Hardened generalized VP `theme` chunk-fallback:
+    - skips fallback `theme` injection when the candidate next-NP argument is separated from the predicate by an intervening verb in the same sentence span.
+  - This reduces long passive/complement chain noise (for example `theme(verify, fields)`-class drift) while preserving adjacent object fallback behavior.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added lock: no fallback `theme` when next NP is separated by intervening verb chain.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Extended IRS copula-chain lock:
+    - keeps `attribute(is, valid)` and `attribute(are, present)`,
+    - blocks `theme(verify, fields)` fallback noise.
+
+### Documentation
+- `TODO.md`
+  - Marked generalized fallback-noise hardening as completed in `1.1.33`.
+- `ROADMAP.md`
+  - Marked `1.1.33` as completed and advanced the remaining `1.1.x` queue.
+
 ## [1.1.32] - 2026-02-14
 
 Compared to `v1.1.31`.

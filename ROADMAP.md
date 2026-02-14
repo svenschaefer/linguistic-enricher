@@ -385,7 +385,7 @@ Execution rule:
   - extend fallback-boundary hardening beyond the bounded IRS case fixed in `1.1.30`.
   - keep useful fallback recovery while reducing remaining noisy fallback emissions in long passive/complement chains.
 - Owners: Stage 11 (dominant), Stage 08 (secondary).
-- Status: planned.
+- Status: completed and released.
 - Required gates:
   - Stage 11 unit locks distinguishing allowed fallback recovery vs noisy fallback synthesis.
   - cross-seed integration lock update (`access_control`, `irs`, `webshop`) to prevent drift.
@@ -412,7 +412,6 @@ Execution rule:
 
 ### Next queue
 - `1.1.x` follow-up queue is re-opened for remaining patch-scope gaps:
-  - `1.1.33` generalized fallback-noise hardening
   - `1.1.34` low-quality `are (low)` carrier persistence hardening
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.

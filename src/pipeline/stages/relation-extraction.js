@@ -616,6 +616,29 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
   const ARGUMENT_LIKE_DEP_LABELS = new Set(["nsubj", "nsubjpass", "obj", "dobj", "iobj", "pobj"]);
   const CLAUSAL_DEP_LABELS = new Set(["xcomp", "ccomp", "advcl", "relcl"]);
 
+  function hasInterveningVerbBetween(predicateId, argumentId) {
+    if (!predicateId || !argumentId || !tokenById.has(predicateId) || !tokenById.has(argumentId)) {
+      return false;
+    }
+    const predTok = tokenById.get(predicateId);
+    const argTok = tokenById.get(argumentId);
+    if (!predTok || !argTok || predTok.segment_id !== argTok.segment_id || argTok.i <= predTok.i + 1) {
+      return false;
+    }
+    for (const tok of tokenById.values()) {
+      if (!tok || tok.segment_id !== predTok.segment_id) {
+        continue;
+      }
+      if (tok.i <= predTok.i || tok.i >= argTok.i) {
+        continue;
+      }
+      if (isVerbLikeTag(getTag(tok))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function nearestPrevNP(idx) {
     for (let i = idx - 1; i >= 0; i -= 1) {
       const c = chunks[i];
@@ -734,9 +757,13 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     }
 
     const nextNP = nearestNextNP(i);
+    const nextNpHeadId = nextNP ? chunkHeadByChunkId.get(nextNP.id) : null;
+    const hasInterveningVerbToNextArg = nextNpHeadId
+      ? hasInterveningVerbBetween(predicateId, nextNpHeadId)
+      : false;
     let nextNpLooksLikeExternalSubject = false;
     if (nextNP) {
-      const nextArg = chunkHeadByChunkId.get(nextNP.id);
+      const nextArg = nextNpHeadId;
       const incomingToNextArg = nextArg ? (depByDep.get(nextArg) || []) : [];
       nextNpLooksLikeExternalSubject = incomingToNextArg.some(function (d) {
         if (!d || !d.head || !d.head.id || d.head.id === predicateId || !tokenById.has(d.head.id)) {
@@ -749,8 +776,13 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
         return isVerbLikeTag(getTag(tokenById.get(d.head.id)));
       });
     }
-    if (nextNP && !hasCoreObject && !hasPassiveSubject && !hasByPrepObject && !nextNpLooksLikeExternalSubject) {
-      const arg = chunkHeadByChunkId.get(nextNP.id);
+    if (nextNP &&
+      !hasCoreObject &&
+      !hasPassiveSubject &&
+      !hasByPrepObject &&
+      !nextNpLooksLikeExternalSubject &&
+      !hasInterveningVerbToNextArg) {
+      const arg = nextNpHeadId;
       addRelation(predicateId, arg, "theme", {
         pattern: "chunk_fallback",
         dependency_label: null,
