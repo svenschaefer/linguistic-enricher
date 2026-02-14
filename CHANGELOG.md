@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.28] - 2026-02-14
+
+Compared to `v1.1.27`.
+
+### Tests
+- `test/integration/stage11-relation-extraction.test.js`
+  - Refreshed connector-contract regression locks for both `such as` and `as well as` families:
+    - accepted semantic output remains in canonical `kind="dependency"` with `status="accepted"` from Stage 11,
+    - connector tokens (`such`, `as`, `well`) are not used as accepted semantic relation endpoints,
+    - required structural semantics (`actor/theme/exemplifies/coordination`) remain present.
+
+### Documentation
+- `TODO.md`
+  - Marked connector contract-alignment lock refresh as completed in `1.1.28`.
+- `ROADMAP.md`
+  - Marked `1.1.28` as completed and advanced the remaining open queue.
+
 ## [1.1.27] - 2026-02-14
 
 Compared to `v1.1.26`.

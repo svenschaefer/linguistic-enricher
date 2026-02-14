@@ -407,7 +407,7 @@ test("runPipeline relations_extracted normalizes as well as into additive coordi
   );
 });
 
-test("runPipeline relations_extracted keeps connector-token suppression by design while preserving structural edges", async function () {
+test("runPipeline relations_extracted enforces connector contract (suppressed connector endpoints, preserved structural semantics)", async function () {
   const cases = [
     {
       text: "Each role grants permissions such as read, write, or administer.",
@@ -426,6 +426,14 @@ test("runPipeline relations_extracted keeps connector-token suppression by desig
         ["theme", "include", "fields"],
         ["coordination", "location", "free-form"]
       ]
+    },
+    {
+      text: "The report includes structured fields as well as free descriptions.",
+      required: [
+        ["actor", "includes", "report"],
+        ["theme", "includes", "fields"],
+        ["coordination", "fields", "descriptions"]
+      ]
     }
   ];
 
@@ -440,6 +448,7 @@ test("runPipeline relations_extracted keeps connector-token suppression by desig
         Array.isArray(a.sources) &&
         a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
     });
+    assert.equal(rels.length > 0, true);
 
     const connectorUsed = rels.some(function (r) {
       const h = String(tokenById.get(r.head.id) || "").toLowerCase();

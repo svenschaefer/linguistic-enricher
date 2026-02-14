@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.27`
+Current published version: `1.1.28`
 
 ## Versioning Strategy
 
@@ -331,7 +331,7 @@ Execution rule:
   - keep Stage 11 connector-local suppression by design while tightening downstream integration expectations for unresolved connector tokens (`such`, `as`, `well`).
   - refresh regression locks so connector behavior is explicitly treated as contract-level compatibility, not semantic-edge loss.
 - Owners: Stage 11 + integration tests/docs.
-- Status: planned.
+- Status: completed and released.
 - Required gates:
   - integration lock refresh on `such as` and `as well as` fixtures with explicit connector-contract assertions.
   - full test suite + pre/post-publish smoke.
@@ -365,7 +365,7 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- Active queue begins with remaining open regression-report follow-ups: `1.1.28` -> `1.1.30`.
+- Active queue begins with remaining open regression-report follow-ups: `1.1.29` -> `1.1.30`.
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
 

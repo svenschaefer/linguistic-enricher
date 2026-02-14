@@ -427,7 +427,7 @@ Status snapshot after `v1.1.27`:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
   - Downstream unresolved-token expectations may still flag connector tokens.
   - Confidence: reproducible now as an integration-contract issue, not a standalone upstream defect.
-  - Open follow-up: `1.1.27` contract-alignment lock refresh.
+  - Contract-alignment lock refresh completed in `1.1.28` (`such as` + `as well as` integration locks).
 
 - Clause/PP attachment drift in complex sentence variants remains open:
   - Reproducible on longer coordinated/complement shapes (non-universal).
