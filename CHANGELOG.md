@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.20] - 2026-02-14
+
+Compared to `v1.1.19`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Narrowed Stage 11 fallback actor suppression scope:
+    - fallback `actor` suppression for verb-linked predicates now applies only to explicit clausal incoming links (`xcomp|ccomp|advcl|relcl`).
+    - generic incoming `dep` links no longer trigger blanket actor suppression.
+  - Keeps the `v1.1.19` IRS clausal-noise suppression while restoring legitimate actor-bearing fallback signal in dep-linked webshop long-chain clauses.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added regression lock proving fallback actor is allowed for incoming generic `dep` link predicates.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Updated long-chain webshop lock:
+    - `complement_clause/purpose(needs, take)` remain suppressed,
+    - `actor(take, system)` is present again.
+
 ## [1.1.19] - 2026-02-13
 
 Compared to `v1.1.18`.

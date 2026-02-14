@@ -698,7 +698,7 @@ test("runPipeline relations_extracted suppresses fallback actor injection on cla
   );
 });
 
-test("runPipeline relations_extracted suppresses chunk-fallback to-nextVP noise when explicit xcomp exists", async function () {
+test("runPipeline relations_extracted suppresses to-nextVP noise but keeps actor signal on dep-linked take", async function () {
   const text = "The shop needs to make sure that items are actually available and the system can take payment and keep a record of the order.";
   const out = await api.runPipeline(text, { target: "relations_extracted" });
   assert.equal(out.stage, "relations_extracted");
@@ -734,6 +734,6 @@ test("runPipeline relations_extracted suppresses chunk-fallback to-nextVP noise 
   );
   assert.equal(
     rels.some(function (r) { return r.label === "actor" && r.head.id === takeId && r.dep.id === systemId; }),
-    false
+    true
   );
 });

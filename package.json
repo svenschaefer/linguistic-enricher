@@ -1,6 +1,6 @@
 {
   "name": "linguistic-enricher",
-  "version": "1.1.19",
+  "version": "1.1.20",
   "description": "Deterministic linguistic enrichment pipeline for Node.js (CommonJS)",
   "repository": {
     "type": "git",
@@ -40,9 +40,19 @@
   },
   "dependencies": {
     "ajv": "^8.17.1",
+    "linguistic-enricher": "file:linguistic-enricher-1.1.20.tgz",
     "sbd": "^1.0.19",
     "wikipedia-title-index": "^1.2.6",
     "wink-pos-tagger": "^2.2.2",
     "wink-tokenizer": "^5.2.0"
-  }
+  },
+  "directories": {
+    "test": "test"
+  },
+  "author": "",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/svenschaefer/linguistic-enricher/issues"
+  },
+  "homepage": "https://github.com/svenschaefer/linguistic-enricher#readme"
 }

@@ -434,6 +434,36 @@ test("stage11 suppresses fallback actor when predicate is verb-linked clausal co
   assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t3"; }), false);
 });
 
+test("stage11 allows fallback actor when incoming verb-link is generic dep", async function () {
+  const text = "needs the system can take payment";
+  const tokens = [
+    token("t1", 0, "needs", "VBZ", 0, 5),
+    token("t2", 1, "the", "DT", 6, 9),
+    token("t3", 2, "system", "NN", 10, 16),
+    token("t4", 3, "can", "MD", 17, 20),
+    token("t5", 4, "take", "VB", 21, 25),
+    token("t6", 5, "payment", "NN", 26, 33)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "needs", "VP", { start: 0, end: 5 }),
+    chunk("c2", ["t2", "t3"], "the system", "NP", { start: 6, end: 16 }),
+    chunk("c3", ["t4", "t5", "t6"], "can take payment", "VP", { start: 17, end: 33 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t3"),
+    chunkHead("h3", "c3", "t5"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t5", "t1", "dep", false),
+    depObs("d3", "t4", "t5", "aux", false),
+    depObs("d4", "t6", "t5", "obj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t5" && r.dep.id === "t6"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "actor" && r.head.id === "t5" && r.dep.id === "t3"; }), true);
+});
+
 test("stage11 skips to-nextVP chunk fallback when explicit xcomp exists", async function () {
   const text = "needs to make and can take";
   const tokens = [

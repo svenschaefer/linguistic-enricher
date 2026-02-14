@@ -583,12 +583,12 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     const hasExplicitClausalComplement = predDeps.some(function (d) {
       return d && CLAUSAL_DEP_LABELS.has(baseDepLabel(d.label));
     });
-    const hasIncomingVerbLinkedPredicate = incomingDeps.some(function (d) {
+    const hasIncomingClausalVerbLink = incomingDeps.some(function (d) {
       if (!d || !d.head || !d.head.id || !tokenById.has(d.head.id)) {
         return false;
       }
       const base = baseDepLabel(d.label);
-      if (base !== "dep" && base !== "conj" && !CLAUSAL_DEP_LABELS.has(base)) {
+      if (!CLAUSAL_DEP_LABELS.has(base)) {
         return false;
       }
       return isVerbLikeTag(getTag(tokenById.get(d.head.id)));
@@ -629,7 +629,7 @@ function maybeAddChunkFallbackRelations(relations, addRelation, chunks, chunkHea
     const sentenceId = predTok.segment_id;
 
     const prevNP = nearestPrevNP(i);
-    if (prevNP && !hasCoreSubject && !hasPassiveSubject && !hasIncomingVerbLinkedPredicate) {
+    if (prevNP && !hasCoreSubject && !hasPassiveSubject && !hasIncomingClausalVerbLink) {
       const arg = chunkHeadByChunkId.get(prevNP.id);
       addRelation(predicateId, arg, "actor", {
         pattern: "chunk_fallback",
