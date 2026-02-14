@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.24] - 2026-02-14
+
+Compared to `v1.1.23`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Added a bounded Stage 11 guard to prevent webshop copula-theme drift:
+    - skips `obj/dobj -> theme` projection when the head is demoted verbish and already has explicit copula-complement shape (`attr|acomp`).
+  - This prevents `theme(is, purchase)`-class drift while preserving copula attribute/cframe output.
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added regression lock: no `theme` from `obj` under demoted copula head with explicit complement.
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added webshop `s1` lock:
+    - no `theme(is, purchase)`,
+    - expected `attribute(is, store)` remains present.
+
 ## [1.1.23] - 2026-02-14
 
 Compared to `v1.1.22`.

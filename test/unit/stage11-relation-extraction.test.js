@@ -567,6 +567,35 @@ test("stage11 baseline fixture: webshop copula sentence is deterministic", async
   assert.equal(evidence.complement_kind, "nominal");
 });
 
+test("stage11 skips obj->theme for demoted copula head when copula complements are present", async function () {
+  const text = "WebShop is store purchase";
+  const tokens = [
+    token("t1", 0, "WebShop", "NN", 0, 7),
+    token("t2", 1, "is", "VBZ", 8, 10),
+    token("t3", 2, "store", "NN", 11, 16),
+    token("t4", 3, "purchase", "NN", 17, 25)
+  ];
+  const annotations = [
+    chunk("c1", ["t1"], "WebShop", "NP", { start: 0, end: 7 }),
+    chunk("c2", ["t2"], "is", "VP", { start: 8, end: 10 }),
+    chunk("c3", ["t3"], "store", "NP", { start: 11, end: 16 }),
+    chunk("c4", ["t4"], "purchase", "NP", { start: 17, end: 25 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t2"),
+    chunkHead("h3", "c3", "t3"),
+    chunkHead("h4", "c4", "t4"),
+    depObs("d1", "t2", null, "root", true),
+    depObs("d2", "t1", "t2", "nsubj", false),
+    depObs("d3", "t3", "t2", "attr", false),
+    depObs("d4", "t4", "t2", "obj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t2" && r.dep.id === "t4"; }), false);
+  assert.equal(rels.some(function (r) { return r.label === "attribute" && r.head.id === "t2" && r.dep.id === "t3"; }), true);
+});
+
 test("stage11 baseline fixture: generated primes sentence has stable relation ids", async function () {
   const text = "Generated primes may be used for educational purposes.";
   const tokens = [

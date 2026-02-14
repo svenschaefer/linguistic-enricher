@@ -1205,6 +1205,14 @@ async function runStage(seed) {
     const mappedRole = roleFromDepLabel(dep.label, getTag(depTok), getTag(headTok));
     if (mappedRole) {
       const headSurfaceLower = lowerSurface(headTok);
+      const outgoingFromHead = depByHead.get(dep.head.id) || [];
+      const hasCopulaComplementShape = outgoingFromHead.some(function (d) {
+        if (!d || !d.dep || !d.dep.id || !tokenById.has(d.dep.id)) {
+          return false;
+        }
+        const base = baseDepLabel(d.label);
+        return base === "attr" || base === "acomp";
+      });
       const hasSubjectLikeOutgoing = (depByHead.get(dep.head.id) || []).some(function (d) {
         return d && isSubjectLikeDepLabel(d.label) && d.dep && d.dep.id && tokenById.has(d.dep.id);
       });
@@ -1223,6 +1231,14 @@ async function runStage(seed) {
         headSurfaceLower !== "are" &&
         !hasSubjectLikeOutgoing &&
         hasIncomingVerbLink
+      ) {
+        continue;
+      }
+      if (
+        mappedRole === "theme" &&
+        (depBase === "obj" || depBase === "dobj") &&
+        isDemotedVerbish(headTok) &&
+        hasCopulaComplementShape
       ) {
         continue;
       }

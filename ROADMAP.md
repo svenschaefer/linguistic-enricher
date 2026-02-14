@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.23`
+Current published version: `1.1.24`
 
 ## Versioning Strategy
 
@@ -281,7 +281,40 @@ Execution rule:
     - IRS s4-like: `attribute(is, valid)` and `attribute(are, present)` present.
   - full test suite + pre/post-publish smoke.
 
-### `1.1.24` - Connector contract/interface alignment follow-up
+### `1.1.24` - Webshop copula-theme drift fix (`is -> purchase` misassignment)
+- Scope:
+  - prevent copula/theme reassignment in webshop `s1` where `is` incorrectly absorbs `purchase` as `theme`.
+  - keep copula/attribute coverage intact while removing unrelated theme carryover on the same clause.
+- Owners: Stage 11 (dominant), Stage 08 (secondary), integration tests.
+- Status: completed and released.
+- Required gates:
+  - unit lock for copula-theme boundary selection in webshop-like clause chains.
+  - end-to-end lock: no `theme(is, purchase)` in webshop `s1`, while expected copula/attribute rows remain present.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.25` - Webshop pronoun-as-predicate suppression (`them` head artifacts)
+- Scope:
+  - prevent pronoun-centered predicate projection in webshop `s1` (`them` becoming relation head for location/topic structure).
+  - preserve valid object-role signal for `them` as argument without promoting it to predicate center.
+- Owners: Stage 11 (dominant), Stage 08 (secondary), integration tests.
+- Status: planned.
+- Required gates:
+  - unit lock for pronoun predicate-head rejection in fallback/projection path.
+  - end-to-end lock: no accepted relation with head surface `them` in webshop `s1` for location/topic artifacts.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.26` - Webshop carrier-shape normalization (`are` standalone overemphasis)
+- Scope:
+  - reduce downstream-fragile standalone carrier overemphasis in webshop `s2` while preserving coverage-required payload (`actually/available`).
+  - keep integration-safe behavior from `1.1.23` (no loss of `is/are` payload coverage).
+- Owners: Stage 11 (dominant), Stage 08 (secondary).
+- Status: planned.
+- Required gates:
+  - Stage 11 unit lock for bounded carrier-shape normalization.
+  - end-to-end lock for webshop `s2` role stability with no coverage drop.
+  - full test suite + pre/post-publish smoke.
+
+### `1.1.27` - Connector contract/interface alignment follow-up
 - Scope:
   - keep Stage 11 connector-local suppression by design while tightening downstream integration expectations for unresolved connector tokens (`such`, `as`, `well`).
   - refresh regression locks so connector behavior is explicitly treated as contract-level compatibility, not semantic-edge loss.
@@ -291,7 +324,7 @@ Execution rule:
   - integration lock refresh on `such as` and `as well as` fixtures with explicit connector-contract assertions.
   - full test suite + pre/post-publish smoke.
 
-### `1.1.25` - Cross-seed drift guardrails (quality delta lock)
+### `1.1.28` - Cross-seed drift guardrails (quality delta lock)
 - Scope:
   - add deterministic cross-seed delta guards to prevent mixed quality regressions after relation-shape/fallback hardening.
   - target seed family: `access_control`, `irs`, `webshop`, with stable accepted-label/role-presence checks.
@@ -302,7 +335,7 @@ Execution rule:
   - no regression of currently locked Stage 11 canonical semantic-edge contract.
   - full test suite + pre/post-publish smoke.
 
-### `1.1.26` - IRS nominal payload noise reduction (apposition/passive-complement)
+### `1.1.29` - IRS nominal payload noise reduction (apposition/passive-complement)
 - Scope:
   - reduce partially reproducible nominal payload noise in IRS-family apposition/passive-complement structures without losing core patient/agent/theme coverage.
 - Owners: Stage 11 (dominant), Stage 08 (secondary).
@@ -320,7 +353,8 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- Active queue begins with open `1.1.x` regression-report follow-ups: `1.1.24` -> `1.1.26`.
+- Active queue begins with webshop-priority `1.1.x` follow-ups: `1.1.25` -> `1.1.26`.
+- Then continue remaining open regression-report follow-ups: `1.1.27` -> `1.1.29`.
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
 

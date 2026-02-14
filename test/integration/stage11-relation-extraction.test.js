@@ -765,6 +765,37 @@ test("runPipeline relations_extracted keeps webshop are-carrier modifier/attribu
   );
 });
 
+test("runPipeline relations_extracted avoids copula-theme drift on webshop purchase clause", async function () {
+  const text = "A WebShop is an online store where people can pick products they want to buy, put them into a shopping cart, and then complete the purchase by placing an order.";
+  const out = await api.runPipeline(text, { target: "relations_extracted" });
+  assert.equal(out.stage, "relations_extracted");
+
+  const tokenById = new Map(out.tokens.map(function (t) { return [t.id, t]; }));
+  const rels = out.annotations.filter(function (a) {
+    return a.kind === "dependency" &&
+      a.status === "accepted" &&
+      Array.isArray(a.sources) &&
+      a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+  });
+
+  assert.equal(
+    rels.some(function (r) {
+      return r.label === "theme" &&
+        String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "is" &&
+        String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "purchase";
+    }),
+    false
+  );
+  assert.equal(
+    rels.some(function (r) {
+      return r.label === "attribute" &&
+        String((tokenById.get(r.head.id) || {}).surface || "").toLowerCase() === "is" &&
+        String((tokenById.get(r.dep.id) || {}).surface || "").toLowerCase() === "store";
+    }),
+    true
+  );
+});
+
 test("runPipeline relations_extracted keeps IRS copula attributes for is-valid and are-present clauses", async function () {
   const text = "Before a report is accepted, the system must verify that the selected category is valid and mandatory fields are present.";
   const out = await api.runPipeline(text, { target: "relations_extracted" });

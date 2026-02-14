@@ -392,12 +392,16 @@ Status snapshot after `v1.1.23`:
   - restored dependency-backed copula carrier coverage in webshop/IRS clause shapes (`are/is` attribute/modifier paths).
   - retained weak-carrier suppression for non-`is/are` demoted carriers.
 - `given` monitor lock remains unchanged and green.
+- Newly re-validated webshop upstream gaps to fix:
+  - `theme(is, purchase)` appears in webshop `s1` (copula/theme drift in clause composition).
+  - spurious predicate-head behavior around `them` remains in webshop `s1` (e.g., `location(them, shopping|cart)`).
+  - standalone `are` carrier relation shape remains in webshop `s2` (`modifier(are, actually)`, `attribute(are, available)`), still impacting downstream quality expectations.
 
 - Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
   - Downstream unresolved-token expectations may still flag connector tokens.
   - Confidence: reproducible now as an integration-contract issue, not a standalone upstream defect.
-  - Open follow-up: `1.1.23` contract-alignment lock refresh.
+  - Open follow-up: `1.1.27` contract-alignment lock refresh.
 
 - Clause/PP attachment drift in complex sentence variants remains open:
   - Reproducible on longer coordinated/complement shapes (non-universal).
@@ -408,7 +412,7 @@ Status snapshot after `v1.1.23`:
   - Stage 11 chunk-fallback paths can amplify weak upstream structure in specific long-sentence cases.
   - Owner focus: Stage 11 fallback boundaries, with Stage 08 structural input quality.
   - Confidence: reproducible now.
-  - Open follow-up: `1.1.24` cross-seed drift/delta guard cycle.
+  - Open follow-up: `1.1.28` cross-seed drift/delta guard cycle.
 
 - Low-quality carrier precursor note (`are`):
   - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).
@@ -422,7 +426,13 @@ Status snapshot after `v1.1.23`:
 
 - Nominal payload noise in apposition/passive-complement contexts (`irs`-family) remains partially reproducible:
   - Treat as a bounded Stage 11 normalization/fallback-noise follow-up.
-  - Open follow-up: `1.1.25` IRS nominal payload noise reduction lock.
+  - Open follow-up: `1.1.29` IRS nominal payload noise reduction lock.
+
+- Webshop clause-composition drift remains open and must be fixed in upstream relation shaping:
+  - prevent copula-theme reassignment in `s1` (`is` should not absorb unrelated `purchase` as `theme`).
+  - prevent pronoun-as-predicate projection in `s1` (`them` should not become relation head for location/topic structure).
+  - keep `s2` carrier payload stable while avoiding downstream-fragile standalone carrier overemphasis.
+  - Open follow-up sequence: `1.1.24` (copula-theme), `1.1.25` (pronoun-head), `1.1.26` (carrier-shape normalization).
 
 - Attribution rule for release history:
   - Version-by-version causality is intentionally unproven unless historical tags are replayed.
