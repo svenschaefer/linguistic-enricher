@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.28`
+Current published version: `1.1.29`
 
 ## Versioning Strategy
 
@@ -341,7 +341,7 @@ Execution rule:
   - add deterministic cross-seed delta guards to prevent mixed quality regressions after relation-shape/fallback hardening.
   - target seed family: `access_control`, `irs`, `webshop`, with stable accepted-label/role-presence checks.
 - Owners: Stage 11 (dominant), Stage 08 (secondary), integration tests.
-- Status: planned.
+- Status: completed and released.
 - Required gates:
   - integration delta locks across the tracked seed set.
   - no regression of currently locked Stage 11 canonical semantic-edge contract.
@@ -365,7 +365,7 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- Active queue begins with remaining open regression-report follow-ups: `1.1.29` -> `1.1.30`.
+- Active queue begins with remaining open regression-report follow-up: `1.1.30`.
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
 

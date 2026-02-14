@@ -423,6 +423,11 @@ Status snapshot after `v1.1.27`:
 - IRS lock unchanged and green:
   - `attribute(is, valid)` and `attribute(are, present)` remain present.
 
+Status snapshot after `v1.1.29`:
+- cross-seed drift guardrails completed:
+  - integration lock now enforces stable core role presence across `access_control`, `irs`, and `webshop`.
+  - known webshop no-go artifacts remain blocked (`theme(is, purchase)` and pronoun-headed `location|topic`).
+
 - Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
   - Downstream unresolved-token expectations may still flag connector tokens.
@@ -438,7 +443,7 @@ Status snapshot after `v1.1.27`:
   - Stage 11 chunk-fallback paths can amplify weak upstream structure in specific long-sentence cases.
   - Owner focus: Stage 11 fallback boundaries, with Stage 08 structural input quality.
   - Confidence: reproducible now.
-  - Open follow-up: `1.1.28` cross-seed drift/delta guard cycle.
+  - Open follow-up: `1.1.30` IRS nominal payload noise reduction.
 
 - Low-quality carrier precursor note (`are`):
   - Treat as a partially reproducible precursor only (not guaranteed regression per seed/run).

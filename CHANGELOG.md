@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.29] - 2026-02-14
+
+Compared to `v1.1.28`.
+
+### Tests
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added cross-seed drift guardrail lock across `access_control`, `irs`, and `webshop` sentence families.
+  - Locks stable accepted semantic role presence for core relation sets and known no-go artifacts:
+    - `access_control`: coordinated verb actor/theme coverage (`request/update/assign`).
+    - `irs`: copula attribute coverage (`attribute(is, valid)`, `attribute(are, present)`).
+    - `webshop`: preserved `theme(put, them)` and blocked historical drift artifacts (`theme(is, purchase)`, pronoun-headed `location|topic`).
+
+### Documentation
+- `TODO.md`
+  - Marked cross-seed quality drift guard follow-up as completed in `1.1.29`.
+- `ROADMAP.md`
+  - Marked `1.1.29` as completed and advanced the open queue.
+
 ## [1.1.28] - 2026-02-14
 
 Compared to `v1.1.27`.

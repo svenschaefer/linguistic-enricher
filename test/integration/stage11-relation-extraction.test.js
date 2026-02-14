@@ -936,3 +936,86 @@ test("runPipeline relations_extracted keeps given as non-predicate monitor in pr
     false
   );
 });
+
+test("runPipeline relations_extracted cross-seed drift guardrails keep stable core role sets", async function () {
+  const cases = [
+    {
+      name: "access_control",
+      text: "Users can request changes, update reports, and assign supervisors.",
+      required: [
+        ["actor", "request", "users"],
+        ["theme", "request", "changes"],
+        ["actor", "update", "users"],
+        ["theme", "update", "reports"],
+        ["actor", "assign", "users"],
+        ["theme", "assign", "supervisors"]
+      ]
+    },
+    {
+      name: "irs",
+      text: "Before a report is accepted, the system must verify that the selected category is valid and mandatory fields are present.",
+      required: [
+        ["attribute", "is", "valid"],
+        ["attribute", "are", "present"]
+      ]
+    },
+    {
+      name: "webshop",
+      text: "A WebShop is an online store where people can pick products they want to buy, put them into a shopping cart, and then complete the purchase by placing an order.",
+      required: [
+        ["theme", "put", "them"]
+      ],
+      forbidden: [
+        ["theme", "is", "purchase"],
+        ["location", "them", "shopping"],
+        ["location", "them", "cart"],
+        ["topic", "them", "shopping"],
+        ["topic", "them", "cart"]
+      ]
+    }
+  ];
+
+  for (let i = 0; i < cases.length; i += 1) {
+    const c = cases[i];
+    const out = await api.runPipeline(c.text, { target: "relations_extracted" });
+    assert.equal(out.stage, "relations_extracted");
+
+    const tokenById = new Map(out.tokens.map(function (t) {
+      return [t.id, String(t.surface || "").toLowerCase()];
+    }));
+    const rels = out.annotations.filter(function (a) {
+      return a.kind === "dependency" &&
+        a.status === "accepted" &&
+        Array.isArray(a.sources) &&
+        a.sources.some(function (s) { return s && s.name === "relation-extraction"; });
+    });
+    assert.equal(rels.length > 0, true, c.name + ": expected accepted dependency relations");
+
+    for (let j = 0; j < c.required.length; j += 1) {
+      const req = c.required[j];
+      assert.equal(
+        rels.some(function (r) {
+          return r.label === req[0] &&
+            tokenById.get(r.head.id) === req[1] &&
+            tokenById.get(r.dep.id) === req[2];
+        }),
+        true,
+        c.name + ": missing required relation " + req.join("(") + ")"
+      );
+    }
+
+    const forbidden = c.forbidden || [];
+    for (let j = 0; j < forbidden.length; j += 1) {
+      const ban = forbidden[j];
+      assert.equal(
+        rels.some(function (r) {
+          return r.label === ban[0] &&
+            tokenById.get(r.head.id) === ban[1] &&
+            tokenById.get(r.dep.id) === ban[2];
+        }),
+        false,
+        c.name + ": found forbidden relation " + ban.join("(") + ")"
+      );
+    }
+  }
+});
