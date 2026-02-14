@@ -412,6 +412,42 @@ function roleFromPrepSurface(surface) {
   return null;
 }
 
+function remapPrepContainerIfPronoun(containerId, depByDep, tokenById) {
+  if (!containerId || !tokenById.has(containerId)) {
+    return containerId;
+  }
+  const containerTok = tokenById.get(containerId);
+  const tag = getTag(containerTok);
+  if (tag !== "PRP" && tag !== "PRP$") {
+    return containerId;
+  }
+  const incoming = depByDep.get(containerId) || [];
+  const candidates = incoming
+    .filter(function (d) {
+      if (!d || !d.head || !d.head.id || !tokenById.has(d.head.id)) {
+        return false;
+      }
+      const base = baseDepLabel(d.label);
+      if (base !== "obj" && base !== "dobj" && base !== "iobj") {
+        return false;
+      }
+      return isVerbLikeTag(getTag(tokenById.get(d.head.id)));
+    })
+    .map(function (d) { return tokenById.get(d.head.id); })
+    .sort(function (a, b) {
+      const distA = Math.abs(a.i - containerTok.i);
+      const distB = Math.abs(b.i - containerTok.i);
+      if (distA !== distB) {
+        return distA - distB;
+      }
+      if (a.i !== b.i) {
+        return a.i - b.i;
+      }
+      return String(a.id).localeCompare(String(b.id));
+    });
+  return candidates.length > 0 ? candidates[0].id : containerId;
+}
+
 function isExemplarCandidateToken(token) {
   const tag = getTag(token);
   return isLexicalVerbTag(tag) || isNominalLikeTag(tag) || /^JJ/.test(tag);
@@ -1355,10 +1391,12 @@ async function runStage(seed) {
       if (!pobj.dep || !pobj.dep.id) {
         continue;
       }
+      const remappedHeadId = remapPrepContainerIfPronoun(dep.head.id, depByDep, tokenById);
+      const remappedHeadTok = tokenById.get(remappedHeadId);
       addRelation(
-        isVerbLikeTag(getTag(tokenById.get(dep.head.id)))
-          ? resolvePredicateForRelation(dep.head.id)
-          : resolvePredicate(dep.head.id),
+        isVerbLikeTag(getTag(remappedHeadTok))
+          ? resolvePredicateForRelation(remappedHeadId)
+          : resolvePredicate(remappedHeadId),
         pobj.dep.id,
         role,
         {

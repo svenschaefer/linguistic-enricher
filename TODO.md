@@ -397,6 +397,18 @@ Status snapshot after `v1.1.23`:
   - spurious predicate-head behavior around `them` remains in webshop `s1` (e.g., `location(them, shopping|cart)`).
   - standalone `are` carrier relation shape remains in webshop `s2` (`modifier(are, actually)`, `attribute(are, available)`), still impacting downstream quality expectations.
 
+Status snapshot after `v1.1.24`:
+- webshop copula-theme drift fixed:
+  - no `theme(is, purchase)` in webshop `s1` relation output.
+  - copula/attribute coverage remains present.
+
+Status snapshot after `v1.1.25`:
+- webshop pronoun-head drift fixed:
+  - no `location|topic` relation with `headSurface=them` in webshop `s1`.
+  - argument signal preserved (`theme(put, them)` remains).
+- Remaining webshop-priority open item:
+  - carrier-shape normalization in webshop `s2` (`are` standalone overemphasis) scheduled as `1.1.26`.
+
 - Connector-token unresolveds (`such`, `as`, `well`) are tracked as a contract/interface mismatch:
   - Stage 11 suppresses connector-local semantic edges by design while preserving structural exemplar/additive edges.
   - Downstream unresolved-token expectations may still flag connector tokens.

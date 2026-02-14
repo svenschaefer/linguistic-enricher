@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.25] - 2026-02-14
+
+Compared to `v1.1.24`.
+
+### Changed
+- `src/pipeline/stages/relation-extraction.js`
+  - Added pronoun prep-container remapping for `prep+pobj` projection:
+    - when a PP is attached to a pronoun object (`PRP/PRP$`) that is itself an object of a governing verb, Stage 11 now anchors the PP role to the governing verb.
+  - This removes webshop `s1` pronoun-headed location/topic artifacts (`head=them`) while preserving valid object-role signal (`theme(put, them)`).
+
+### Tests
+- `test/unit/stage11-relation-extraction.test.js`
+  - Added lock for pronoun prep-container remap (`put them into cart` -> `location(put, cart)`, not `location(them, cart)`).
+- `test/integration/stage11-relation-extraction.test.js`
+  - Added webshop `s1` lock:
+    - no accepted `location|topic` relation with `headSurface=them`,
+    - `theme(put, them)` remains present.
+
 ## [1.1.24] - 2026-02-14
 
 Compared to `v1.1.23`.

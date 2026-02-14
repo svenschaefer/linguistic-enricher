@@ -204,6 +204,32 @@ test("stage11 emits actor/theme/location and complement_clause/coordination rela
   assert.equal(locationEvidence.pobj_token_id, "t7");
 });
 
+test("stage11 remaps pronoun prep-container to governing verb for prep+pobj relations", async function () {
+  const text = "put them into cart";
+  const tokens = [
+    token("t1", 0, "put", "VB", 0, 3),
+    token("t2", 1, "them", "PRP", 4, 8),
+    token("t3", 2, "into", "IN", 9, 13),
+    token("t4", 3, "cart", "NN", 14, 18)
+  ];
+  const annotations = [
+    chunk("c1", ["t1", "t2"], "put them", "VP", { start: 0, end: 8 }),
+    chunk("c2", ["t3", "t4"], "into cart", "PP", { start: 9, end: 18 }),
+    chunkHead("h1", "c1", "t1"),
+    chunkHead("h2", "c2", "t3"),
+    depObs("d1", "t1", null, "root", true),
+    depObs("d2", "t2", "t1", "obj", false),
+    depObs("d3", "t3", "t2", "prep", false),
+    depObs("d4", "t4", "t3", "pobj", false)
+  ];
+
+  const out = await stage11.runStage(seed(text, tokens, annotations));
+  const rels = stage11Rels(out);
+  assert.equal(rels.some(function (r) { return r.label === "theme" && r.head.id === "t1" && r.dep.id === "t2"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "location" && r.head.id === "t1" && r.dep.id === "t4"; }), true);
+  assert.equal(rels.some(function (r) { return r.label === "location" && r.head.id === "t2"; }), false);
+});
+
 test("stage11 rejects partially relation-extracted docs", async function () {
   const text = "A test.";
   const tokens = [

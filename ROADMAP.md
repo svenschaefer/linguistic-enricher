@@ -1,6 +1,6 @@
 # ROADMAP
 
-Current published version: `1.1.24`
+Current published version: `1.1.25`
 
 ## Versioning Strategy
 
@@ -297,7 +297,7 @@ Execution rule:
   - prevent pronoun-centered predicate projection in webshop `s1` (`them` becoming relation head for location/topic structure).
   - preserve valid object-role signal for `them` as argument without promoting it to predicate center.
 - Owners: Stage 11 (dominant), Stage 08 (secondary), integration tests.
-- Status: planned.
+- Status: completed and released.
 - Required gates:
   - unit lock for pronoun predicate-head rejection in fallback/projection path.
   - end-to-end lock: no accepted relation with head surface `them` in webshop `s1` for location/topic artifacts.
@@ -353,7 +353,7 @@ Execution rule:
 - Keep one issue family per release cycle.
 
 ### Next queue
-- Active queue begins with webshop-priority `1.1.x` follow-ups: `1.1.25` -> `1.1.26`.
+- Active queue begins with webshop-priority `1.1.x` follow-ups: `1.1.26`.
 - Then continue remaining open regression-report follow-ups: `1.1.27` -> `1.1.29`.
 - After `1.1.x` follow-ups, continue with the `1.2.x` plan above (new scope only).
 - `1.1` residual descriptor-modifier shape remains closed as non-actionable nominal detail.
