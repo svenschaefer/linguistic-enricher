@@ -637,6 +637,44 @@ Evidence coverage (deterministic):
 Deliverable status:
 - Stage 11 is functionally complete.
 
+## 12.3) Long-Term Security Watchlist
+
+Status:
+- No immediate exploitable high-severity issue confirmed in current runtime path.
+- Keep the following items tracked until explicitly closed.
+
+1) AJV advisory tracking (`ajv@8.17.1`, CVE-2025-69873 / SNYK-JS-AJV-15274295)
+- Scope:
+  - Current code does not enable AJV `$data`; exploit note requires `$data` enabled.
+  - Still track dependency advisory until upstream remediation exists and can be adopted.
+- Owner:
+  - Validation/runtime (`src/validation/schema-validator.js`) + dependency maintenance.
+- Required gates before closure:
+  - keep/extend unit coverage proving validator options do not enable `$data`.
+  - run dependency audit gate (`npm audit --omit=dev`) and SCA review at each release cycle.
+  - once a fixed AJV version is available, evaluate upgrade and run full unit/integration + smoke.
+
+2) Deterministic ID hash algorithm hardening (`src/util/ids.js`)
+- Scope:
+  - Current `sha1` usage is for deterministic non-password IDs, but it is repeatedly flagged by static scanners.
+  - Any algorithm change can alter deterministic IDs and may be compatibility-impacting.
+- Owner:
+  - Core determinism/util layer + schema/consumer contract.
+- Required gates before closure:
+  - if migrated, plan as non-patch compatibility cycle (`1.2.x` or later).
+  - add deterministic-ID compatibility tests (existing IDs vs migration policy).
+  - document migration/compatibility strategy in CHANGELOG + release notes.
+
+3) Scanner-scope hygiene (false-positive prevention)
+- Scope:
+  - Findings against non-repo / non-shipped paths (for example `prototype/*`, unrelated test files) must not be treated as package-runtime vulnerabilities.
+  - Package publish scope is controlled by `package.json` `files`; keep this explicit.
+- Owner:
+  - Release/security process.
+- Required gates before closure:
+  - keep release checklist verification that shipped tarball contains only intended runtime files.
+  - keep scan triage notes distinguishing runtime/package issues from out-of-scope findings.
+
 ## 13) Acceptance Criteria
 
 - Package is installable and runnable as an independent npm package.
